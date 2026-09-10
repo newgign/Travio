@@ -1,0 +1,263 @@
+.section {
+    margin-top: 90px;
+}
+
+
+.popular {
+    margin-top: 80px;
+}
+
+
+/* =====================================
+   SECTION HEADER
+===================================== */
+
+.section-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+
+.section-header h2 {
+    margin: 0 0 10px;
+
+    color: #0f172a;
+
+    font-size: 42px;
+}
+
+
+.section-header p {
+    margin: 0;
+
+    color: #64748b;
+
+    font-size: 18px;
+}
+
+
+/* =====================================
+   LOADING
+===================================== */
+
+.home-loading {
+    padding: 50px 20px;
+
+    border-radius: 22px;
+
+    background: #ffffff;
+
+    color: #64748b;
+
+    text-align: center;
+
+    box-shadow:
+        0 10px 30px
+        rgba(15, 23, 42, 0.06);
+}
+
+
+/* =====================================
+   HOME TOUR GRID
+
+   На Results TourCard горизонтальный.
+
+   На главной тот же TourCard
+   делаем вертикальным.
+===================================== */
+
+.home-tour-grid,
+.hot-tours .tour-grid {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(3, minmax(0, 1fr));
+
+    gap: 28px;
+
+    align-items: stretch;
+}
+
+
+/* =====================================
+   HOME CARD
+===================================== */
+
+.home-tour-grid .tour-card,
+.hot-tours .tour-card {
+
+    display: flex;
+
+    flex-direction: column;
+
+    min-width: 0;
+
+    min-height: 0;
+
+    grid-template-columns: none;
+}
+
+
+/* =====================================
+   IMAGE
+===================================== */
+
+.home-tour-grid .tour-card-image,
+.hot-tours .tour-card-image {
+
+    width: 100%;
+
+    height: 250px;
+
+    min-height: 250px;
+}
+
+
+/* =====================================
+   CONTENT
+===================================== */
+
+.home-tour-grid .tour-card-content,
+.hot-tours .tour-card-content {
+
+    flex: 1;
+
+    padding: 22px;
+}
+
+
+.home-tour-grid .tour-card-header,
+.hot-tours .tour-card-header {
+
+    gap: 14px;
+}
+
+
+.home-tour-grid .tour-card-header h3,
+.hot-tours .tour-card-header h3 {
+
+    font-size: 22px;
+}
+
+
+/* =====================================
+   PRICE / BUTTON
+===================================== */
+
+.home-tour-grid .tour-card-bottom,
+.hot-tours .tour-card-bottom {
+
+    gap: 14px;
+}
+
+
+.home-tour-grid
+.tour-card-current-price strong,
+
+.hot-tours
+.tour-card-current-price strong {
+
+    font-size: 27px;
+}
+
+
+.home-tour-grid .details-btn,
+.hot-tours .details-btn {
+
+    min-width: 120px;
+
+    padding: 12px 16px;
+}
+
+
+/* =====================================
+   HOT TOURS
+===================================== */
+
+.hot-tours {
+    margin-top: 90px;
+}
+
+
+/* =====================================
+   TABLET
+===================================== */
+
+@media (max-width: 1100px) {
+
+    .home-tour-grid,
+    .hot-tours .tour-grid {
+
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+
+    }
+
+}
+
+
+/* =====================================
+   MOBILE
+===================================== */
+
+@media (max-width: 720px) {
+
+    .section,
+    .popular,
+    .hot-tours {
+
+        margin-top: 60px;
+
+    }
+
+
+    .section-header h2 {
+
+        font-size: 32px;
+
+    }
+
+
+    .section-header p {
+
+        font-size: 16px;
+
+    }
+
+
+    .home-tour-grid,
+    .hot-tours .tour-grid {
+
+        grid-template-columns: 1fr;
+
+    }
+
+
+    .home-tour-grid .tour-card-image,
+    .hot-tours .tour-card-image {
+
+        height: 230px;
+
+        min-height: 230px;
+
+    }
+
+}
+/* Sprint 3A — compact catalogue cards on home */
+.home-tour-grid .tour-card-primary-info,
+.hot-tours .tour-card-primary-info { grid-template-columns:1fr; }
+.home-tour-grid .tour-card-primary-info > div:nth-child(n+2),
+.hot-tours .tour-card-primary-info > div:nth-child(n+2) { display:none; }
+.home-tour-grid .tour-card-amenities small,
+.hot-tours .tour-card-amenities small { display:none; }
+.home-tour-grid .tour-card-actions,
+.hot-tours .tour-card-actions { width:100%; }
+.home-tour-grid .tour-card-actions .secondary,
+.hot-tours .tour-card-actions .secondary { display:none; }
+.home-tour-grid .tour-card-actions .details-btn,
+.hot-tours .tour-card-actions .details-btn { width:100%; }
+@media(max-width:720px){
+  .home-tour-grid .tour-card-primary-info > div:nth-child(2),
+  .hot-tours .tour-card-primary-info > div:nth-child(2) { display:block; }
+}

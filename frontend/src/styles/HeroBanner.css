@@ -1,0 +1,134 @@
+.hero{
+    position:relative;
+    min-height:820px;
+    background-size:cover;
+    background-position:center;
+    background-repeat:no-repeat;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    padding-top:120px;
+    padding-bottom:120px;
+}
+
+.hero-overlay{
+    width:100%;
+    height:100%;
+    background:linear-gradient(rgba(8,18,40,.60),rgba(8,18,40,.60));
+    display:flex;
+    justify-content:center;
+    align-items:center;
+}
+
+.hero-content{
+    width:100%;
+    max-width:1300px;
+    margin:auto;
+    padding:0 25px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    text-align:center;
+}
+
+.hero-badge{
+    background:rgba(255,255,255,.18);
+    backdrop-filter:blur(12px);
+    color:#fff;
+    padding:12px 26px;
+    border-radius:999px;
+    font-weight:600;
+    margin-bottom:30px;
+}
+
+.hero h1{
+    color:#fff;
+    font-size:72px;
+    font-weight:800;
+    line-height:1.05;
+    margin-bottom:24px;
+}
+
+.hero p{
+    color:#e5e7eb;
+    font-size:22px;
+    line-height:1.8;
+    max-width:760px;
+    margin-bottom:45px;
+}
+
+.hero-stats{
+    margin-top:60px;
+    display:flex;
+    justify-content:center;
+    gap:70px;
+    flex-wrap:wrap;
+}
+
+.hero-stat{
+    color:white;
+    text-align:center;
+}
+
+.hero-stat h3{
+    font-size:38px;
+    margin-bottom:8px;
+    font-weight:800;
+}
+
+.hero-stat span{
+    color:#dbeafe;
+    font-size:17px;
+}
+
+@media (max-width:900px){
+
+    .hero{
+        min-height:760px;
+        padding-top:110px;
+        padding-bottom:100px;
+    }
+
+    .hero h1{
+        font-size:48px;
+    }
+
+    .hero p{
+        font-size:18px;
+    }
+
+}
+
+@media (max-width:768px){
+
+    .hero-stats{
+        gap:30px;
+    }
+
+    .hero-stat h3{
+        font-size:28px;
+    }
+
+}
+
+@media (max-width:600px){
+
+    .hero{
+        min-height:720px;
+        padding:100px 20px 80px;
+    }
+
+    .hero h1{
+        font-size:36px;
+    }
+
+    .hero p{
+        font-size:16px;
+        margin-bottom:35px;
+    }
+
+    .hero-badge{
+        font-size:14px;
+    }
+
+}

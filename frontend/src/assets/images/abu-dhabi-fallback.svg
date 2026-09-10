@@ -1,0 +1,11 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
+<title>Иллюстрация дюн эмирата Абу-Даби</title>
+<defs><linearGradient id="sky" x2="0" y2="1"><stop stop-color="#626fa0"/><stop offset=".7" stop-color="#edb59c"/><stop offset="1" stop-color="#ffe0ae"/></linearGradient><linearGradient id="sand" x2="0" y2="1"><stop stop-color="#edb879"/><stop offset="1" stop-color="#ae714e"/></linearGradient></defs>
+<path fill="url(#sky)" d="M0 0h1200v800H0z"/><circle cx="370" cy="260" r="98" fill="#ffe2a9"/>
+<path fill="#eac598" d="M0 500Q240 340 530 480T1200 445V800H0Z"/>
+<path fill="#d99e66" d="M0 600Q280 460 480 555T1200 485V800H0Z"/>
+<path fill="url(#sand)" d="M0 710Q380 385 790 610T1200 575V800H0Z"/>
+<path fill="#f7cb8e" d="M80 673Q415 452 745 600Q460 405 80 673Z"/>
+<path fill="#96644e" d="M600 800Q820 605 1200 690V800Z"/>
+<g fill="none" stroke="#ffe3ac" stroke-width="3" opacity=".3"><path d="M30 750q270-150 460-60m-430 90q240-140 420-65m340-15q180-60 340-20"/></g>
+</svg>

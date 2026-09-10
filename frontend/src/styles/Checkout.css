@@ -1,0 +1,886 @@
+/* ===========================
+   Checkout Page
+=========================== */
+
+.checkout-page{
+
+    max-width:1200px;
+
+    margin:0 auto 80px;
+
+    padding:var(--travio-page-top) 20px 0;
+
+    box-sizing:border-box;
+
+}
+
+/* ===========================
+   Stepper
+=========================== */
+
+.checkout-stepper{
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+    margin-bottom:45px;
+
+    gap:20px;
+
+}
+
+.step{
+
+    flex:1;
+
+    background:#f1f5f9;
+
+    border-radius:16px;
+
+    padding:18px;
+
+    text-align:center;
+
+    font-size:22px;
+
+    font-weight:700;
+
+    color:#94a3b8;
+
+    transition:.3s;
+
+}
+
+.step span{
+
+    display:block;
+
+    margin-top:8px;
+
+    font-size:14px;
+
+    font-weight:600;
+
+}
+
+.step.active{
+
+    background:#2563eb;
+
+    color:white;
+
+}
+
+/* ===========================
+   Card
+=========================== */
+
+.checkout-card{
+
+    background:white;
+
+    border-radius:24px;
+
+    padding:40px;
+
+    box-shadow:0 20px 60px rgba(0,0,0,.08);
+
+}
+
+.checkout-card h1{
+
+    font-size:34px;
+
+    margin-bottom:35px;
+
+    color:#0f172a;
+
+}
+
+/* ===========================
+   Traveler Step
+=========================== */
+
+.checkout-grid{
+
+    display:grid;
+
+    grid-template-columns:repeat(2,1fr);
+
+    gap:20px;
+
+    margin-bottom:25px;
+
+}
+
+.checkout-grid input,
+.checkout-grid select{
+
+    width:100%;
+
+    height:58px;
+
+    border:2px solid #e2e8f0;
+
+    border-radius:14px;
+
+    padding:0 18px;
+
+    font-size:16px;
+
+    transition:.25s;
+
+    outline:none;
+
+}
+
+.checkout-grid input:focus,
+.checkout-grid select:focus{
+
+    border-color:#2563eb;
+
+    box-shadow:0 0 0 4px rgba(37,99,235,.12);
+
+}
+
+.checkout-card textarea{
+
+    width:100%;
+
+    min-height:140px;
+
+    border:2px solid #e2e8f0;
+
+    border-radius:14px;
+
+    padding:18px;
+
+    resize:vertical;
+
+    font-size:16px;
+
+    margin-bottom:30px;
+
+    outline:none;
+
+}
+
+.checkout-card textarea:focus{
+
+    border-color:#2563eb;
+
+    box-shadow:0 0 0 4px rgba(37,99,235,.12);
+
+}
+
+/* ===========================
+   Review Step
+=========================== */
+
+.review-tour{
+
+    display:flex;
+
+    gap:30px;
+
+    align-items:center;
+
+    margin-bottom:35px;
+
+}
+
+.review-tour img{
+
+    width:320px;
+
+    height:220px;
+
+    border-radius:18px;
+
+    object-fit:cover;
+
+}
+
+.review-tour h2{
+
+    font-size:30px;
+
+    margin-bottom:10px;
+
+}
+
+.review-tour p{
+
+    margin-bottom:8px;
+
+    color:#64748b;
+
+}
+
+.review-block{
+
+    background:#f8fafc;
+
+    border-radius:18px;
+
+    padding:24px;
+
+    margin-bottom:25px;
+
+}
+
+.review-block h3{
+
+    margin-bottom:20px;
+
+    font-size:22px;
+
+}
+
+.review-block p{
+
+    margin-bottom:10px;
+
+    color:#334155;
+
+}
+
+.price-row{
+
+    display:flex;
+
+    justify-content:space-between;
+
+    margin-bottom:14px;
+
+    font-size:17px;
+
+}
+
+.price-total{
+
+    display:flex;
+
+    justify-content:space-between;
+
+    border-top:2px solid #e2e8f0;
+
+    margin-top:20px;
+
+    padding-top:20px;
+
+    font-size:28px;
+
+    font-weight:800;
+
+    color:#2563eb;
+
+}
+
+/* ===========================
+   Agreement
+=========================== */
+
+.agreement{
+
+    display:flex;
+
+    flex-direction:column;
+
+    gap:15px;
+
+    margin:35px 0;
+
+}
+
+.agreement label{
+
+    display:flex;
+
+    gap:12px;
+
+    align-items:center;
+
+    font-size:16px;
+
+}
+
+/* ===========================
+   Payment
+=========================== */
+
+.payment-grid{
+
+    display:grid;
+
+    grid-template-columns:repeat(2,1fr);
+
+    gap:20px;
+
+    margin-bottom:35px;
+
+}
+
+.payment-card{
+
+    border:2px solid #e2e8f0;
+
+    border-radius:18px;
+
+    padding:30px;
+
+    cursor:pointer;
+
+    transition:.25s;
+
+    text-align:center;
+
+    user-select:none;
+
+}
+
+.payment-card:hover{
+
+    border-color:#2563eb;
+
+    transform:translateY(-4px);
+
+}
+
+.payment-card.active{
+
+    background:#eff6ff;
+
+    border-color:#2563eb;
+
+}
+
+.payment-card h3{
+
+    margin-top:12px;
+
+    margin-bottom:8px;
+
+}
+
+.payment-card p{
+
+    color:#64748b;
+
+}
+
+.payment-summary{
+
+    background:#f8fafc;
+
+    border-radius:18px;
+
+    padding:30px;
+
+    margin-bottom:35px;
+
+}
+
+.payment-summary span{
+
+    color:#64748b;
+
+}
+
+.payment-summary h2{
+
+    margin-top:10px;
+
+    font-size:40px;
+
+    color:#2563eb;
+
+}
+
+/* ===========================
+   Buttons
+=========================== */
+
+.checkout-buttons{
+
+    display:flex;
+
+    justify-content:flex-end;
+
+    gap:16px;
+
+}
+
+.back-btn{
+
+    background:#e2e8f0;
+
+    border:none;
+
+    border-radius:14px;
+
+    padding:15px 30px;
+
+    cursor:pointer;
+
+    font-size:16px;
+
+    font-weight:700;
+
+    transition:.25s;
+
+}
+
+.back-btn:hover{
+
+    background:#cbd5e1;
+
+}
+
+.next-btn{
+
+    background:#2563eb;
+
+    color:white;
+
+    border:none;
+
+    border-radius:14px;
+
+    padding:15px 34px;
+
+    cursor:pointer;
+
+    font-size:16px;
+
+    font-weight:700;
+
+    transition:.25s;
+
+}
+
+.next-btn:hover{
+
+    background:#1d4ed8;
+
+}
+
+.next-btn:disabled{
+
+    opacity:.55;
+
+    cursor:not-allowed;
+
+}
+
+/* ===========================
+   Success
+=========================== */
+
+.success{
+
+    text-align:center;
+
+    padding:70px 20px;
+
+}
+
+.success-icon{
+
+    width:110px;
+
+    height:110px;
+
+    border-radius:50%;
+
+    background:#22c55e;
+
+    color:white;
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:center;
+
+    font-size:60px;
+
+    margin:0 auto 25px;
+
+}
+
+.success h1{
+
+    margin-bottom:18px;
+
+}
+
+.success p{
+
+    color:#64748b;
+
+    margin-bottom:35px;
+
+    font-size:18px;
+
+}
+
+/* ===========================
+   Responsive
+=========================== */
+
+@media(max-width:900px){
+
+.checkout-stepper{
+
+flex-direction:column;
+
+}
+
+.step{
+
+width:100%;
+
+}
+
+.checkout-grid{
+
+grid-template-columns:1fr;
+
+}
+
+.review-tour{
+
+flex-direction:column;
+
+text-align:center;
+
+}
+
+.review-tour img{
+
+width:100%;
+
+height:250px;
+
+}
+
+.payment-grid{
+
+grid-template-columns:1fr;
+
+}
+
+.checkout-buttons{
+
+flex-direction:column;
+
+}
+
+.back-btn,
+.next-btn{
+
+width:100%;
+
+}
+
+}
+
+@media(max-width:600px){
+
+.checkout-card{
+
+padding:25px;
+
+}
+
+.checkout-card h1{
+
+font-size:28px;
+
+}
+
+.review-tour h2{
+
+font-size:24px;
+
+}
+
+.payment-summary h2{
+
+font-size:30px;
+
+}
+
+}
+/* ===========================
+   Success
+=========================== */
+
+.success{
+
+    text-align:center;
+
+}
+
+.success-order{
+
+    background:#eff6ff;
+
+    border-radius:18px;
+
+    padding:25px;
+
+    margin:35px auto;
+
+    max-width:420px;
+
+}
+
+.success-order h2{
+
+    margin-top:10px;
+
+    color:#2563eb;
+
+    font-size:34px;
+
+}
+
+.success-tour{
+
+    display:flex;
+
+    align-items:center;
+
+    gap:25px;
+
+    margin:40px 0;
+
+    background:#f8fafc;
+
+    border-radius:18px;
+
+    padding:25px;
+
+    text-align:left;
+
+}
+
+.success-tour img{
+
+    width:220px;
+
+    height:150px;
+
+    object-fit:cover;
+
+    border-radius:14px;
+
+}
+
+.success-buttons{
+
+    display:flex;
+
+    justify-content:center;
+
+    gap:15px;
+
+    flex-wrap:wrap;
+
+}
+
+.voucher-btn{
+
+    border:none;
+
+    background:#10b981;
+
+    color:white;
+
+    border-radius:14px;
+
+    padding:15px 28px;
+
+    cursor:pointer;
+
+    font-size:16px;
+
+    font-weight:700;
+
+}
+
+.voucher-btn:hover{
+
+    background:#059669;
+
+}
+
+@media(max-width:768px){
+
+.success-tour{
+
+flex-direction:column;
+
+text-align:center;
+
+}
+
+.success-tour img{
+
+width:100%;
+
+height:220px;
+
+}
+
+}
+/* ===========================
+   Sprint 2E travelers
+=========================== */
+
+.traveler-count-note{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    margin:-15px 0 24px;
+    padding:10px 14px;
+    border-radius:12px;
+    background:#eff6ff;
+    color:#1d4ed8;
+    font-weight:700;
+}
+
+.traveler-list{
+    display:flex;
+    flex-direction:column;
+    gap:18px;
+    margin-bottom:28px;
+}
+
+.traveler-card{
+    border:1px solid #e2e8f0;
+    border-radius:18px;
+    padding:22px;
+    background:#f8fafc;
+}
+
+.traveler-card-title{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:16px;
+    color:#0f172a;
+}
+
+.traveler-card-title span{
+    color:#64748b;
+    font-size:14px;
+}
+
+.traveler-grid{
+    margin-bottom:0;
+}
+
+.contact-block{
+    margin-top:10px;
+}
+
+.input-error{
+    display:block;
+    margin-top:6px;
+    color:#dc2626;
+    font-size:13px;
+}
+
+@media (max-width: 720px){
+    .checkout-grid,
+    .traveler-grid{
+        grid-template-columns:1fr;
+    }
+}
+
+/* Sprint 2F provider notices */
+.checkout-provider-warning{
+    margin:0 0 18px;
+    padding:14px 16px;
+    border-radius:12px;
+    background:#fff7ed;
+    color:#9a3412;
+    line-height:1.5;
+    font-weight:600;
+}
+
+
+/* Sprint 2G saved traveler helpers */
+.saved-traveler-hint {
+  color: #2563eb;
+  font-weight: 700;
+}
+
+.saved-traveler-select {
+  display: grid;
+  gap: 7px;
+  margin: 12px 0 16px;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.saved-traveler-select select {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  background: #eff6ff;
+  color: #1e3a8a;
+}
+
+.checkout-profile-link {
+  margin: 6px 0 18px;
+  text-align: right;
+}
+
+.checkout-profile-link a {
+  color: #2563eb;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.checkout-profile-link a:hover {
+  text-decoration: underline;
+}
+
+/* Sprint 3A — checkout clarity */
+.checkout-trust-row {
+    display:flex;
+    flex-wrap:wrap;
+    gap:9px;
+    margin:0 0 22px;
+}
+.checkout-trust-row span {
+    padding:8px 11px;
+    border:1px solid #dbeafe;
+    border-radius:999px;
+    background:#eff6ff;
+    color:#1e40af;
+    font-size:12px;
+    font-weight:700;
+}
+@media(max-width:900px){
+    .checkout-stepper{flex-direction:row;overflow-x:auto;gap:8px;padding-bottom:4px}
+    .step{min-width:125px;padding:14px 10px;font-size:17px}
+    .step span{font-size:11px}
+}
+@media(max-width:520px){
+    .checkout-page{padding:var(--travio-page-top) 14px 0}
+    .checkout-card{padding:20px}
+    .checkout-trust-row{gap:6px}
+    .checkout-trust-row span{width:100%;box-sizing:border-box;border-radius:11px}
+}

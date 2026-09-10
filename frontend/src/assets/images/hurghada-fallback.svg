@@ -1,0 +1,10 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
+<title>Иллюстрация побережья Красного моря</title>
+<defs><linearGradient id="sky" x2="0" y2="1"><stop stop-color="#93d6ec"/><stop offset="1" stop-color="#e5f5ee"/></linearGradient><linearGradient id="sea" x2="0" y2="1"><stop stop-color="#1cbbc1"/><stop offset="1" stop-color="#076786"/></linearGradient></defs>
+<path fill="url(#sky)" d="M0 0h1200v800H0z"/><circle cx="920" cy="150" r="68" fill="#fff0b7"/>
+<path fill="#ceaa87" d="M0 345 140 280 230 320 390 230 550 340 700 295 840 350 1030 290 1200 330V470H0Z"/>
+<path fill="url(#sea)" d="M0 390h1200v410H0z"/>
+<path fill="#f4dca5" d="M0 390c150 10 220 130 400 170S710 620 800 800H0Z"/>
+<path fill="none" stroke="#d7faf1" stroke-width="12" opacity=".7" d="M30 440c150 20 210 135 370 160s260 65 325 140M650 465h210m100 70h160M750 655h180"/>
+<g fill="none" stroke="#ed947c" stroke-width="16" stroke-linecap="round"><path d="M1060 800V667m0 74-50-48m50 24 48-55m-48 105 65-25"/><path d="M960 800v-55m0 32-36-25"/></g>
+</svg>

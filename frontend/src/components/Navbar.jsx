@@ -1,0 +1,57 @@
+﻿import { useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { useFavorites } from "../context/FavoritesContext";
+import "../styles/Navbar.css";
+import { site } from "../config/site";
+
+export default function Navbar() {
+  const { favorites } = useFavorites();
+  const location = useLocation();
+  const isHome = location.pathname === "/";
+  const [menuLocation, setMenuLocation] = useState(null);
+  const menuOpen = menuLocation === location.key;
+  const setMenuOpen = (open) => setMenuLocation(open ? location.key : null);
+  const user = JSON.parse(localStorage.getItem("user"));
+
+
+
+  function logout() {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    window.dispatchEvent(new Event("travio-auth-changed"));
+    window.location.href = "/";
+  }
+
+  return (
+    <header className={`navbar ${isHome ? "" : "navbar-solid"}`}>
+      <div className="navbar-container">
+        <Link to="/" className="logo">✈️ <span>{site.siteName}</span></Link>
+
+        <nav className={`nav-menu ${menuOpen ? "open" : ""}`}>
+          <Link to="/">Главная</Link>
+          <Link to="/results">Туры</Link>
+          <Link to="/#countries">Страны</Link>
+          <Link to="/#offers">Акции</Link>
+          <Link to="/#contacts">Контакты</Link>
+          <div className="mobile-nav-account">
+            <Link to="/favorites">❤️ Избранное {favorites.length > 0 ? `(${favorites.length})` : ""}</Link>
+            <Link to="/my-bookings">🧳 Мои бронирования</Link>
+            {user && <Link to="/profile">👤 Личный кабинет</Link>}
+            {user?.role === "admin" && <Link to="/admin">⚙️ Админ-панель</Link>}
+          </div>
+        </nav>
+
+        <div className="nav-right">
+          <Link to="/favorites" className="icon-btn desktop-icon">❤️{favorites.length > 0 && <span className="badge">{favorites.length}</span>}</Link>
+          <Link to="/my-bookings" className="icon-btn desktop-icon">🧳</Link>
+          {user?.role === "admin" && <Link to="/admin" className="icon-btn desktop-icon" title="Админ-панель">⚙️</Link>}
+          {user ? (
+            <div className="user-box desktop-user"><Link to="/profile" className="user-name user-name-link">👋 {user.full_name}</Link><button className="login-btn" onClick={logout}>Выйти</button></div>
+          ) : <Link to="/login" className="login-btn desktop-user">👤 Войти</Link>}
+          <button type="button" className={`nav-toggle ${menuOpen ? "active" : ""}`} onClick={() => setMenuOpen(!menuOpen)} aria-label="Открыть меню" aria-expanded={menuOpen}><span /><span /><span /></button>
+        </div>
+      </div>
+      {menuOpen && <button type="button" className="nav-backdrop" onClick={() => setMenuOpen(false)} aria-label="Закрыть меню" />}
+    </header>
+  );
+}

@@ -1,0 +1,146 @@
+-- Travio core runtime tables.
+-- Migration is intentionally idempotent so it can be applied to the
+-- existing development database without deleting current data.
+
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    full_name VARCHAR(255) NOT NULL,
+    email VARCHAR(320) NOT NULL,
+    password TEXT NOT NULL,
+    phone VARCHAR(50),
+    role VARCHAR(20) NOT NULL DEFAULT 'user',
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(255);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(320);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS password TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(50);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'user';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW();
+ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();
+
+UPDATE users SET role = 'user' WHERE role IS NULL OR TRIM(role) = '';
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_lower
+ON users (LOWER(email));
+
+CREATE INDEX IF NOT EXISTS idx_users_role
+ON users(role);
+
+
+CREATE TABLE IF NOT EXISTS tours (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    departure_city VARCHAR(120) NOT NULL DEFAULT 'Астана',
+    country VARCHAR(120) NOT NULL,
+    city VARCHAR(120) NOT NULL,
+    hotel VARCHAR(255) NOT NULL,
+    price NUMERIC(14,2) NOT NULL DEFAULT 0,
+    duration INTEGER NOT NULL DEFAULT 7,
+    departure_date DATE NOT NULL,
+    food VARCHAR(50),
+    rating NUMERIC(3,1) NOT NULL DEFAULT 0,
+    image TEXT,
+    description TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE tours ADD COLUMN IF NOT EXISTS title VARCHAR(255);
+ALTER TABLE tours ADD COLUMN IF NOT EXISTS departure_city VARCHAR(120) DEFAULT 'Астана';
+ALTER TABLE tours ADD COLUMN IF NOT EXISTS country VARCHAR(120);
+ALTER TABLE tours ADD COLUMN IF NOT EXISTS city VARCHAR(120);
+ALTER TABLE tours ADD COLUMN IF NOT EXISTS hotel VARCHAR(255);
+ALTER TABLE tours ADD COLUMN IF NOT EXISTS price NUMERIC(14,2) DEFAULT 0;
+ALTER TABLE tours ADD COLUMN IF NOT EXISTS duration INTEGER DEFAULT 7;
+ALTER TABLE tours ADD COLUMN IF NOT EXISTS departure_date DATE;
+ALTER TABLE tours ADD COLUMN IF NOT EXISTS food VARCHAR(50);
+ALTER TABLE tours ADD COLUMN IF NOT EXISTS rating NUMERIC(3,1) DEFAULT 0;
+ALTER TABLE tours ADD COLUMN IF NOT EXISTS image TEXT;
+ALTER TABLE tours ADD COLUMN IF NOT EXISTS description TEXT;
+ALTER TABLE tours ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW();
+ALTER TABLE tours ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();
+
+UPDATE tours
+SET title = COALESCE(NULLIF(title, ''), NULLIF(hotel, ''), 'Travio tour #' || id)
+WHERE title IS NULL OR title = '';
+
+UPDATE tours
+SET departure_city = 'Астана'
+WHERE departure_city IS NULL OR departure_city = '';
+
+CREATE INDEX IF NOT EXISTS idx_tours_country
+ON tours(country);
+
+CREATE INDEX IF NOT EXISTS idx_tours_city
+ON tours(city);
+
+CREATE INDEX IF NOT EXISTS idx_tours_departure_date
+ON tours(departure_date);
+
+
+CREATE TABLE IF NOT EXISTS bookings (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    tour_id INTEGER NOT NULL REFERENCES tours(id),
+    first_name VARCHAR(120) NOT NULL,
+    last_name VARCHAR(120) NOT NULL,
+    phone VARCHAR(50) NOT NULL,
+    email VARCHAR(320) NOT NULL,
+    birth_date DATE,
+    people INTEGER NOT NULL DEFAULT 1,
+    comment TEXT,
+    status VARCHAR(40) NOT NULL DEFAULT 'Новая',
+    booking_date TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS user_id INTEGER;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS tour_id INTEGER;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS first_name VARCHAR(120);
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS last_name VARCHAR(120);
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS phone VARCHAR(50);
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS email VARCHAR(320);
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS birth_date DATE;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS people INTEGER DEFAULT 1;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS comment TEXT;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS status VARCHAR(40) DEFAULT 'Новая';
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS booking_date TIMESTAMP DEFAULT NOW();
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();
+
+CREATE INDEX IF NOT EXISTS idx_bookings_user_id
+ON bookings(user_id);
+
+CREATE INDEX IF NOT EXISTS idx_bookings_tour_id
+ON bookings(tour_id);
+
+CREATE INDEX IF NOT EXISTS idx_bookings_status
+ON bookings(status);
+
+
+CREATE TABLE IF NOT EXISTS payments (
+    id SERIAL PRIMARY KEY,
+    booking_id INTEGER NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+    amount NUMERIC(14,2) NOT NULL DEFAULT 0,
+    method VARCHAR(80),
+    status VARCHAR(30) NOT NULL DEFAULT 'pending',
+    paid_at TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS booking_id INTEGER;
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS amount NUMERIC(14,2) DEFAULT 0;
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS method VARCHAR(80);
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS status VARCHAR(30) DEFAULT 'pending';
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS paid_at TIMESTAMP;
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW();
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();
+
+CREATE INDEX IF NOT EXISTS idx_payments_booking_id
+ON payments(booking_id);
+
+CREATE INDEX IF NOT EXISTS idx_payments_status
+ON payments(status);

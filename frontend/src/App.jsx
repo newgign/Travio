@@ -1,118 +1,112 @@
-import { useEffect, useState } from "react";
+import { Routes, Route } from "react-router-dom";
+
+import "./App.css";
+
+import Help from "./pages/Help";
+import ScrollToSection from "./components/ScrollToSection";
+import Home from "./pages/Home";
+import Results from "./pages/Results";
+import Favorites from "./pages/Favorites";
+import TourDetails from "./pages/TourDetails";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import Checkout from "./pages/Checkout";
+import MyBookings from "./pages/MyBookings";
+import BookingDetails from "./pages/BookingDetails";
+import Profile from "./pages/Profile";
+import Voucher from "./pages/Voucher";
+import AdminPanel from "./pages/AdminPanel";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
-  const [countries, setCountries] = useState([]);
-  const [cities, setCities] = useState([]);
-  const [hotels, setHotels] = useState([]);
-
-  const [selectedCountry, setSelectedCountry] = useState("");
-  const [selectedCity, setSelectedCity] = useState("");
-
-  // Загружаем страны
-  useEffect(() => {
-    fetch("http://localhost:3000/countries")
-      .then((res) => res.json())
-      .then((data) => setCountries(data))
-      .catch((err) => console.error(err));
-  }, []);
-
-  // Загружаем города после выбора страны
-  useEffect(() => {
-    if (!selectedCountry) {
-      setCities([]);
-      setHotels([]);
-      return;
-    }
-
-    fetch("http://localhost:3000/cities")
-      .then((res) => res.json())
-      .then((data) => {
-        const filtered = data.filter(
-          (city) => city.country_id == selectedCountry
-        );
-        setCities(filtered);
-        setSelectedCity("");
-        setHotels([]);
-      });
-  }, [selectedCountry]);
-
-  // Загружаем отели после выбора города
-  useEffect(() => {
-    if (!selectedCity) {
-      setHotels([]);
-      return;
-    }
-
-    fetch(`http://localhost:3000/hotels?city=${selectedCity}`)
-      .then((res) => res.json())
-      .then((data) => setHotels(data))
-      .catch((err) => console.error(err));
-  }, [selectedCity]);
-
   return (
-    <div style={{ padding: "40px", fontFamily: "Arial" }}>
-      <h1>🌍 Поиск туров</h1>
+    <>
+    <ScrollToSection />
+    <Routes>
+      <Route path="/" element={<Home />} />
+      <Route path="/help/:topic" element={<Help />} />
+      <Route path="/results" element={<Results />} />
+      <Route path="/favorites" element={<Favorites />} />
+      <Route path="/tour/:provider/:id" element={<TourDetails />} />
+      <Route path="/tour/:id" element={<TourDetails />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
 
-      <p>Добро пожаловать в наш сервис!</p>
+      <Route
+        path="/checkout/:provider/:tourId"
+        element={
+          <ProtectedRoute>
+            <Checkout />
+          </ProtectedRoute>
+        }
+      />
 
-      <hr />
 
-      <label>Страна</label>
-      <br />
+      <Route
+        path="/checkout/:tourId"
+        element={
+          <ProtectedRoute>
+            <Checkout />
+          </ProtectedRoute>
+        }
+      />
 
-      <select
-        value={selectedCountry}
-        onChange={(e) => setSelectedCountry(e.target.value)}
-      >
-        <option value="">Выберите страну</option>
 
-        {countries.map((country) => (
-          <option key={country.id} value={country.id}>
-            {country.name}
-          </option>
-        ))}
-      </select>
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <Profile />
+          </ProtectedRoute>
+        }
+      />
 
-      <br />
-      <br />
+      <Route
+        path="/voucher/:bookingId"
+        element={
+          <ProtectedRoute>
+            <Voucher />
+          </ProtectedRoute>
+        }
+      />
 
-      <label>Город</label>
-      <br />
+      <Route
+        path="/my-bookings"
+        element={
+          <ProtectedRoute>
+            <MyBookings />
+          </ProtectedRoute>
+        }
+      />
 
-      <select
-        value={selectedCity}
-        onChange={(e) => setSelectedCity(e.target.value)}
-      >
-        <option value="">Выберите город</option>
+      <Route
+        path="/my-bookings/:bookingId"
+        element={
+          <ProtectedRoute>
+            <BookingDetails />
+          </ProtectedRoute>
+        }
+      />
 
-        {cities.map((city) => (
-          <option key={city.id} value={city.id}>
-            {city.name}
-          </option>
-        ))}
-      </select>
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute adminOnly>
+            <AdminPanel />
+          </ProtectedRoute>
+        }
+      />
 
-      <br />
-      <br />
-
-      <label>Отель</label>
-      <br />
-
-      <select>
-        <option>Выберите отель</option>
-
-        {hotels.map((hotel) => (
-          <option key={hotel.id} value={hotel.id}>
-            {hotel.name}
-          </option>
-        ))}
-      </select>
-
-      <br />
-      <br />
-
-      <button>Найти тур</button>
-    </div>
+      <Route
+        path="/admin/bookings"
+        element={
+          <ProtectedRoute adminOnly>
+            <AdminPanel initialTab="bookings" />
+          </ProtectedRoute>
+        }
+      />
+    </Routes>
+    </>
   );
 }
 

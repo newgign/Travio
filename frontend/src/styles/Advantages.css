@@ -1,0 +1,46 @@
+.advantages{
+    margin:90px 0;
+}
+
+.advantages h2{
+    text-align:center;
+    font-size:42px;
+    color:#0f172a;
+    margin-bottom:50px;
+}
+
+.advantages-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+    gap:25px;
+}
+
+.adv-card{
+    background:#fff;
+    border-radius:20px;
+    padding:35px 25px;
+    text-align:center;
+    box-shadow:0 10px 30px rgba(0,0,0,.08);
+    transition:.3s;
+}
+
+.adv-card:hover{
+    transform:translateY(-8px);
+    box-shadow:0 20px 40px rgba(0,0,0,.12);
+}
+
+.adv-icon{
+    font-size:46px;
+    margin-bottom:20px;
+}
+
+.adv-card h3{
+    font-size:22px;
+    margin-bottom:12px;
+    color:#0f172a;
+}
+
+.adv-card p{
+    color:#64748b;
+    line-height:1.6;
+}

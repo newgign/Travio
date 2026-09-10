@@ -1,0 +1,139 @@
+.admin-bookings {
+  max-width: 1400px;
+  margin: 100px auto;
+  padding: 30px;
+}
+
+.admin-bookings h1 {
+  margin-bottom: 30px;
+  font-size: 36px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.08);
+}
+
+.admin-table thead {
+  background: #2563eb;
+  color: white;
+}
+
+.admin-table th {
+  padding: 18px;
+  text-align: left;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.admin-table td {
+  padding: 18px;
+  border-bottom: 1px solid #eef2f7;
+  vertical-align: middle;
+}
+
+.admin-table tbody tr {
+  transition: .2s;
+}
+
+.admin-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.status.Новая {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status.Подтверждена {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status.Отменена {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+}
+
+.btn {
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 18px;
+  transition: .2s;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+}
+
+.btn-success {
+  background: #22c55e;
+  color: white;
+}
+
+.btn-success:hover {
+  background: #16a34a;
+}
+
+.btn-danger {
+  background: #ef4444;
+  color: white;
+}
+
+.btn-danger:hover {
+  background: #dc2626;
+}
+
+.btn-delete {
+  background: #64748b;
+  color: white;
+}
+
+.btn-delete:hover {
+  background: #475569;
+}
+
+.empty {
+  text-align: center;
+  padding: 80px;
+  color: #64748b;
+  font-size: 20px;
+}
+
+@media (max-width: 1100px) {
+
+  .admin-bookings {
+    padding: 15px;
+  }
+
+  .admin-table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+}

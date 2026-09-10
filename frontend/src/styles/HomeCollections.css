@@ -1,0 +1,68 @@
+.collection-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:28px; align-items:stretch; }
+.destination-card { position:relative; display:block; height:300px; min-width:0; overflow:hidden; border-radius:22px; color:#fff; cursor:pointer; box-shadow:0 10px 30px #0f172a12; transition:transform 200ms,box-shadow 200ms; }
+.collection-image { width:100%; height:100%; background:#dbe7ef; }
+.collection-image img { display:block; width:100%; height:100%; object-fit:cover; transition:transform 200ms; }
+.collection-image-fallback { display:flex; width:100%; height:100%; align-items:center; justify-content:center; color:#475569; background:linear-gradient(135deg,#dbeafe,#e2e8f0); font-size:14px; }
+.destination-card::after { content:""; position:absolute; inset:0; background:linear-gradient(transparent 25%,#0f172a99 75%,#0f172ae6); }
+.destination-caption { position:absolute; bottom:26px; left:26px; right:26px; z-index:1; overflow-wrap:anywhere; }
+.destination-caption span { font-size:16px; }
+.destination-caption h3 { margin:8px 0 0; font-size:28px; color:#fff; }
+.destination-card:hover { transform:translateY(-4px); box-shadow:0 16px 34px #0f172a22; }
+.destination-card:hover img { transform:scale(1.04); }
+.collection-note { text-align:center; color:#64748b; margin:-16px 0 24px; font-size:14px; line-height:1.5; }
+.hot-trip-card { min-width:0; display:flex; flex-direction:column; overflow:hidden; border-radius:22px; background:#fff; color:#0f172a; box-shadow:0 10px 30px #0f172a12; transition:transform 200ms,box-shadow 200ms; }
+.hot-trip-card:hover { transform:translateY(-4px); box-shadow:0 16px 34px #0f172a22; }
+.hot-trip-photo { height:230px; position:relative; flex-shrink:0; }
+.hot-trip-badge { position:absolute; left:16px; top:16px; padding:9px 12px; border-radius:12px; background:#fff; color:#9a3412; font-weight:700; font-size:14px; }
+.hot-trip-content { padding:24px; display:flex; flex:1; flex-direction:column; min-width:0; }
+.hot-trip-meta { display:flex; flex-wrap:wrap; justify-content:space-between; gap:8px; min-height:24px; color:#946300; font-size:14px; }
+.hot-trip-content h3 { margin:12px 0 8px; font-size:22px; line-height:1.3; min-height:2.6em; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; overflow-wrap:anywhere; }
+.hot-trip-location { color:#64748b; font-size:14px; min-height:2.8em; line-height:1.4; }
+.hot-trip-facts { list-style:none; display:grid; gap:10px; margin:20px 0; padding:0; color:#334155; font-size:15px; line-height:1.5; overflow-wrap:anywhere; }
+.hot-trip-bottom { margin-top:auto; padding-top:20px; border-top:1px solid #e2e8f0; display:flex; flex-direction:column; gap:8px; }
+.hot-trip-bottom strong { font-size:27px; overflow-wrap:anywhere; }
+.hot-trip-bottom small { color:#64748b; }
+.collection-cta { display:inline-flex; justify-content:center; align-items:center; background:#2563eb; color:#fff; padding:14px 20px; margin-top:12px; border-radius:12px; text-decoration:none; font-weight:700; cursor:pointer; transition:background 200ms; }
+.collection-cta:hover { background:#1d4ed8; }
+.collection-cta:focus-visible,.destination-card:focus-visible { outline:3px solid #2563eb; outline-offset:4px; }
+.hot-tour-skeleton { height:610px; border-radius:22px; background:#fff; overflow:hidden; }
+.hot-tour-skeleton div { height:230px; background:#dbe7ef; }
+.hot-tour-skeleton span { display:block; height:24px; margin:24px; border-radius:8px; background:#e2e8f0; }
+.collection-pulse { animation:collection-pulse 1.4s ease-in-out infinite alternate; }
+@keyframes collection-pulse { to { opacity:.55; } }
+@media(max-width:1100px) { .collection-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:720px) { .collection-grid { grid-template-columns:minmax(0,1fr); gap:20px; } }
+@media(prefers-reduced-motion:reduce) { .collection-pulse { animation:none; } .destination-card,.collection-image img,.hot-trip-card,.collection-cta { transition:none; } }
+
+/* Desktop home finishing; layout remains fluid at smaller widths. */
+.app .hero { border-radius:24px; overflow:hidden; padding:0; min-height:720px; }
+.app .hero-overlay { min-height:720px; padding:80px 0; align-self:stretch; }
+.hero-search-wrap { width:100%; min-width:0; }
+.hero-search { grid-template-columns:repeat(4,minmax(0,1fr)); }
+.search-item { min-width:0; }
+.search-item input,.search-item select { min-width:0; }
+.country-grid,.advantages-grid { grid-template-columns:repeat(4,minmax(0,1fr)); }
+.country-card,.adv-card { min-width:0; transition:transform 200ms,box-shadow 200ms; }
+.country-card img { transition:transform 200ms; }
+.footer-container { grid-template-columns:repeat(4,minmax(0,1fr)); gap:32px; }
+.footer-column { min-width:0; overflow-wrap:anywhere; }
+#popular,#hot-tours,#countries,#faq,#contacts { scroll-margin-top:110px; }
+.country-card:focus-visible { outline:3px solid #2563eb; outline-offset:4px; }
+.help-page { max-width:960px; margin:auto; padding:140px 24px 40px; color:#0f172a; min-height:65vh; }
+.help-page h1 { margin-bottom:28px; }
+.help-page p { margin:18px 0; line-height:1.8; }
+.help-page a { color:#2563eb; }
+.catalogue-search { max-width:1320px; margin:0 auto 32px; padding:0 24px; }
+.catalogue-search h1 { margin-bottom:12px; }
+.catalogue-search p { margin-bottom:24px; color:#64748b; }
+.hot-trip-bottom del { color:#64748b; }
+@media(max-width:1100px) { .country-grid,.advantages-grid,.footer-container { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:720px) { .country-grid,.advantages-grid,.footer-container { grid-template-columns:minmax(0,1fr); } .hero-search { grid-template-columns:minmax(0,1fr); } .app { padding:16px; } }
+
+#offers { scroll-margin-top:110px; }
+.hot-tours-empty .section-header { margin-bottom:20px; }
+.hot-tours-empty .home-loading { padding:22px 28px; display:flex; align-items:center; justify-content:space-between; gap:20px; text-align:left; }
+.hot-tours-empty .collection-cta { margin-top:0; flex-shrink:0; }
+@media(max-width:720px) {
+  .hot-tours-empty .home-loading { flex-direction:column; text-align:center; padding:22px; }
+}
