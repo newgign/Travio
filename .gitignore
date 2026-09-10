@@ -39,3 +39,6 @@ backend/backups/
 
 # Runtime cache
 backend/cache/
+
+# Hotelbeds certificates
+backend/certs/
