@@ -1,8 +1,9 @@
 import { Navigate } from "react-router-dom";
+import { Fragment } from "react";
+import useSession from "../hooks/useSession";
 
 export default function ProtectedRoute({ children, adminOnly = false }) {
-  const token = localStorage.getItem("token");
-  const user = JSON.parse(localStorage.getItem("user") || "null");
+  const { token, user } = useSession();
 
   if (!token || !user) {
     return <Navigate to="/login" replace />;
@@ -12,5 +13,5 @@ export default function ProtectedRoute({ children, adminOnly = false }) {
     return <Navigate to="/" replace />;
   }
 
-  return children;
+  return <Fragment key={user.id}>{children}</Fragment>;
 }

@@ -63,6 +63,10 @@ const register = async (req, res) => {
       return res.status(400).json({ message: "Укажите имя, email и пароль" });
     }
 
+    if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ message: "Укажите корректный email" });
+    }
+
     if (password.length < 8) {
       return res.status(400).json({ message: "Пароль должен содержать не менее 8 символов" });
     }
@@ -176,7 +180,7 @@ const updateProfile = async (req, res) => {
     const fullName = String(req.body.full_name || "").trim();
     const phone = String(req.body.phone || "").trim() || null;
     const preferredLanguage = ["ru", "en", "kk"].includes(String(req.body.preferred_language || "ru"))
-      ? String(req.body.preferred_language)
+      ? String(req.body.preferred_language || "ru")
       : "ru";
     const emailNotifications = req.body.email_notifications !== false;
     const bookingReminders = req.body.booking_reminders !== false;

@@ -1,4 +1,5 @@
 import API_URL from "./api";
+import { clearSession } from "./session";
 
 export default async function authFetch(url, options = {}) {
   const token = localStorage.getItem("token");
@@ -28,8 +29,7 @@ export default async function authFetch(url, options = {}) {
 
   if (!response.ok) {
     if (response.status === 401) {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
+      clearSession(token);
     }
 
     const error = new Error(

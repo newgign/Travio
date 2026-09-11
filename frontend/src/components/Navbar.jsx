@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { useFavorites } from "../context/FavoritesContext";
 import "../styles/Navbar.css";
 import { site } from "../config/site";
+import useSession from "../hooks/useSession";
 
 export default function Navbar() {
   const { favorites } = useFavorites();
@@ -11,7 +12,7 @@ export default function Navbar() {
   const [menuLocation, setMenuLocation] = useState(null);
   const menuOpen = menuLocation === location.key;
   const setMenuOpen = (open) => setMenuLocation(open ? location.key : null);
-  const user = JSON.parse(localStorage.getItem("user"));
+  const { user } = useSession();
 
 
 
@@ -38,6 +39,9 @@ export default function Navbar() {
             <Link to="/my-bookings">🧳 Мои бронирования</Link>
             {user && <Link to="/profile">👤 Личный кабинет</Link>}
             {user?.role === "admin" && <Link to="/admin">⚙️ Админ-панель</Link>}
+            {user
+              ? <button type="button" className="login-btn" onClick={logout}>Выйти</button>
+              : <Link to="/login">👤 Войти</Link>}
           </div>
         </nav>
 

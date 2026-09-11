@@ -8,6 +8,7 @@ import {
 } from "react";
 
 import authFetch from "../services/authFetch";
+import { subscribeSession } from "../services/session";
 
 const FavoritesContext = createContext(null);
 
@@ -32,6 +33,7 @@ export function FavoritesProvider({ children }) {
 
       const result = await authFetch("/favorites");
 
+      if (localStorage.getItem("token") !== token) return;
       setFavorites(
         Array.isArray(result?.data)
           ? result.data
@@ -51,14 +53,15 @@ export function FavoritesProvider({ children }) {
     }, 0);
 
     function handleAuthChanged() {
+      setFavorites([]);
       loadFavorites();
     }
 
-    window.addEventListener("travio-auth-changed", handleAuthChanged);
+    const unsubscribe = subscribeSession(handleAuthChanged);
 
     return () => {
       window.clearTimeout(initialLoad);
-      window.removeEventListener("travio-auth-changed", handleAuthChanged);
+      unsubscribe();
     };
   }, [loadFavorites]);
 
