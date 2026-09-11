@@ -46,10 +46,7 @@ async function databaseStatus() {
 
 function securityStatus() {
   const jwtSecret = String(process.env.JWT_SECRET || "");
-  const cors = String(process.env.CORS_ORIGIN || "http://localhost:5173")
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
+  const cors = require("../config/cors").allowedOrigins();
   return {
     jwtConfigured: Boolean(jwtSecret),
     jwtStrongEnough: jwtSecret.length >= 32,

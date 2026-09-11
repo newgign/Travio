@@ -33,7 +33,8 @@
     "reliability:check": "node scripts/reliabilityCheck.js",
     "test:sprint3a": "node tests/sprint3a.test.js",
     "hotelbeds:live-smoke": "node scripts/hotelbedsLiveSmoke.js",
-    "test:hotelbeds-live": "node --test tests/hotelbedsLive.test.js"
+    "test:hotelbeds-live": "node --test tests/hotelbedsLive.test.js",
+    "test:deployment": "node --test tests/stagingDeployment.test.js"
   },
   "keywords": [],
   "author": "",

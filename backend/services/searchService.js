@@ -2,7 +2,7 @@
 const filterService = require("./filterService");
 const offerService = require("./offerService");
 const offerTokenService = require("./offerTokenService");
-const cache = require("../cache/memoryCache");
+const cache = require("./memoryCache");
 const logger = require("../utils/logger");
 const priceHistory = require("./priceHistoryService");
 

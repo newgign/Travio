@@ -4,10 +4,12 @@ const pool = require("../db");
 
 const migrationsDir = path.resolve(__dirname, "../../database/migrations");
 
-async function migrate() {
-  const client = await pool.connect();
+async function migrate(migrationPool = pool) {
+  const client = await migrationPool.connect();
 
   try {
+    // One migration runner per database, including separate deployment processes.
+    await client.query('SELECT pg_advisory_lock(319003)');
     await client.query(`
       CREATE TABLE IF NOT EXISTS _migrations (
         id SERIAL PRIMARY KEY,
@@ -54,12 +56,15 @@ async function migrate() {
 
     console.log("✓ Travio database is up to date");
   } finally {
+    await client.query('SELECT pg_advisory_unlock(319003)').catch(() => {});
     client.release();
-    await pool.end();
+    await migrationPool.end();
   }
 }
 
-migrate().catch((error) => {
-  console.error("MIGRATION ERROR:", error);
+if (require.main === module) migrate().catch((error) => {
+  console.error("MIGRATION ERROR:", error.code || "MIGRATION_FAILED");
   process.exit(1);
 });
+
+module.exports = { migrate };

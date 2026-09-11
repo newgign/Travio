@@ -32,10 +32,7 @@ const healthRoutes = require("./routes/health");
 
 const app = express();
 
-const allowedOrigins = (process.env.CORS_ORIGIN || "http://localhost:5173")
-  .split(",")
-  .map((origin) => origin.trim())
-  .filter(Boolean);
+const allowedOrigins = require('./config/cors').allowedOrigins();
 
 const trustProxy = String(process.env.TRUST_PROXY || "false").trim();
 if (trustProxy === "true") app.set("trust proxy", 1);
@@ -44,6 +41,7 @@ else if (/^\d+$/.test(trustProxy) && Number(trustProxy) > 0) app.set("trust prox
 app.disable("x-powered-by");
 app.use(requestTelemetry);
 app.use(securityHeaders);
+app.get('/health', require('./routes/stagingHealth').healthHandler(pool));
 app.use(cors({
   origin(origin, callback) {
     if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
@@ -93,7 +91,7 @@ app.use(notFound);
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, "0.0.0.0", () => {
   logger.info(`🚀 Server started on port ${PORT} | Sprint 3A`, { port: Number(PORT), environment: process.env.NODE_ENV || "development" });
   healthMonitorService.start();
   backupSchedulerService.start();
