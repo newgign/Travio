@@ -1,13 +1,12 @@
 const crypto = require("crypto");
-const fs = require("fs");
 const https = require("https");
 const axios = require("axios");
 
 const config = require("../../config/providers");
 
 class HotelbedsClient {
-  constructor() {
-    this.config = config.hotelbeds;
+  constructor(providerConfig = config.hotelbeds) {
+    this.config = providerConfig;
 
     this.bookingHttp = axios.create({
       baseURL: this.config.bookingBaseUrl,
@@ -92,27 +91,9 @@ class HotelbedsClient {
 
     this.assertBookingTransportConfigured();
 
-    const certPath = String(this.config.mtlsCertPath).trim();
-    const keyPath = String(this.config.mtlsKeyPath).trim();
-    const keyPassphrase = String(this.config.mtlsKeyPassphrase || "");
-    const caPath = String(this.config.mtlsCaPath || "").trim();
-
-    try {
-      this.bookingAgent = new https.Agent({
-        cert: fs.readFileSync(certPath),
-        key: fs.readFileSync(keyPath),
-        ...(keyPassphrase ? { passphrase: keyPassphrase } : {}),
-        ...(caPath ? { ca: fs.readFileSync(caPath) } : {}),
-        keepAlive: true,
-      });
-    } catch (error) {
-      const wrapped = new Error(
-        `Не удалось прочитать Hotelbeds mTLS сертификат/ключ: ${error.message}`
-      );
-      wrapped.status = 503;
-      wrapped.code = "HOTELBEDS_MTLS_FILES_UNREADABLE";
-      throw wrapped;
-    }
+    this.bookingAgent = new https.Agent({
+      ...require('./mtls').loadTlsOptions(this.config), keepAlive: true,
+    });
 
     return this.bookingAgent;
   }
@@ -138,6 +119,8 @@ class HotelbedsClient {
   readiness() {
     return { environment: this.config.environment, credentialsConfigured: this.isConfigured(),
       enabled: this.config.enabled, liveBookingEnabled: this.config.liveBookingEnabled,
+      readOnly: this.config.readOnly, bookingEnabled: this.config.bookingEnabled,
+      mtlsPathsConfigured: Boolean(this.config.mtlsCertPath && this.config.mtlsKeyPath),
       configurationErrors: this.config.configurationErrors, ...this.health,
       status: !this.health.providerReachable ? 'down' : this.health.lastErrorCategory ? 'degraded' : 'healthy',
       message: !this.isConfigured() && this.config.environment === 'live' ? 'Hotelbeds LIVE credentials are not configured.' : null };
@@ -153,7 +136,18 @@ class HotelbedsClient {
     }
   }
 
+  assertReadOnlyOperation({ channel = 'booking', method = 'GET', url }) {
+    if (!this.config.readOnly) return;
+    const verb = String(method).toUpperCase();
+    const allowed = channel === 'booking'
+      ? (verb === 'GET' && url === '/hotel-api/1.0/status') ||
+        (verb === 'POST' && ['/hotel-api/1.0/hotels', '/hotel-api/1.0/checkrates'].includes(url))
+      : channel === 'content' && verb === 'GET' && /^\/hotel-content-api\/1\.0\/[a-zA-Z0-9/_-]+$/.test(url);
+    if (!allowed) throw Object.assign(new Error('Hotelbeds read-only operation is not allowed'), { status: 503, code: 'HOTELBEDS_READ_ONLY_OPERATION_BLOCKED' });
+  }
+
   async request(options) {
+    this.assertReadOnlyOperation(options);
     this.assertConfigured();
     if (this.pending >= 100) throw Object.assign(new Error('Provider queue is full'), { status: 503, code: 'RATE_LIMIT' });
     // Never retry booking or cancellation, including timeouts with an unknown outcome.
@@ -178,6 +172,8 @@ class HotelbedsClient {
   }
 
   async performRequest({ channel = 'booking', method = 'GET', url, data, params, timeout }) {
+    // Also guard direct transport calls, before signatures, TLS or network access.
+    this.assertReadOnlyOperation({ channel, method, url });
     const started = Date.now();
     const category = channel === 'content' ? 'content' : url.endsWith('/hotels') ? 'availability' : url.endsWith('/checkrates') ? 'checkrate' : url.endsWith('/status') ? 'status' : 'booking';
     const logger = require('../../utils/logger');
@@ -196,7 +192,7 @@ class HotelbedsClient {
         ['ECONNABORTED', 'ETIMEDOUT'].includes(error.code) ? 'TIMEOUT' : status >= 500 ? 'PROVIDER_UNAVAILABLE' :
         category === 'checkrate' ? 'RATE_NOT_AVAILABLE' : category === 'booking' && method === 'DELETE' ? 'CANCELLATION_FAILED' :
         category === 'booking' && method === 'POST' ? 'BOOKING_REJECTED' : 'INVALID_REQUEST';
-      this.health = { ...this.health, providerReachable: false, lastErrorCategory: code, httpStatus: status };
+      this.health = { ...this.health, providerReachable: false, lastErrorCategory: code, httpStatus: Number(error.response?.status) || null };
       logger.warn('Hotelbeds request failed', { environment: this.config.environment, category, status, duration: Date.now() - started, errorCategory: code });
       const wrapped = Object.assign(new Error('Предложение временно недоступно. Повторите поиск позже.'), { status: status >= 500 ? 503 : status === 429 ? 503 : 409, code, provider: 'hotelbeds' });
       const retryAfter = error.response?.headers?.['retry-after'];
@@ -318,3 +314,4 @@ class HotelbedsClient {
 }
 
 module.exports = new HotelbedsClient();
+module.exports.HotelbedsClient = HotelbedsClient;

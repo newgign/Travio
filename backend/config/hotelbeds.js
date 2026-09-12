@@ -14,6 +14,8 @@ function buildConfig(env = process.env) {
     environment, baseUrl, bookingBaseUrl, contentBaseUrl: baseUrl, configurationErrors: errors,
     enabled: env.HOTELBEDS_ENABLED === 'true', bookingEnabled: env.HOTELBEDS_BOOKING_ENABLED === 'true',
     liveBookingEnabled: env.HOTELBEDS_LIVE_BOOKING_ENABLED === 'true',
+    // LIVE connection starts read-only; TEST behavior remains unchanged.
+    readOnly: live ? env.HOTELBEDS_READ_ONLY !== 'false' : env.HOTELBEDS_READ_ONLY === 'true',
     // LIVE cannot inherit the legacy TEST credential pair.
     apiKey: live ? env.HOTELBEDS_LIVE_API_KEY || '' : env.HOTELBEDS_API_KEY || '',
     secret: live ? env.HOTELBEDS_LIVE_API_SECRET || '' : env.HOTELBEDS_API_SECRET || env.HOTELBEDS_SECRET || '',

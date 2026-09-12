@@ -35,7 +35,10 @@
     "hotelbeds:live-smoke": "node scripts/hotelbedsLiveSmoke.js",
     "test:hotelbeds-live": "node --test tests/hotelbedsLive.test.js",
     "test:deployment": "node --test tests/stagingDeployment.test.js",
-    "test:sprint3c": "node --test tests/stagingAcceptance.test.js tests/stagingDeployment.test.js"
+    "test:sprint3c": "node --test tests/stagingAcceptance.test.js tests/stagingDeployment.test.js",
+    "hotelbeds:live-preflight": "node scripts/hotelbedsLiveReadOnly.js --preflight",
+    "hotelbeds:live-readonly": "node scripts/hotelbedsLiveReadOnly.js",
+    "test:sprint3d": "node --test tests/hotelbedsReadOnly.test.js tests/hotelbedsLive.test.js tests/hotelbedsIsolation.test.js"
   },
   "keywords": [],
   "author": "",

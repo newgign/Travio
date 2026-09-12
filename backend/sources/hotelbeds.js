@@ -68,7 +68,7 @@ class HotelbedsProvider {
       throw error;
     }
 
-    if (!offer.recheckRequired) {
+    if (offer.rateType !== 'RECHECK') {
       return offer;
     }
 
@@ -91,19 +91,7 @@ class HotelbedsProvider {
       throw error;
     }
 
-    const exact = candidates.find(
-      ({ rate }) => String(rate.rateKey || "") === String(offer.rateKey)
-    );
-    const sameProduct = candidates.find(
-      ({ room, rate }) =>
-        String(room.code || "") === String(offer.roomCode || "") &&
-        String(rate.boardCode || "") === String(offer.boardCode || "") &&
-        String(rate.rateClass || "") === String(offer.rateClass || "") &&
-        Number(rate.rooms) === Number(offer.occupancy?.rooms) &&
-        Number(rate.adults) === Number(offer.occupancy?.adults) &&
-        Number(rate.children) === Number(offer.occupancy?.children)
-    );
-    const selected = exact || sameProduct;
+    const selected = require('../services/hotelbedsRateIdentity').selectCheckedRate(offer, response);
     if (!selected) throw Object.assign(new Error("Выбранный тариф недоступен"), { status: 409, code: "RATE_NOT_AVAILABLE" });
     const priceDetails = pricing.extract(selected.rate, hotel?.currency || selected.rate.currency || offer.currency);
     if (!priceDetails) throw Object.assign(new Error("Цена тарифа недоступна"), { status: 409, code: "RATE_NOT_AVAILABLE" });
@@ -140,10 +128,11 @@ class HotelbedsProvider {
       cancellationPolicies: Array.isArray(selected.rate.cancellationPolicies)
         ? selected.rate.cancellationPolicies
         : [],
-      rateComments: selected.rate.rateComments || offer.rateComments || null,
-      rateCommentsId: selected.rate.rateCommentsId || offer.rateCommentsId || null,
+      rateComments: selected.rate.rateComments ?? null,
+      rateCommentsId: selected.rate.rateCommentsId ?? null,
       checkRatePerformed: true,
       checkedRateAt: new Date().toISOString(),
+      observedAt: new Date().toISOString(),
     };
   }
 
@@ -446,6 +435,7 @@ class HotelbedsProvider {
         ? selected.rate.cancellationPolicies
         : [],
       rateCommentsId: selected.rate.rateCommentsId || null,
+      rateComments: selected.rate.rateComments ?? null,
       checkIn: filters.checkIn || filters.departureDate || null,
       checkOut: filters.checkOut || this.addDays(
         filters.checkIn || filters.departureDate,

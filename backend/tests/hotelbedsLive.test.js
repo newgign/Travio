@@ -71,9 +71,9 @@ test('offer identity separates environments and cancellation conditions', () => 
 });
 test('CheckRate updates price and policies but rejects a different product', async () => {
   const original=client.checkRates;
-  const offer={rateKey:'old',recheckRequired:true,roomCode:'DBL',boardCode:'BB',currency:'EUR',price:100,occupancy:{rooms:1,adults:2,children:0}};
+  const offer={providerHotelId:1,rateType:'RECHECK',rateKey:'old',recheckRequired:true,roomCode:'DBL',boardCode:'BB',rateClass:'NOR',paymentType:'AT_WEB',packaging:false,currency:'EUR',price:100,occupancy:{rooms:1,adults:2,children:0}};
   let code='DBL';
-  client.checkRates=async()=>({hotel:{currency:'EUR',rooms:[{code,rates:[{rateKey:'new',rateType:'BOOKABLE',boardCode:'BB',rooms:1,adults:2,children:0,net:'90',sellingRate:'120',cancellationPolicies:[{amount:'120',from:'2030-01-01'}]}]}]}});
+  client.checkRates=async()=>({hotel:{code:1,currency:'EUR',rooms:[{code,rates:[{rateClass:'NOR',paymentType:'AT_WEB',packaging:false,rateKey:'new',rateType:'BOOKABLE',boardCode:'BB',rooms:1,adults:2,children:0,net:'90',sellingRate:'120',cancellationPolicies:[{amount:'120',from:'2030-01-01'}]}]}]}});
   try {
     const result=await provider.checkRateOffer(offer);assert.equal(result.price,120);assert.equal(result.cancellationPolicies[0].amount,'120');
     code='SUITE';await assert.rejects(provider.checkRateOffer(offer),{code:'RATE_NOT_AVAILABLE'});
