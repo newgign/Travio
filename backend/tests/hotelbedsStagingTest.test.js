@@ -101,7 +101,7 @@ test('TEST errors and empty availability cannot manufacture results', async () =
   const empty=await service.run({env:safe,checkRate:true,validateTls:()=>{},createClient:()=>({
     status:async()=>{},availability:async()=>({hotels:{hotels:[]}}),readiness:()=>({httpStatus:200}),
     checkRates:async()=>{throw Error('Must not recheck empty result');} })});
-  assert.equal(empty.operations[1].hotelCount,0);assert.equal(empty.operations[2].status,'NOT APPLICABLE');
+  assert.equal(empty.operations[1].hotelCount,0);assert.equal(empty.operations[1].status,'EMPTY');assert.equal(empty.operations[2].status,'NOT APPLICABLE');
 });
 
 test('frontend TEST display requires public opt-in AND server TEST read-only labels', async () => {
@@ -114,4 +114,43 @@ test('frontend TEST display requires public opt-in AND server TEST read-only lab
     for(const patch of [{provider:'mock'},{stagingTestAllowed:false},{bookingDisabled:false}])assert.equal(module.visibleProviderOffer({...offer,...patch}),false);
     assert.equal(module.visibleProviderOffer({...offer,priceEnvironment:'live'}),true);
   }
+});
+
+test('admin buttons use boolean-only options and require every TEST safety condition', async () => {
+  const fs=require('node:fs');const path=require('node:path');
+  const source=fs.readFileSync(path.join(__dirname,'../../frontend/src/utils/hotelbedsProbe.js'),'utf8');
+  const {canProbeTest,probeOptions}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
+  assert.deepEqual(JSON.parse(probeOptions(false).body),{availability:false,checkRate:false});
+  assert.deepEqual(JSON.parse(probeOptions(true).body),{availability:true,checkRate:false});
+  const ready={environment:'test',stagingTestAllowed:true,connection:{credentialsConfigured:true,mtlsReady:true},bookingDisabled:true,paymentsDisabled:true,salesReady:false};
+  assert.equal(canProbeTest(ready),true);
+  for(const patch of [{environment:'live'},{stagingTestAllowed:false},{bookingDisabled:false},{paymentsDisabled:false},{salesReady:true},{connection:{credentialsConfigured:true,mtlsReady:false}},{connection:{credentialsConfigured:false,mtlsReady:true}}])assert.equal(canProbeTest({...ready,...patch}),false);
+  assert.equal(canProbeTest(null),false);
+});
+
+test('admin HTTP handler rejects client environment/selection and forwards only booleans to TEST runner', async t => {
+  const router=require('../routes/adminOperations');
+  const route=router.stack.find(layer=>layer.route?.path==='/providers/hotelbeds/probe'&&layer.route.methods.post).route;
+  assert.equal(route.stack.length,2); // Permission middleware remains before handler; auth/role on router.
+  const handler=route.stack.at(-1).handle;
+  const calls=[];t.mock.method(service,'runAdminProbe',async options=>{calls.push(options);return {status:'PASS',environment:'test',operations:[]};});
+  let code,body;const res={status:n=>{code=n;return res;},json:x=>{body=x;return res;}};
+  for(const payload of [{environment:'live'},{hotelCodes:[1]},{checkIn:'2030-01-01'},{availability:'true'},{checkRate:1},[]]) {
+    await handler({body:payload},res);assert.equal(code,400);assert.equal(body.status,'BLOCKED');
+  }
+  assert.equal(calls.length,0);
+  await handler({body:{availability:false,checkRate:false}},res);
+  await handler({body:{availability:true,checkRate:false}},res);
+  assert.deepEqual(calls,[{availability:false,checkRate:false},{availability:true,checkRate:false}]);
+  assert.equal(body.environment,'test');
+});
+
+test('missing selection blocks before transport while status-only is independent; output omits raw data', async () => {
+  const missing={...safe,HOTELBEDS_TEST_PROBE_HOTEL_CODES:''};let calls=0;
+  const createClient=()=>{calls++;return {status:async()=>({secret:'never-render-this',rateKey:'never-render-key'}),readiness:()=>({httpStatus:200})};};
+  const blocked=await service.run({env:missing,availability:true,validateTls:()=>{},createClient});
+  assert.equal(blocked.status,'BLOCKED');assert.equal(blocked.networkAttempted,false);assert.equal(calls,0);
+  const status=await service.run({env:missing,availability:false,checkRate:false,validateTls:()=>{},createClient});
+  assert.equal(status.status,'PASS');assert.equal(calls,1);assert.deepEqual(status.operations.map(x=>x.operation),['status']);
+  for(const value of ['never-render-this','never-render-key','offline-test-secret','offline-test-key'])assert.equal(JSON.stringify(status).includes(value),false);
 });

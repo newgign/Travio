@@ -40,6 +40,10 @@ router.get('/providers/hotelbeds', requirePermission('admin.system.read'), async
 });
 router.post('/providers/hotelbeds/probe', requirePermission('admin.system.selftest'), async (req, res) => {
   try {
+    const body = req.body || {};
+    if (typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some(key => !['availability', 'checkRate'].includes(key) || typeof body[key] !== 'boolean')) {
+      return res.status(400).json({status:'BLOCKED',blockers:['INVALID_PROBE_OPTIONS'],networkAttempted:false});
+    }
     const service = require(require('../config/providers').hotelbeds.environment === 'test' ? '../services/hotelbedsTestReadOnlyService' : '../services/hotelbedsLiveReadOnlyService');
     res.json(await service.runAdminProbe({ availability: req.body?.availability === true, checkRate: req.body?.checkRate === true }));
   } catch { res.status(503).json({status:'FAIL',code:'READ_ONLY_PROBE_FAILED'}); }

@@ -4,11 +4,14 @@ let lastProbe = null;
 let adminProbeRunning = false;
 let nextAdminProbeAt = 0;
 async function runAdminProbe(options = {}) {
-  if (adminProbeRunning || Date.now() < nextAdminProbeAt) return {status:'BLOCKED',blockers:['PROBE_RATE_LIMITED'],networkAttempted:false};
+  const config = buildConfig(options.env || process.env);
+  const metadata = { environment: config.environment, hostname: new URL(config.bookingBaseUrl).hostname, timestamp: new Date().toISOString(), durationMs: 0 };
+  if (adminProbeRunning || Date.now() < nextAdminProbeAt) return {...metadata,status:'BLOCKED',blockers:['PROBE_RATE_LIMITED'],networkAttempted:false};
   adminProbeRunning = true;
   try {
-    const result = await run(options);
+    const result = { ...metadata, ...await run(options) };
     if (result.networkAttempted) nextAdminProbeAt = Date.now() + 60000;
+    lastProbe = { ...result, operations: result.operations || [] };
     return result;
   } finally { adminProbeRunning = false; }
 }
@@ -91,7 +94,7 @@ async function run({ env = process.env, availability = false, checkRate = false,
       const hotels = response?.hotels?.hotels;
       if (!Array.isArray(hotels)) throw Object.assign(new Error('Invalid availability response'), { code: 'INVALID_PROVIDER_RESPONSE' });
       const entries=hotels.flatMap(hotel=>(hotel.rooms||[]).flatMap(room=>(room.rates||[]).map(rate=>({hotel,room,rate}))));
-      result.operations.push({ operation, status: 'PASS', category:hotels.length?'AVAILABLE':'NO_AVAILABILITY', httpStatus: client.readiness().httpStatus, hotelCount: hotels.length, rateCount:entries.length, currencies:[...new Set(entries.map(x=>x.hotel.currency||x.rate.currency).filter(Boolean))], priceSources:[...new Set(entries.map(x=>require('./hotelbedsPriceService').extract(x.rate,x.hotel.currency||x.rate.currency)?.priceSource).filter(Boolean))] });
+      result.operations.push({ operation, status: expectedEnvironment === 'test' && entries.length === 0 ? 'EMPTY' : 'PASS', category:entries.length?'AVAILABLE':'NO_AVAILABILITY', httpStatus: client.readiness().httpStatus, hotelCount: hotels.length, rateCount:entries.length, currencies:[...new Set(entries.map(x=>x.hotel.currency||x.rate.currency).filter(x=>/^[A-Z]{3}$/.test(x)))], priceSources:[...new Set(entries.map(x=>require('./hotelbedsPriceService').extract(x.rate,x.hotel.currency||x.rate.currency)?.priceSource).filter(Boolean))] });
       if (checkRate) {
         // Never accept a hand-entered or old rateKey. Recheck one rate from this response only.
         const candidates=entries.filter(({room,rate})=>rate.rateType==='RECHECK' && rate.rateKey &&
