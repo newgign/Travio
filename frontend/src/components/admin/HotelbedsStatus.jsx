@@ -15,6 +15,7 @@ export default function HotelbedsStatus() {
     {status.message && <p>{status.message}</p>}
     <p>Последний успешный запрос: {status.lastSuccessfulRequest || '—'}</p>
     <p>{status.environment.toUpperCase()} credentials: {status.connection?.credentialsConfigured ? 'настроены' : 'не настроены'} · mTLS: {status.connection?.mtlsReady ? 'готов' : 'не готов'}</p>
+    <p>Причина mTLS: {status.connection?.mtlsErrorCode || 'NOT RUN'}</p>
     <p>{status.environment.toUpperCase()} smoke: {status.liveProbe?.status || 'NOT RUN'} · последний probe: {status.liveProbe?.timestamp || '—'}</p>
     <p>Availability: {status.liveProbe?.lastAvailabilityStatus || 'NOT RUN'}. История probe относится к текущему процессу и сбрасывается после перезапуска.</p>
     <p>Booking: {status.bookingDisabled ? 'выключен' : 'проверьте flags'} · Payments: {status.paymentsDisabled ? 'выключены' : 'проверьте flags'}. Успешное подключение не разрешает продажи.</p>

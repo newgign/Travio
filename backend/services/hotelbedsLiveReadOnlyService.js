@@ -1,5 +1,5 @@
 const { buildConfig } = require('../config/hotelbeds');
-const { loadTlsOptions } = require('../integrations/hotelbeds/mtls');
+const { loadTlsOptions, diagnoseTls, legacyCode } = require('../integrations/hotelbeds/mtls');
 let lastProbe = null;
 let adminProbeRunning = false;
 let nextAdminProbeAt = 0;
@@ -30,8 +30,15 @@ function preflight(env = process.env, validateTls = loadTlsOptions, expectedEnvi
   if ((env.PAYMENTS_MODE || 'disabled') !== 'disabled' || (env.PAYMENTS_PROVIDER || 'none') !== 'none') blockers.push('PAYMENTS_MUST_BE_DISABLED');
   if (env.NODE_TLS_REJECT_UNAUTHORIZED === '0') blockers.push('TLS_VERIFICATION_REQUIRED');
   let mtlsReady = false;
+  // The production path returns only safe diagnostic fields; injected validators remain for offline tests.
+  const tlsDiagnostics = validateTls === loadTlsOptions ? diagnoseTls(config) : null;
   if (config.environment === expectedEnvironment) {
-    try { validateTls(config); mtlsReady = true; }
+    try {
+      if (tlsDiagnostics) {
+        if (!tlsDiagnostics.mtlsReady) throw { code: legacyCode(tlsDiagnostics.mtlsErrorCode) };
+      } else validateTls(config);
+      mtlsReady = true;
+    }
     catch (error) {
       const known = ['HOTELBEDS_MTLS_NOT_CONFIGURED', 'HOTELBEDS_MTLS_FILES_UNREADABLE', 'HOTELBEDS_MTLS_CERT_DATE_INVALID', 'HOTELBEDS_MTLS_KEY_MISMATCH', 'HOTELBEDS_MTLS_MATERIAL_INVALID'];
       blockers.push(known.includes(error.code) ? error.code : 'HOTELBEDS_MTLS_MATERIAL_INVALID');
@@ -43,6 +50,7 @@ function preflight(env = process.env, validateTls = loadTlsOptions, expectedEnvi
     liveCredentialsConfigured: config.environment === 'live' && Boolean(config.apiKey && config.secret),
     apiKeyConfigured: Boolean(config.apiKey), secretConfigured: Boolean(config.secret),
     certificateConfigured: Boolean(config.mtlsCertPath), privateKeyConfigured: Boolean(config.mtlsKeyPath), caConfigured: Boolean(config.mtlsCaPath),
+    ...tlsDiagnostics,
     mtlsReady, blockers: [...new Set(blockers)], networkAttempted: false,
     endpoints: { booking: config.bookingBaseUrl, content: config.contentBaseUrl },
   };

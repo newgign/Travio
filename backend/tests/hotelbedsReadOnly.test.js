@@ -7,7 +7,7 @@ const crypto = require('node:crypto');
 const cp = require('node:child_process');
 const { buildConfig } = require('../config/hotelbeds');
 const { HotelbedsClient } = require('../integrations/hotelbeds/client');
-const { loadTlsOptions } = require('../integrations/hotelbeds/mtls');
+const { loadTlsOptions, diagnoseTls } = require('../integrations/hotelbeds/mtls');
 const { preflight, availabilityPayload, run } = require('../services/hotelbedsLiveReadOnlyService');
 const env = {
   NODE_ENV:'production', HOTELBEDS_ENV:'live', HOTELBEDS_ENABLED:'true', HOTELBEDS_READ_ONLY:'true',
@@ -93,19 +93,44 @@ test('mTLS validates temporary cert/key, expiry and readable material; TLS verif
   try {
     cp.execFileSync(openssl,['req','-x509','-newkey','rsa:2048','-nodes','-keyout',key,'-out',cert,'-days','1','-subj','/CN=localhost'],{stdio:'ignore',windowsHide:true});
     const config={mtlsCertPath:cert,mtlsKeyPath:key};
+    assert.equal(diagnoseTls({...config,mtlsCertPath:''}).mtlsErrorCode,'CERT_NOT_CONFIGURED');
+    assert.equal(diagnoseTls({...config,mtlsKeyPath:''}).mtlsErrorCode,'KEY_NOT_CONFIGURED');
+    assert.equal(diagnoseTls({...config,mtlsCertPath:path.join(dir,'absent.crt')}).mtlsErrorCode,'CERT_READ_FAILED');
+    assert.equal(diagnoseTls({...config,mtlsKeyPath:path.join(dir,'absent.key')}).mtlsErrorCode,'KEY_READ_FAILED');
     const options=loadTlsOptions(config);assert.equal(options.rejectUnauthorized,true);assert.equal(options.minVersion,'TLSv1.2');
   const certificate=new crypto.X509Certificate(fs.readFileSync(cert));
     assert.throws(()=>loadTlsOptions(config,Date.parse(certificate.validFrom)-1),{code:'HOTELBEDS_MTLS_CERT_DATE_INVALID'});
     assert.throws(()=>loadTlsOptions(config,Date.parse(certificate.validTo)+1),{code:'HOTELBEDS_MTLS_CERT_DATE_INVALID'});
+    assert.equal(diagnoseTls(config,Date.parse(certificate.validTo)+1).mtlsErrorCode,'CERT_EXPIRED');
+    assert.equal(diagnoseTls(config,Date.parse(certificate.validFrom)-1).mtlsErrorCode,'CERT_NOT_YET_VALID');
     assert.throws(()=>loadTlsOptions({...config,mtlsKeyPath:path.join(dir,'absent.key')}),error=>error.code==='HOTELBEDS_MTLS_FILES_UNREADABLE'&&!error.message.includes(dir));
     const originalKey=fs.readFileSync(key);
     fs.writeFileSync(key,crypto.createPrivateKey(originalKey).export({type:'pkcs8',format:'pem',cipher:'aes-256-cbc',passphrase:'offline-fixture-passphrase'}));
     assert.throws(()=>loadTlsOptions(config),{code:'HOTELBEDS_MTLS_MATERIAL_INVALID'});
     assert.equal(loadTlsOptions({...config,mtlsKeyPassphrase:'offline-fixture-passphrase'}).rejectUnauthorized,true);
+    const ready=diagnoseTls({...config,mtlsKeyPassphrase:'offline-fixture-passphrase'});
+    assert.equal(ready.mtlsReady,true);assert.equal(ready.mtlsErrorCode,'NONE');
+    for(const field of ['certificateReadable','privateKeyReadable','certificateValid','privateKeyDecryptable','keyMatchesCertificate'])assert.equal(ready[field],true);
+    const wrong=diagnoseTls({...config,mtlsKeyPassphrase:'wrong-offline-passphrase'});
+    assert.equal(wrong.mtlsReady,false);assert.equal(wrong.mtlsErrorCode,'KEY_DECRYPT_FAILED');
+    assert.equal(wrong.certificateReadable,true);assert.equal(wrong.privateKeyReadable,true);assert.equal(wrong.certificateValid,true);assert.equal(wrong.privateKeyDecryptable,false);
+    const api=preflight({...env,HOTELBEDS_LIVE_MTLS_CERT_PATH:cert,HOTELBEDS_LIVE_MTLS_KEY_PATH:key,HOTELBEDS_LIVE_MTLS_KEY_PASSPHRASE:'wrong-offline-passphrase'});
+    assert.equal(api.mtlsErrorCode,'KEY_DECRYPT_FAILED');assert.equal(api.mtlsReady,false);
+    for(const result of [ready,wrong,api]) {
+      const output=JSON.stringify(result);
+      for(const secret of [dir,cert,key,'offline-fixture-passphrase','wrong-offline-passphrase',fs.readFileSync(key,'utf8'),fs.readFileSync(cert,'utf8'),'/CN=localhost','offline-key','offline-secret'])assert.equal(output.includes(secret),false);
+    }
+    for(const [field,value] of Object.entries(ready))assert.equal(typeof value,field==='mtlsErrorCode'?'string':'boolean');
     const different=crypto.generateKeyPairSync('rsa',{modulusLength:2048}).privateKey.export({type:'pkcs8',format:'pem'});
     fs.writeFileSync(key,different);
     assert.throws(()=>loadTlsOptions(config),{code:'HOTELBEDS_MTLS_KEY_MISMATCH'});
+    assert.equal(diagnoseTls(config).mtlsErrorCode,'KEY_CERT_MISMATCH');
+    assert.equal(diagnoseTls(config).privateKeyDecryptable,true);
     fs.writeFileSync(key,'invalid');assert.throws(()=>loadTlsOptions(config),{code:'HOTELBEDS_MTLS_MATERIAL_INVALID'});
+    assert.equal(diagnoseTls(config).mtlsErrorCode,'KEY_DECRYPT_FAILED');
+    fs.writeFileSync(key,originalKey);
+    assert.equal(diagnoseTls({...config,mtlsCaPath:path.join(dir,'absent.ca')}).mtlsErrorCode,'TLS_CONFIG_INVALID');
+    fs.writeFileSync(cert,'invalid certificate');assert.equal(diagnoseTls(config).mtlsErrorCode,'CERT_INVALID');
   } finally {
     // Only the exact files created above, no recursive filesystem operation.
     for(const file of [key,cert])if(fs.existsSync(file))fs.unlinkSync(file);
