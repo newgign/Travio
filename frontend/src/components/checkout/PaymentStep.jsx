@@ -12,8 +12,9 @@ export default function PaymentStep({
     const currency = checkout?.tour?.currency || checkout?.currency || "KZT";
     const isHotelbeds = checkout?.tour?.provider === "hotelbeds";
 
-    if (isHotelbeds && checkout.tour.priceEnvironment === 'live') {
+    if (isHotelbeds && (checkout.tour.priceEnvironment === 'live' || checkout.tour.bookingDisabled || (import.meta.env.PROD && checkout.tour.priceEnvironment === 'test'))) {
         return <div className="checkout-card"><h1>Бронирование пока недоступно</h1>
+            {checkout.tour.priceEnvironment === 'test' && <p>Hotelbeds TEST / Evaluation — только техническое тестирование.</p>}
             <p>Стоимость проживания: {formatMoney(checkout.total, currency)}. Приём оплаты и подтверждение бронирований ещё не подключены.</p>
             <button className="back-btn" onClick={back}>Назад</button>
         </div>;

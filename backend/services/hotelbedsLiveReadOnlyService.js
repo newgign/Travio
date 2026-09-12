@@ -13,23 +13,24 @@ async function runAdminProbe(options = {}) {
   } finally { adminProbeRunning = false; }
 }
 function probeState() {
-  return { scope: 'process', status: lastProbe?.status || 'NOT RUN', timestamp: lastProbe?.timestamp || null,
+  return { scope: 'process', environment: lastProbe?.environment || null, lastAvailability: lastProbe?.operations.find(x=>x.operation==='availability') || null, status: lastProbe?.status || 'NOT RUN', timestamp: lastProbe?.timestamp || null,
     lastAvailabilityStatus: lastProbe?.operations.find(x=>x.operation==='availability')?.status || 'NOT RUN' };
 }
 
-function preflight(env = process.env, validateTls = loadTlsOptions) {
+function preflight(env = process.env, validateTls = loadTlsOptions, expectedEnvironment = 'live') {
   const config = buildConfig(env);
   const blockers = [...config.configurationErrors];
-  if (config.environment !== 'live') blockers.push('LIVE_ENVIRONMENT_REQUIRED');
+  if (config.environment !== expectedEnvironment) blockers.push('EXPECTED_ENVIRONMENT_REQUIRED');
+  if (expectedEnvironment === 'test' && !config.stagingTestAllowed) blockers.push('STAGING_TEST_OPT_IN_REQUIRED');
   if (!config.enabled) blockers.push('HOTELBEDS_DISABLED');
   if (!config.readOnly) blockers.push('READ_ONLY_MODE_REQUIRED');
-  if (!config.apiKey || !config.secret || config.environment !== 'live') blockers.push('LIVE_CREDENTIALS_REQUIRED');
+  if (!config.apiKey || !config.secret || config.environment !== expectedEnvironment) blockers.push(expectedEnvironment === 'live' ? 'LIVE_CREDENTIALS_REQUIRED' : 'TEST_CREDENTIALS_REQUIRED');
   if (config.bookingEnabled || config.liveBookingEnabled) blockers.push('BOOKING_FLAGS_MUST_BE_DISABLED');
   if (['PRODUCTION_SALES_ENABLED', 'REAL_CHARGES_ENABLED', 'REAL_REFUNDS_ENABLED', 'HOT_DEALS_MONITOR_ENABLED', 'HOTELBEDS_CONTENT_SYNC_ENABLED'].some(key => env[key] === 'true')) blockers.push('SAFETY_FLAGS_MUST_BE_DISABLED');
   if ((env.PAYMENTS_MODE || 'disabled') !== 'disabled' || (env.PAYMENTS_PROVIDER || 'none') !== 'none') blockers.push('PAYMENTS_MUST_BE_DISABLED');
   if (env.NODE_TLS_REJECT_UNAUTHORIZED === '0') blockers.push('TLS_VERIFICATION_REQUIRED');
   let mtlsReady = false;
-  if (config.environment === 'live') {
+  if (config.environment === expectedEnvironment) {
     try { validateTls(config); mtlsReady = true; }
     catch (error) {
       const known = ['HOTELBEDS_MTLS_NOT_CONFIGURED', 'HOTELBEDS_MTLS_FILES_UNREADABLE', 'HOTELBEDS_MTLS_CERT_DATE_INVALID', 'HOTELBEDS_MTLS_KEY_MISMATCH', 'HOTELBEDS_MTLS_MATERIAL_INVALID'];
@@ -38,7 +39,7 @@ function preflight(env = process.env, validateTls = loadTlsOptions) {
   } else blockers.push('LIVE_MTLS_REQUIRED');
   return {
     status: blockers.length ? 'BLOCKED' : 'READY',
-    environment: config.environment, readOnly: config.readOnly,
+    environment: config.environment, stagingTestAllowed: config.stagingTestAllowed, credentialsConfigured: Boolean(config.apiKey && config.secret), readOnly: config.readOnly,
     liveCredentialsConfigured: config.environment === 'live' && Boolean(config.apiKey && config.secret),
     apiKeyConfigured: Boolean(config.apiKey), secretConfigured: Boolean(config.secret),
     certificateConfigured: Boolean(config.mtlsCertPath), privateKeyConfigured: Boolean(config.mtlsKeyPath), caConfigured: Boolean(config.mtlsCaPath),
@@ -62,8 +63,8 @@ function availabilityPayload(env, now = Date.now()) {
   return { stay: { checkIn, checkOut }, occupancies: [{ rooms: 1, adults, children: 0 }], hotels: { hotel: [...new Set(codes.map(Number))] } };
 }
 
-async function run({ env = process.env, availability = false, checkRate = false, dryRun = false, validateTls = loadTlsOptions, createClient } = {}) {
-  const result = { ...preflight(env, validateTls), operations: [] };
+async function run({ env = process.env, availability = false, checkRate = false, dryRun = false, validateTls = loadTlsOptions, createClient, expectedEnvironment = 'live' } = {}) {
+  const result = { ...preflight(env, validateTls, expectedEnvironment), operations: [] };
   if (result.status !== 'READY' || dryRun) return result;
   let payload;
   try { if (availability || checkRate) payload = availabilityPayload(env); }
@@ -82,7 +83,7 @@ async function run({ env = process.env, availability = false, checkRate = false,
       const hotels = response?.hotels?.hotels;
       if (!Array.isArray(hotels)) throw Object.assign(new Error('Invalid availability response'), { code: 'INVALID_PROVIDER_RESPONSE' });
       const entries=hotels.flatMap(hotel=>(hotel.rooms||[]).flatMap(room=>(room.rates||[]).map(rate=>({hotel,room,rate}))));
-      result.operations.push({ operation, status: 'PASS', category:hotels.length?'AVAILABLE':'NO_AVAILABILITY', httpStatus: client.readiness().httpStatus, hotelCount: hotels.length, rateCount:entries.length });
+      result.operations.push({ operation, status: 'PASS', category:hotels.length?'AVAILABLE':'NO_AVAILABILITY', httpStatus: client.readiness().httpStatus, hotelCount: hotels.length, rateCount:entries.length, currencies:[...new Set(entries.map(x=>x.hotel.currency||x.rate.currency).filter(Boolean))], priceSources:[...new Set(entries.map(x=>require('./hotelbedsPriceService').extract(x.rate,x.hotel.currency||x.rate.currency)?.priceSource).filter(Boolean))] });
       if (checkRate) {
         // Never accept a hand-entered or old rateKey. Recheck one rate from this response only.
         const candidates=entries.filter(({room,rate})=>rate.rateType==='RECHECK' && rate.rateKey &&

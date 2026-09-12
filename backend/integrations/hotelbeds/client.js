@@ -40,7 +40,7 @@ class HotelbedsClient {
   }
 
   assertConfigured() {
-    if (this.config.configurationErrors.length || (process.env.NODE_ENV === "production" && this.config.environment !== "live")) {
+    if (this.config.configurationErrors.length || (process.env.NODE_ENV === "production" && this.config.environment !== "live" && !this.config.stagingTestAllowed)) {
       throw Object.assign(new Error("Hotelbeds configuration is not ready"), { status: 503, code: "HOTELBEDS_INVALID_CONFIG" });
     }
     if (!this.config.enabled) {
@@ -119,7 +119,7 @@ class HotelbedsClient {
   readiness() {
     return { environment: this.config.environment, credentialsConfigured: this.isConfigured(),
       enabled: this.config.enabled, liveBookingEnabled: this.config.liveBookingEnabled,
-      readOnly: this.config.readOnly, bookingEnabled: this.config.bookingEnabled,
+      stagingTestAllowed: this.config.stagingTestAllowed, readOnly: this.config.readOnly, bookingEnabled: this.config.bookingEnabled,
       mtlsPathsConfigured: Boolean(this.config.mtlsCertPath && this.config.mtlsKeyPath),
       configurationErrors: this.config.configurationErrors, ...this.health,
       status: !this.health.providerReachable ? 'down' : this.health.lastErrorCategory ? 'degraded' : 'healthy',
@@ -137,12 +137,12 @@ class HotelbedsClient {
   }
 
   assertReadOnlyOperation({ channel = 'booking', method = 'GET', url }) {
-    if (!this.config.readOnly) return;
+    if (!this.config.readOnly && !this.config.stagingTestRequested) return;
     const verb = String(method).toUpperCase();
     const allowed = channel === 'booking'
       ? (verb === 'GET' && url === '/hotel-api/1.0/status') ||
         (verb === 'POST' && ['/hotel-api/1.0/hotels', '/hotel-api/1.0/checkrates'].includes(url))
-      : channel === 'content' && verb === 'GET' && /^\/hotel-content-api\/1\.0\/[a-zA-Z0-9/_-]+$/.test(url);
+      : !this.config.stagingTestRequested && channel === 'content' && verb === 'GET' && /^\/hotel-content-api\/1\.0\/[a-zA-Z0-9/_-]+$/.test(url);
     if (!allowed) throw Object.assign(new Error('Hotelbeds read-only operation is not allowed'), { status: 503, code: 'HOTELBEDS_READ_ONLY_OPERATION_BLOCKED' });
   }
 

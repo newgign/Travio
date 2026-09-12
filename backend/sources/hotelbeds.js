@@ -385,6 +385,8 @@ class HotelbedsProvider {
       occupancy: { rooms: Number(selected.rate.rooms), adults: Number(selected.rate.adults), children: Number(selected.rate.children) },
       currency: priceDetails.currency,
       priceIsFinal: true,
+      bookingDisabled: hotelbedsClient.config.readOnly || !hotelbedsClient.config.bookingEnabled,
+      stagingTestAllowed: hotelbedsClient.config.stagingTestAllowed,
       priceEnvironment: require("../services/priceHistoryService").priceEnvironment(),
 
       image: content?.image_url || images[0] || null,

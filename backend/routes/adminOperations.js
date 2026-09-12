@@ -30,7 +30,7 @@ router.get('/providers/hotelbeds', requirePermission('admin.system.read'), async
     const client = require('../integrations/hotelbeds/client');
     const jobs = await require('../db').query('SELECT * FROM provider_job_state WHERE environment=$1', [client.config.environment]);
     const tracked = await require('../db').query('SELECT COUNT(*)::int AS count FROM hotelbeds_tracked_searches WHERE environment=$1', [client.config.environment]);
-    const readOnly = require('../services/hotelbedsLiveReadOnlyService');
+    const readOnly = require(require('../config/providers').hotelbeds.environment === 'test' ? '../services/hotelbedsTestReadOnlyService' : '../services/hotelbedsLiveReadOnlyService');
     res.json({ ...client.readiness(), connection: readOnly.preflight(), liveProbe: readOnly.probeState(),
       bookingDisabled: !client.config.bookingEnabled && !client.config.liveBookingEnabled,
       paymentsDisabled: require('../services/paymentGatewayService').readiness().mode === 'disabled',
@@ -40,7 +40,7 @@ router.get('/providers/hotelbeds', requirePermission('admin.system.read'), async
 });
 router.post('/providers/hotelbeds/probe', requirePermission('admin.system.selftest'), async (req, res) => {
   try {
-    const service = require('../services/hotelbedsLiveReadOnlyService');
+    const service = require(require('../config/providers').hotelbeds.environment === 'test' ? '../services/hotelbedsTestReadOnlyService' : '../services/hotelbedsLiveReadOnlyService');
     res.json(await service.runAdminProbe({ availability: req.body?.availability === true, checkRate: req.body?.checkRate === true }));
   } catch { res.status(503).json({status:'FAIL',code:'READ_ONLY_PROBE_FAILED'}); }
 });

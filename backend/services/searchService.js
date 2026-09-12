@@ -12,7 +12,7 @@ class SearchService {
 
         const started = Date.now();
         if (filters.publicOnly === "true" &&
-            ((filters.provider || require("../config/providers").activeProvider) !== "hotelbeds" || priceHistory.priceEnvironment() !== "live")) {
+            ((filters.provider || require("../config/providers").activeProvider) !== "hotelbeds" || (priceHistory.priceEnvironment() !== "live" && !require("../config/providers").hotelbeds.stagingTestAllowed))) {
             const error = new Error("Поиск предложений временно недоступен.");
             error.status = 503;
             throw error;

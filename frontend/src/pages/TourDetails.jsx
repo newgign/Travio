@@ -1,3 +1,4 @@
+import { visibleProviderOffer } from "../utils/providerEnvironment";
 import RateConditions from "../components/RateConditions";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
@@ -40,7 +41,7 @@ export default function TourDetails() {
     try {
       setLoading(true);
       setError("");
-      if (selectedOffer && Date.now() - Date.parse(selectedOffer.observedAt) < 900000 && (!import.meta.env.PROD || selectedOffer.priceEnvironment === "live") && String(selectedOffer.provider || provider) === String(provider) && String(selectedOffer.providerHotelId ?? selectedOffer.id) === String(id)) {
+      if (selectedOffer && Date.now() - Date.parse(selectedOffer.observedAt) < 900000 && (!import.meta.env.PROD || visibleProviderOffer(selectedOffer)) && String(selectedOffer.provider || provider) === String(provider) && String(selectedOffer.providerHotelId ?? selectedOffer.id) === String(id)) {
         setTour(selectedOffer);
         return;
       }
@@ -67,7 +68,7 @@ export default function TourDetails() {
     return unique.length ? unique : [FALLBACK_IMAGE];
   }, [tour]);
 
-  if (import.meta.env.PROD && tour && (tour.provider !== "hotelbeds" || tour.priceEnvironment !== "live")) return <><Navbar /><main className="help-page"><h1>Предложение недоступно</h1><p>Вернитесь к поиску актуальных предложений.</p><a href="/results">Найти туры</a></main><Footer /></>;
+  if (import.meta.env.PROD && tour && !visibleProviderOffer(tour)) return <><Navbar /><main className="help-page"><h1>Предложение недоступно</h1><p>Вернитесь к поиску актуальных предложений.</p><a href="/results">Найти туры</a></main><Footer /></>;
   if (loading) return <><Navbar /><main className="tour-loading"><div className="tour-loading-card"><span className="tour-spinner" /><h2>Проверяем предложение...</h2><p>Загружаем данные отеля и выбранного тарифа</p></div></main><Footer /></>;
   if (error || !tour) return <><Navbar /><main className="tour-loading"><div className="tour-loading-card"><h2>Тур не найден</h2><p>{error}</p><button type="button" onClick={() => navigate(-1)}>Вернуться назад</button></div></main><Footer /></>;
 
@@ -90,6 +91,7 @@ export default function TourDetails() {
   const cancellationPolicies = Array.isArray(tour.cancellationPolicies) ? tour.cancellationPolicies : [];
 
   function goCheckout() {
+    if (tour.bookingDisabled) return;
     navigate(`/checkout/${encodeURIComponent(tour.provider || provider)}/${encodeURIComponent(tour.providerHotelId ?? tour.id)}${location.search}`, { state: { selectedOffer: tour } });
   }
 
@@ -103,6 +105,7 @@ export default function TourDetails() {
     <>
       <Navbar />
       <main className="tour-page">
+        {tour.priceEnvironment === "test" && <p role="status">Hotelbeds TEST / Evaluation — только техническое тестирование. Бронирование и оплата недоступны.</p>}
         <div className="tour-breadcrumbs"><button type="button" onClick={() => navigate(-1)}>← К результатам</button><span>/</span><span>{tour.country || "Направление"}</span><span>/</span><strong>{hotelName}</strong></div>
 
         <section className="tour-product-head">
@@ -163,13 +166,13 @@ export default function TourDetails() {
             <div className="current-price">{formattedPrice}</div>
             <div className="price-caption">{isHotelbeds ? `за ${nights} ночей · ${adults + children} гост.` : "итоговая стоимость предложения"}</div>
             <div className="price-checks"><span>✓ Цена из выбранного предложения</span><span>✓ Параметры гостей сохранены</span><span>✓ Перед подтверждением будет проверка</span></div>
-            <button type="button" className="book-btn" onClick={goCheckout}>Перейти к оформлению →</button>
+            <button type="button" className="book-btn" disabled={tour.bookingDisabled} onClick={goCheckout}>{tour.bookingDisabled ? 'Бронирование отключено' : 'Перейти к оформлению →'}</button>
             <div className="secure-booking">🔒 Оплата и подтверждение доступны после проверки условий</div>
           </div></aside>
         </section>
       </main>
 
-      <div className="mobile-booking-bar"><div><span>Стоимость</span><strong>{formattedPrice}</strong></div><button type="button" onClick={goCheckout}>Выбрать</button></div>
+      <div className="mobile-booking-bar"><div><span>Стоимость</span><strong>{formattedPrice}</strong></div><button type="button" disabled={tour.bookingDisabled} onClick={goCheckout}>{tour.bookingDisabled ? 'Бронирование отключено' : 'Выбрать'}</button></div>
       <Footer />
     </>
   );

@@ -10,12 +10,19 @@ function buildConfig(env = process.env) {
   for (const [name, expected] of [['HOTELBEDS_BASE_URL', baseUrl], ['HOTELBEDS_CONTENT_BASE_URL', baseUrl], ['HOTELBEDS_BOOKING_BASE_URL', bookingBaseUrl]]) {
     if (env[name] && env[name].replace(/\/$/, '') !== expected) errors.push('ENDPOINT_ENVIRONMENT_MISMATCH');
   }
+  const stagingTestRequested = environment === 'test' && env.HOTELBEDS_STAGING_TEST_ENABLED === 'true';
+  if (stagingTestRequested) {
+    const disabled = ['HOTELBEDS_BOOKING_ENABLED', 'HOTELBEDS_LIVE_BOOKING_ENABLED', 'PRODUCTION_SALES_ENABLED', 'REAL_CHARGES_ENABLED', 'REAL_REFUNDS_ENABLED', 'HOT_DEALS_MONITOR_ENABLED', 'HOTELBEDS_CONTENT_SYNC_ENABLED'];
+    if (disabled.some(key => env[key] !== 'false') || env.PAYMENTS_MODE !== 'disabled' || env.PAYMENTS_PROVIDER !== 'none' || env.HOTELBEDS_READ_ONLY === 'false' || env.NODE_TLS_REJECT_UNAUTHORIZED === '0') errors.push('UNSAFE_STAGING_TEST_CONFIG');
+  }
+  const stagingTestAllowed = stagingTestRequested && errors.length === 0;
   return {
+    stagingTestRequested, stagingTestAllowed,
     environment, baseUrl, bookingBaseUrl, contentBaseUrl: baseUrl, configurationErrors: errors,
     enabled: env.HOTELBEDS_ENABLED === 'true', bookingEnabled: env.HOTELBEDS_BOOKING_ENABLED === 'true',
     liveBookingEnabled: env.HOTELBEDS_LIVE_BOOKING_ENABLED === 'true',
-    // LIVE connection starts read-only; TEST behavior remains unchanged.
-    readOnly: live ? env.HOTELBEDS_READ_ONLY !== 'false' : env.HOTELBEDS_READ_ONLY === 'true',
+    // LIVE defaults read-only; explicit staging TEST cannot opt out of read-only.
+    readOnly: stagingTestRequested || (live ? env.HOTELBEDS_READ_ONLY !== 'false' : env.HOTELBEDS_READ_ONLY === 'true'),
     // LIVE cannot inherit the legacy TEST credential pair.
     apiKey: live ? env.HOTELBEDS_LIVE_API_KEY || '' : env.HOTELBEDS_API_KEY || '',
     secret: live ? env.HOTELBEDS_LIVE_API_SECRET || '' : env.HOTELBEDS_API_SECRET || env.HOTELBEDS_SECRET || '',

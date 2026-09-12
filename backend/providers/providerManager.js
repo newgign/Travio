@@ -23,7 +23,7 @@ class ProviderManager {
 
   getProvider(name = config.activeProvider) {
     if (process.env.NODE_ENV === "production" &&
-        (name !== "hotelbeds" || config.hotelbeds.environment !== "live" || config.hotelbeds.configurationErrors.length > 0)) {
+        (name !== "hotelbeds" || (config.hotelbeds.environment !== "live" && !config.hotelbeds.stagingTestAllowed) || config.hotelbeds.configurationErrors.length > 0)) {
       const error = new Error("Поиск предложений временно недоступен.");
       error.status = 503;
       error.code = "PRODUCTION_PROVIDER_REQUIRED";

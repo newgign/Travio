@@ -16,7 +16,7 @@ class OfferTokenService {
 
   compactOffer(offer = {}) {
     const fields = [
-      "priceEnvironment", "occupancy", "priceSource", "providerAmount", "providerCurrency",
+      "bookingDisabled", "stagingTestAllowed", "priceEnvironment", "occupancy", "priceSource", "providerAmount", "providerCurrency",
       "displayAmount", "displayCurrency", "taxes", "fees", "rateClass", "priceBasis",
       "taxBreakdownAvailable", "observedAt",
       "provider",

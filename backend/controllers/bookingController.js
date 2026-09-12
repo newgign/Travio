@@ -130,6 +130,7 @@ function validateHotelbedsTravelers(travelers, filters = {}) {
 }
 
 const createBooking = async (req, res) => {
+  if (require('../config/providers').hotelbeds.stagingTestRequested) return res.status(503).json({ success: false, code: 'HOTELBEDS_READ_ONLY_OPERATION_BLOCKED', message: 'Hotelbeds TEST: бронирование и оплата отключены.' });
   const client = await pool.connect();
 
   try {

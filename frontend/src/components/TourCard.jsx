@@ -1,3 +1,4 @@
+import { visibleProviderOffer } from "../utils/providerEnvironment";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useFavorites } from "../context/FavoritesContext";
@@ -16,7 +17,7 @@ export default function TourCard({ tour }) {
 
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(timer); }, []);
-  const publicPrice = !import.meta.env.PROD || (tour.provider === "hotelbeds" && tour.priceEnvironment === "live" && now - Date.parse(tour.observedAt) < 900000);
+  const publicPrice = !import.meta.env.PROD || (visibleProviderOffer(tour) && now - Date.parse(tour.observedAt) < 900000);
   const id = tour.id;
   const hotelName = tour.name || tour.title || tour.hotel || "Отель";
   const displayImage = tour.image || tour.images?.[0] || "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=85";
@@ -66,7 +67,7 @@ export default function TourCard({ tour }) {
         <img src={displayImage} alt={hotelName} loading="lazy" onError={(event) => { event.currentTarget.src = "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=85"; }} />
         <div className="tour-card-overlay-top">
           {Number(tour.stars) > 0 && <span className="tour-card-stars">{"★".repeat(Math.min(Number(tour.stars), 5))}</span>}
-          {providerName === "hotelbeds" && <span className="tour-card-test-badge">Hotelbeds</span>}
+          {providerName === "hotelbeds" && <span className="tour-card-test-badge">Hotelbeds {tour.priceEnvironment === "test" ? "TEST · без бронирования" : ""}</span>}
         </div>
         {Number(tour.beachLine) === 1 && <div className="tour-card-badge">🌊 1-я линия</div>}
       </div>
