@@ -102,6 +102,7 @@ export default function TourCard({ tour }) {
           <div className="tour-card-price">
             {hasDiscount && <span className="tour-card-old-price">{formattedBasePrice}</span>}
             <div className="tour-card-current-price"><strong>{formattedPrice}</strong></div>
+            {tour.priceEnvironment === 'test' && <p>Тестовая цена · provider=hotelbeds · environment=test<br />Источник цены: {tour.priceSource || '—'} · Наблюдение: {tour.observedAt || '—'}</p>}
             <small>{providerName === "hotelbeds" ? "за проживание · за всех гостей" : "стоимость тура"}</small>
           </div>
           <div className="tour-card-actions">

@@ -106,6 +106,7 @@ export default function TourDetails() {
       <Navbar />
       <main className="tour-page">
         {tour.priceEnvironment === "test" && <p role="status">Hotelbeds TEST / Evaluation — только техническое тестирование. Бронирование и оплата недоступны.</p>}
+        {tour.priceEnvironment === 'test' && <p>Тестовая цена · provider=hotelbeds · environment=test · Источник цены: {tour.priceSource || '—'} · Наблюдение: {tour.observedAt || '—'}</p>}
         <div className="tour-breadcrumbs"><button type="button" onClick={() => navigate(-1)}>← К результатам</button><span>/</span><span>{tour.country || "Направление"}</span><span>/</span><strong>{hotelName}</strong></div>
 
         <section className="tour-product-head">

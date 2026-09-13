@@ -9,6 +9,7 @@ const priceHistory = require("./priceHistoryService");
 class SearchService {
 
     async search(filters = {}) {
+        filters = require('./stagingTestSearch')(filters, require('../config/providers').hotelbeds);
 
         const started = Date.now();
         if (filters.publicOnly === "true" &&

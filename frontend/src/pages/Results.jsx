@@ -65,11 +65,17 @@ export default function Results() {
   }, [searchParams, currency]);
 
   const loadTours = useCallback(async () => {
-    if (provider === "hotelbeds" && !searchParams.get("departureDate")) { setTours([]); setLoading(false); return; }
+    if (provider === "hotelbeds" && !searchParams.get("departureDate") && !searchParams.get('checkIn')) { setTours([]); setLoading(false); return; }
     try {
       setLoading(true);
       setError("");
       const filters = {
+        stagingTestHotel: searchParams.get('stagingTestHotel') || '',
+        hotelCodes: searchParams.get('hotelCodes') || '',
+        checkIn: searchParams.get('checkIn') || '',
+        checkOut: searchParams.get('checkOut') || '',
+        rooms: searchParams.get('rooms') || '1',
+        adults: searchParams.get('adults') || '',
         provider,
         destinationCode: searchParams.get("destinationCode") || "",
         country: searchParams.get("country") || "",

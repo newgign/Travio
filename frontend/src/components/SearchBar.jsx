@@ -79,6 +79,11 @@ export default function SearchBar() {
 
     params.set("provider", "hotelbeds");
     params.set("country", filters.country);
+    if (import.meta.env.VITE_HOTELBEDS_STAGING_TEST_ENABLED === 'true' && filters.country === 'TEST_3424') {
+      params.delete('country');
+      params.set('stagingTestHotel', '3424');
+      params.set('rooms', '1');
+    }
     params.set("departureDate", filters.departureDate);
     params.set("people", String(Number(filters.people) || 2));
     params.set("children", String(Number(filters.children) || 0));
@@ -112,6 +117,7 @@ export default function SearchBar() {
             required
           >
             <option value="">Выберите страну</option>
+            {import.meta.env.VITE_HOTELBEDS_STAGING_TEST_ENABLED === 'true' && <option value="TEST_3424">Hotelbeds TEST — отель 3424 (1 номер)</option>}
             <option value="Египет">🇪🇬 Египет</option>
             <option value="Турция">🇹🇷 Турция</option>
             <option value="ОАЭ">🇦🇪 ОАЭ</option>
@@ -189,6 +195,7 @@ export default function SearchBar() {
             value={filters.nights}
             onChange={handleChange}
           >
+            <option value="1">1 ночь</option>
             <option value="3">3 ночи</option>
             <option value="5">5 ночей</option>
             <option value="7">7 ночей</option>
