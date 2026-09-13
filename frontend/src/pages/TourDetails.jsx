@@ -87,6 +87,7 @@ export default function TourDetails() {
   const foodLabel = tour.boardName || tour.food || tour.boardCode || "По тарифу";
   const roomLabel = tour.roomName || tour.roomType || tour.roomCode || "Номер по выбранному тарифу";
   const isHotelbeds = (tour.provider || provider) === "hotelbeds";
+  const isHotelbedsTest = isHotelbeds && tour.priceEnvironment === 'test';
   const favoriteActive = isFavorite(tour.providerHotelId ?? tour.id, tour.provider || provider);
   const cancellationPolicies = Array.isArray(tour.cancellationPolicies) ? tour.cancellationPolicies : [];
 
@@ -129,7 +130,7 @@ export default function TourDetails() {
 
         <section className="tour-detail-layout">
           <div className="tour-detail-main">
-            {isHotelbeds && <div className="tour-live-provider"><strong>● Актуальный тариф Hotelbeds</strong><span>Перед Booking API Asedeliya повторно проверит доступность и цену. Реального списания денег сейчас нет.</span></div>}
+            {isHotelbeds && <div className="tour-live-provider"><strong>{isHotelbedsTest ? 'Цена выбранного TEST-предложения' : '● Актуальный тариф Hotelbeds'}</strong><span>{isHotelbedsTest ? 'Цена получена из Hotelbeds TEST Availability. Перед будущим реальным оформлением тариф должен быть повторно проверен.' : 'Перед Booking API Asedeliya повторно проверит доступность и цену. Реального списания денег сейчас нет.'}</span></div>}
 
             <div className="tour-facts-grid">
               <div><span>Заезд</span><strong>📅 {formatDate(checkIn)}</strong></div>
@@ -151,13 +152,13 @@ export default function TourDetails() {
             </div></section>
 
             <section className="tour-section-card"><h2>Условия предложения</h2><div className="conditions-grid">
-              <div><span>Подтверждение</span><strong>{isHotelbeds ? (tour.recheckRequired ? "Требуется CheckRate" : "Тариф доступен для Booking API") : "По правилам Asedeliya"}</strong></div>
+              <div><span>{isHotelbedsTest ? 'Тип тарифа Hotelbeds' : 'Подтверждение'}</span><strong>{isHotelbedsTest ? (tour.rateType || 'Не указан') : isHotelbeds ? (tour.recheckRequired ? "Требуется CheckRate" : "Тариф доступен для Booking API") : "По правилам Asedeliya"}</strong>{isHotelbedsTest && <p>Бронирование через Asedeliya в TEST-режиме отключено</p>}</div>
               <div><span>Отмена</span><strong>{cancellationPolicies.length ? "Есть правила отмены поставщика" : "Уточняется перед бронированием"}</strong></div>
               <div><span>Что входит</span><strong>{isHotelbeds ? "Проживание по выбранному тарифу" : "Состав тура указан в предложении"}</strong></div>
               <div><span>Что не входит</span><strong>{isHotelbeds ? "Перелёт и страховка не заявлены Hotelbeds" : "Зависит от выбранного пакета"}</strong></div>
             </div>
             {isHotelbeds && <RateConditions offer={tour} />}
-            {cancellationPolicies.length > 0 && <div className="cancellation-note">📋 Asedeliya получил {cancellationPolicies.length} правил(а) отмены. Точная сумма возможного штрафа перепроверяется в процессе оформления.</div>}
+            {cancellationPolicies.length > 0 && <div className="cancellation-note">{isHotelbedsTest ? 'Указано правило отмены Hotelbeds TEST. При будущем реальном оформлении условия должны быть повторно проверены.' : `📋 Asedeliya получил ${cancellationPolicies.length} правил(а) отмены. Точная сумма возможного штрафа перепроверяется в процессе оформления.`}</div>}
             </section>
           </div>
 
@@ -166,9 +167,9 @@ export default function TourDetails() {
             {hasDiscount && <div className="old-price">{formattedBasePrice}</div>}
             <div className="current-price">{formattedPrice}</div>
             <div className="price-caption">{isHotelbeds ? `за ${nights} ночей · ${adults + children} гост.` : "итоговая стоимость предложения"}</div>
-            <div className="price-checks"><span>✓ Цена из выбранного предложения</span><span>✓ Параметры гостей сохранены</span><span>✓ Перед подтверждением будет проверка</span></div>
+            <div className="price-checks"><span>{isHotelbedsTest ? 'Цена выбранного TEST-предложения' : '✓ Цена из выбранного предложения'}</span><span>✓ Параметры гостей сохранены</span><span>{isHotelbedsTest ? 'Для будущего реального оформления нужна повторная проверка' : '✓ Перед подтверждением будет проверка'}</span></div>
             <button type="button" className="book-btn" disabled={tour.bookingDisabled} onClick={goCheckout}>{tour.bookingDisabled ? 'Бронирование отключено' : 'Перейти к оформлению →'}</button>
-            <div className="secure-booking">🔒 Оплата и подтверждение доступны после проверки условий</div>
+            <div className="secure-booking">{isHotelbedsTest ? '🔒 Оплата и бронирование в TEST-режиме отключены' : '🔒 Оплата и подтверждение доступны после проверки условий'}</div>
           </div></aside>
         </section>
       </main>
