@@ -28,6 +28,7 @@ export default function TourCard({ tour }) {
   const hasDiscount = tour.priceEnvironment === "live" && tour.discountEvidence?.source === "price_history" && numericBasePrice > numericPrice && numericPrice > 0;
   const favoriteActive = isFavorite(tour.providerHotelId ?? id, tour.provider || "mock");
   const providerName = tour.provider || "mock";
+  const testBookingDisabled = providerName === 'hotelbeds' && tour.priceEnvironment === 'test' && tour.stagingTestAllowed === true && tour.bookingDisabled === true;
   const providerHotelId = tour.providerHotelId ?? id;
   const foodLabel = labelFood(tour);
   const roomLabel = tour.roomName || tour.roomType || tour.roomCode || null;
@@ -92,7 +93,8 @@ export default function TourCard({ tour }) {
         <div className="tour-card-info">
           {Number(tour.adults) > 0 && <span>👤 {tour.adults} взр.</span>}
           {Number(tour.children) > 0 && <span>👶 {tour.children} дет.</span>}
-          {tour.rateType && <span>⚡ {String(tour.rateType).toUpperCase()}</span>}
+          {tour.rateType && <span>{providerName === 'hotelbeds' && tour.priceEnvironment === 'test' ? 'Тариф Hotelbeds: ' : '⚡ '}{String(tour.rateType).toUpperCase()}</span>}
+          {testBookingDisabled && <span>Тестовый режим — бронирование отключено</span>}
           {tour.recheckRequired && <span className="recheck-chip">🔄 CheckRate</span>}
         </div>
 
@@ -107,7 +109,7 @@ export default function TourCard({ tour }) {
           </div>
           <div className="tour-card-actions">
             <button type="button" className="details-btn secondary" onClick={openDetails}>Подробнее</button>
-            <button type="button" className="details-btn" onClick={openDetails}>Выбрать →</button>
+            <button type="button" className="details-btn" disabled={testBookingDisabled} onClick={openDetails}>{testBookingDisabled ? 'Бронирование недоступно' : 'Выбрать →'}</button>
           </div>
         </div>
       </div>
