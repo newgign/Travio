@@ -26,6 +26,7 @@ function buildConfig(env = process.env) {
     // LIVE cannot inherit the legacy TEST credential pair.
     apiKey: live ? env.HOTELBEDS_LIVE_API_KEY || '' : env.HOTELBEDS_API_KEY || '',
     secret: live ? env.HOTELBEDS_LIVE_API_SECRET || '' : env.HOTELBEDS_API_SECRET || env.HOTELBEDS_SECRET || '',
+    secretSource: live ? (env.HOTELBEDS_LIVE_API_SECRET ? 'live' : null) : env.HOTELBEDS_API_SECRET ? 'api' : env.HOTELBEDS_SECRET ? 'legacy' : null,
     timeout: Math.max(Number(env.HOTELBEDS_TIMEOUT_MS) || 12000, 1000),
     bookingTimeout: Math.max(Number(env.HOTELBEDS_BOOKING_TIMEOUT_MS) || 65000, 60000),
     allowPriceTolerance: false, bookingTolerance: 0,

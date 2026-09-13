@@ -40,6 +40,9 @@ export default function HotelbedsStatus() {
     <p>Последний успешный запрос: {status.lastSuccessfulRequest || '—'}</p>
     <p>{status.environment.toUpperCase()} credentials: {status.connection?.credentialsConfigured ? 'настроены' : 'не настроены'} · mTLS: {status.connection?.mtlsReady ? 'готов' : 'не готов'}</p>
     <p>Причина mTLS: {status.connection?.mtlsErrorCode || 'NOT RUN'}</p>
+    <p>API key length: {status.connection?.apiKeyLength ?? '—'} · API secret length: {status.connection?.apiSecretLength ?? '—'}</p>
+    <p>Credential fingerprint: {status.connection?.credentialPairFingerprint || '—'}</p>
+    <p>Secret source: {status.connection?.usingHotelbedsApiSecret ? 'HOTELBEDS_API_SECRET' : status.connection?.usingLegacyHotelbedsSecret ? 'legacy HOTELBEDS_SECRET' : status.environment === 'live' && status.connection?.secretConfigured ? 'HOTELBEDS_LIVE_API_SECRET' : 'не настроен'}</p>
     {status.environment === 'test' && <div>
       <button type="button" disabled={!canProbeTest(status) || busy || cooldown > 0} onClick={() => runProbe(false)}>Проверить Hotelbeds TEST</button>
       <button type="button" disabled={!canProbeTest(status) || busy || cooldown > 0} onClick={() => runProbe(true)}>Получить TEST Availability</button>

@@ -15,6 +15,31 @@ Object.assign(process.env, safe);
 const { HotelbedsClient } = require('../integrations/hotelbeds/client');
 const service = require('../services/hotelbedsTestReadOnlyService');
 
+test('admin credential fingerprint uses exact effective client credentials and never returns raw values', () => {
+  const diagnostics=require('../integrations/hotelbeds/adminCredentialDiagnostics');
+  const crypto=require('node:crypto');
+  const env={...safe,HOTELBEDS_API_KEY:'fixture-key-with-space ',HOTELBEDS_API_SECRET:'preferred-fixture-secret',HOTELBEDS_SECRET:'legacy-fixture-secret'};
+  for(const patch of [{},{HOTELBEDS_API_SECRET:''},{HOTELBEDS_API_SECRET:undefined},{HOTELBEDS_API_SECRET:'  '}]) {
+    const config=buildConfig({...env,...patch});const client=new HotelbedsClient(config);
+    const d=diagnostics(client.config);
+    assert.deepEqual(d,diagnostics(config));
+    assert.equal(d.credentialPairFingerprint,crypto.createHash('sha256').update(config.apiKey+'\0'+config.secret).digest('hex').slice(0,12));
+    assert.equal(client.createSignature(123),crypto.createHash('sha256').update(config.apiKey+config.secret+'123').digest('hex'));
+    assert.equal(d.usingHotelbedsApiSecret,Boolean(({...env,...patch}).HOTELBEDS_API_SECRET));
+    assert.equal(d.usingLegacyHotelbedsSecret,!d.usingHotelbedsApiSecret);
+    assert.equal(d.apiKeyLength,config.apiKey.length);assert.equal(d.apiSecretLength,config.secret.length);
+    for(const value of [env.HOTELBEDS_API_KEY,env.HOTELBEDS_API_SECRET,env.HOTELBEDS_SECRET])assert.equal(JSON.stringify(d).includes(value),false);
+    assert.deepEqual(Object.keys(d).sort(),['apiKeyLength','apiSecretLength','credentialPairFingerprint','usingHotelbedsApiSecret','usingLegacyHotelbedsSecret'].sort());
+  }
+  const original=diagnostics(buildConfig(env)).credentialPairFingerprint;
+  assert.notEqual(original,diagnostics(buildConfig({...env,HOTELBEDS_API_KEY:'different-key'})).credentialPairFingerprint);
+  assert.notEqual(original,diagnostics(buildConfig({...env,HOTELBEDS_API_SECRET:'different-secret'})).credentialPairFingerprint);
+  const live=diagnostics(buildConfig({...env,HOTELBEDS_ENV:'live',HOTELBEDS_LIVE_API_SECRET:'live-fixture'}));
+  assert.equal(live.usingHotelbedsApiSecret,false);assert.equal(live.usingLegacyHotelbedsSecret,false);
+  assert.equal('credentialPairFingerprint' in service.preflight(safe,()=>{}),false);
+  assert.equal('credentialPairFingerprint' in new HotelbedsClient(buildConfig(env)).readiness(),false);
+});
+
 test('production TEST requires explicit opt-in; every unsafe flag fails closed; LIVE unaffected', () => {
   for (const flag of [undefined,'false','TRUE']) assert.throws(()=>new HotelbedsClient(buildConfig({...safe,HOTELBEDS_STAGING_TEST_ENABLED:flag})).assertConfigured());
   const c=buildConfig(safe); assert.equal(c.stagingTestAllowed,true); new HotelbedsClient(c).assertConfigured();

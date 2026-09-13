@@ -31,7 +31,7 @@ router.get('/providers/hotelbeds', requirePermission('admin.system.read'), async
     const jobs = await require('../db').query('SELECT * FROM provider_job_state WHERE environment=$1', [client.config.environment]);
     const tracked = await require('../db').query('SELECT COUNT(*)::int AS count FROM hotelbeds_tracked_searches WHERE environment=$1', [client.config.environment]);
     const readOnly = require(require('../config/providers').hotelbeds.environment === 'test' ? '../services/hotelbedsTestReadOnlyService' : '../services/hotelbedsLiveReadOnlyService');
-    res.json({ ...client.readiness(), connection: readOnly.preflight(), liveProbe: readOnly.probeState(),
+    res.json({ ...client.readiness(), connection: { ...readOnly.preflight(), ...require('../integrations/hotelbeds/adminCredentialDiagnostics')(client.config) }, liveProbe: readOnly.probeState(),
       bookingDisabled: !client.config.bookingEnabled && !client.config.liveBookingEnabled,
       paymentsDisabled: require('../services/paymentGatewayService').readiness().mode === 'disabled',
       salesReady: false, jobs: jobs.rows, monitor: require('../services/hotelbedsMonitorService').settings(), trackedOffers: tracked.rows[0].count,
