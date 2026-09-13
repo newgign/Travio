@@ -135,7 +135,7 @@ test('admin HTTP handler rejects client environment/selection and forwards only 
   const handler=route.stack.at(-1).handle;
   const calls=[];t.mock.method(service,'runAdminProbe',async options=>{calls.push(options);return {status:'PASS',environment:'test',operations:[]};});
   let code,body;const res={status:n=>{code=n;return res;},json:x=>{body=x;return res;}};
-  for(const payload of [{environment:'live'},{hotelCodes:[1]},{checkIn:'2030-01-01'},{availability:'true'},{checkRate:1},[]]) {
+  for(const payload of [{hostname:'example.org'},{environment:'live'},{hotelCodes:[1]},{checkIn:'2030-01-01'},{availability:'true'},{checkRate:1},[]]) {
     await handler({body:payload},res);assert.equal(code,400);assert.equal(body.status,'BLOCKED');
   }
   assert.equal(calls.length,0);
@@ -143,6 +143,41 @@ test('admin HTTP handler rejects client environment/selection and forwards only 
   await handler({body:{availability:true,checkRate:false}},res);
   assert.deepEqual(calls,[{availability:false,checkRate:false},{availability:true,checkRate:false}]);
   assert.equal(body.environment,'test');
+});
+
+test('TEST/LIVE status uses signed ordinary host; Availability/CheckRate use mTLS host', async () => {
+  for(const environment of ['test','live']) {
+    const cfg=environment==='test'?buildConfig(safe):buildConfig({HOTELBEDS_ENV:'live',HOTELBEDS_ENABLED:'true',HOTELBEDS_LIVE_API_KEY:'offline-live-key',HOTELBEDS_LIVE_API_SECRET:'offline-live-secret'});
+    const client=new HotelbedsClient(cfg);const requests=[];let agents=0;
+    client.getBookingAgent=()=>{agents++;return {offline:true};};
+    client.bookingHttp.request=async options=>{requests.push(options);return {status:200,data:{}};};
+    await client.status();assert.equal(agents,0);
+    assert.equal(requests[0].baseURL,environment==='test'?'https://api.test.hotelbeds.com':'https://api.hotelbeds.com');
+    assert.equal(requests[0].headers['X-Signature'],client.createSignature());
+    assert.equal(requests[0].headers['Api-key'],cfg.apiKey);
+    assert.equal(client.bookingHttp.defaults.headers.Accept,'application/json');
+    assert.equal(requests[0].httpsAgent,undefined);
+    await client.availability({});await client.checkRates('offline-only');assert.equal(agents,2);
+    for(const request of requests.slice(1))assert.equal(request.baseURL,environment==='test'?'https://api-mtls.test.hotelbeds.com':'https://api-mtls.hotelbeds.com');
+    assert.ok(requests.every(request=>request.maxRedirects===0));
+    await assert.rejects(client.request({method:'GET',url:'https://example.org/hotel-api/1.0/status'}));
+    await client.performRequest({method:'GET',url:'/hotel-api/1.0/status',baseURL:'https://example.org'});
+    assert.equal(requests.at(-1).baseURL,cfg.baseUrl);
+  }
+});
+
+test('missing mTLS does not prevent signed status but blocks Availability/CheckRate and their probe', async () => {
+  const cfg=buildConfig({...safe,HOTELBEDS_MTLS_CERT_PATH:'',HOTELBEDS_MTLS_KEY_PATH:''});
+  const client=new HotelbedsClient(cfg);let calls=0;
+  client.bookingHttp.request=async()=>{calls++;return {status:200,data:{}};};
+  await client.status();assert.equal(calls,1);
+  await assert.rejects(client.availability({}));await assert.rejects(client.checkRates('offline-only'));assert.equal(calls,1);
+  const env={...safe,HOTELBEDS_MTLS_CERT_PATH:'',HOTELBEDS_MTLS_KEY_PATH:''};
+  const createClient=()=>client;
+  const status=await service.run({env,createClient});assert.equal(status.status,'PASS');assert.equal(status.mtlsReady,false);
+  assert.equal(status.operations[0].hostname,'api.test.hotelbeds.com');
+  const before=calls;const blocked=await service.run({env,availability:true,createClient});
+  assert.equal(blocked.status,'BLOCKED');assert.equal(calls,before);
 });
 
 test('missing selection blocks before transport while status-only is independent; output omits raw data', async () => {

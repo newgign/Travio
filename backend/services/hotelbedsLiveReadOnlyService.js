@@ -5,7 +5,7 @@ let adminProbeRunning = false;
 let nextAdminProbeAt = 0;
 async function runAdminProbe(options = {}) {
   const config = buildConfig(options.env || process.env);
-  const metadata = { environment: config.environment, hostname: new URL(config.bookingBaseUrl).hostname, timestamp: new Date().toISOString(), durationMs: 0 };
+  const metadata = { environment: config.environment, hostname: new URL(config.baseUrl).hostname, timestamp: new Date().toISOString(), durationMs: 0 };
   if (adminProbeRunning || Date.now() < nextAdminProbeAt) return {...metadata,status:'BLOCKED',blockers:['PROBE_RATE_LIMITED'],networkAttempted:false};
   adminProbeRunning = true;
   try {
@@ -20,7 +20,7 @@ function probeState() {
     lastAvailabilityStatus: lastProbe?.operations.find(x=>x.operation==='availability')?.status || 'NOT RUN' };
 }
 
-function preflight(env = process.env, validateTls = loadTlsOptions, expectedEnvironment = 'live') {
+function preflight(env = process.env, validateTls = loadTlsOptions, expectedEnvironment = 'live', requireMtls = true) {
   const config = buildConfig(env);
   const blockers = [...config.configurationErrors];
   if (config.environment !== expectedEnvironment) blockers.push('EXPECTED_ENVIRONMENT_REQUIRED');
@@ -44,7 +44,7 @@ function preflight(env = process.env, validateTls = loadTlsOptions, expectedEnvi
     }
     catch (error) {
       const known = ['HOTELBEDS_MTLS_NOT_CONFIGURED', 'HOTELBEDS_MTLS_FILES_UNREADABLE', 'HOTELBEDS_MTLS_CERT_DATE_INVALID', 'HOTELBEDS_MTLS_KEY_MISMATCH', 'HOTELBEDS_MTLS_MATERIAL_INVALID'];
-      blockers.push(known.includes(error.code) ? error.code : 'HOTELBEDS_MTLS_MATERIAL_INVALID');
+      if (requireMtls) blockers.push(known.includes(error.code) ? error.code : 'HOTELBEDS_MTLS_MATERIAL_INVALID');
     }
   } else blockers.push('LIVE_MTLS_REQUIRED');
   return {
@@ -75,7 +75,7 @@ function availabilityPayload(env, now = Date.now()) {
 }
 
 async function run({ env = process.env, availability = false, checkRate = false, dryRun = false, validateTls = loadTlsOptions, createClient, expectedEnvironment = 'live' } = {}) {
-  const result = { ...preflight(env, validateTls, expectedEnvironment), operations: [] };
+  const result = { ...preflight(env, validateTls, expectedEnvironment, availability || checkRate || dryRun), operations: [] };
   if (result.status !== 'READY' || dryRun) return result;
   let payload;
   try { if (availability || checkRate) payload = availabilityPayload(env); }
@@ -84,17 +84,18 @@ async function run({ env = process.env, availability = false, checkRate = false,
   const client = createClient ? createClient(config) : new (require('../integrations/hotelbeds/client').HotelbedsClient)(config);
   const started = Date.now();
   let operation = 'status';
+  const hostname = () => new URL(operation === 'status' ? config.baseUrl : config.bookingBaseUrl).hostname;
   try {
     result.networkAttempted = true;
     await client.status();
-    result.operations.push({ operation, status: 'PASS', httpStatus: client.readiness().httpStatus });
+    result.operations.push({ operation, hostname: hostname(), status: 'PASS', httpStatus: client.readiness().httpStatus });
     if (payload) {
       operation = 'availability';
       const response = await client.availability(payload);
       const hotels = response?.hotels?.hotels;
       if (!Array.isArray(hotels)) throw Object.assign(new Error('Invalid availability response'), { code: 'INVALID_PROVIDER_RESPONSE' });
       const entries=hotels.flatMap(hotel=>(hotel.rooms||[]).flatMap(room=>(room.rates||[]).map(rate=>({hotel,room,rate}))));
-      result.operations.push({ operation, status: expectedEnvironment === 'test' && entries.length === 0 ? 'EMPTY' : 'PASS', category:entries.length?'AVAILABLE':'NO_AVAILABILITY', httpStatus: client.readiness().httpStatus, hotelCount: hotels.length, rateCount:entries.length, currencies:[...new Set(entries.map(x=>x.hotel.currency||x.rate.currency).filter(x=>/^[A-Z]{3}$/.test(x)))], priceSources:[...new Set(entries.map(x=>require('./hotelbedsPriceService').extract(x.rate,x.hotel.currency||x.rate.currency)?.priceSource).filter(Boolean))] });
+      result.operations.push({ operation, hostname: hostname(), status: expectedEnvironment === 'test' && entries.length === 0 ? 'EMPTY' : 'PASS', category:entries.length?'AVAILABLE':'NO_AVAILABILITY', httpStatus: client.readiness().httpStatus, hotelCount: hotels.length, rateCount:entries.length, currencies:[...new Set(entries.map(x=>x.hotel.currency||x.rate.currency).filter(x=>/^[A-Z]{3}$/.test(x)))], priceSources:[...new Set(entries.map(x=>require('./hotelbedsPriceService').extract(x.rate,x.hotel.currency||x.rate.currency)?.priceSource).filter(Boolean))] });
       if (checkRate) {
         // Never accept a hand-entered or old rateKey. Recheck one rate from this response only.
         const candidates=entries.filter(({room,rate})=>rate.rateType==='RECHECK' && rate.rateKey &&
@@ -113,7 +114,7 @@ async function run({ env = process.env, availability = false, checkRate = false,
           const checked = await client.checkRates(rate.rateKey);
           const selected=identity.selectCheckedRate(expected,checked);
           if (!require('./hotelbedsPriceService').extract(selected.rate,selected.hotel.currency||selected.rate.currency)) throw Object.assign(new Error('Invalid price'),{code:'RATE_NOT_AVAILABLE'});
-          result.operations.push({ operation, status: 'PASS', httpStatus: client.readiness().httpStatus });
+          result.operations.push({ operation, hostname: hostname(), status: 'PASS', httpStatus: client.readiness().httpStatus });
         } else result.operations.push({ operation, status: 'NOT APPLICABLE', reason: 'NO_RECHECK_RATE_IN_CURRENT_RESPONSE' });
       }
     }
@@ -121,10 +122,10 @@ async function run({ env = process.env, availability = false, checkRate = false,
   } catch (error) {
     const allowed = ['AUTH_ERROR','RATE_LIMIT','TIMEOUT','PROVIDER_UNAVAILABLE','RATE_NOT_AVAILABLE','INVALID_REQUEST','INVALID_PROVIDER_RESPONSE','AMBIGUOUS_RECHECK_SELECTION'];
     result.status = 'FAIL';
-    result.operations.push({ operation, status: 'FAIL', httpStatus: client.readiness().httpStatus, code: allowed.includes(error.code) ? error.code : 'READ_ONLY_REQUEST_FAILED' });
+    result.operations.push({ operation, hostname: hostname(), status: 'FAIL', httpStatus: client.readiness().httpStatus, code: allowed.includes(error.code) ? error.code : 'READ_ONLY_REQUEST_FAILED' });
   } finally {
     result.durationMs = Date.now() - started;
-    result.hostname = new URL(config.bookingBaseUrl).hostname;
+    result.hostname = hostname();
     lastProbe = { ...result, timestamp: new Date().toISOString() };
     client.bookingAgent?.destroy();
   }

@@ -52,7 +52,7 @@ export default function HotelbedsStatus() {
       {probe.blockers?.map(code => <p key={code}>Причина: {code}</p>)}
       {probe.requestedAvailability && !probe.operations?.some(operation => operation.operation === 'availability') && <p>Availability: {probe.status === 'BLOCKED' ? 'BLOCKED' : 'NOT RUN'}</p>}
       {probe.operations?.map(operation => <div key={operation.operation}>
-        <p>Operation: {operation.operation} · {operation.status} · HTTP: {operation.httpStatus ?? '—'} {operation.code || ''}</p>
+        <p>Operation: {operation.operation} · Hostname: {operation.hostname || '—'} · {operation.status} · HTTP: {operation.httpStatus ?? '—'} {operation.code || ''}</p>
         {operation.operation === 'availability' && <p>Availability: {operation.status} · hotelCount: {operation.hotelCount ?? '—'} · rateCount: {operation.rateCount ?? '—'} · currencies: {operation.currencies?.join(', ') || '—'} · priceSources: {operation.priceSources?.join(', ') || '—'}</p>}
       </div>)}
     </div>}

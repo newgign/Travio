@@ -179,8 +179,10 @@ class HotelbedsClient {
     const logger = require('../../utils/logger');
     try {
       const http = channel === 'booking' ? this.bookingHttp : this.contentHttp;
+      const isStatus = channel === 'booking' && String(method).toUpperCase() === 'GET' && url === '/hotel-api/1.0/status';
       const response = await http.request({ method, url, data, params, timeout: timeout || this.config.timeout,
-        maxRedirects: 0, headers: this.createHeaders(), ...(channel === 'booking' ? { httpsAgent: this.getBookingAgent() } : {}) });
+        baseURL: channel === 'booking' ? (isStatus ? this.config.baseUrl : this.config.bookingBaseUrl) : this.config.contentBaseUrl,
+        maxRedirects: 0, headers: this.createHeaders(), ...(channel === 'booking' && !isStatus ? { httpsAgent: this.getBookingAgent() } : {}) });
       if (response.data?.error) throw { response: { status: 502 } };
       this.health = { providerReachable: true, lastSuccessfulRequest: new Date().toISOString(), lastErrorCategory: null, httpStatus: response.status };
       logger.info('Hotelbeds request', { environment: this.config.environment, category, status: response.status, duration: Date.now() - started,
