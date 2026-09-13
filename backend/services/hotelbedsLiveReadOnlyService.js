@@ -122,7 +122,8 @@ async function run({ env = process.env, availability = false, checkRate = false,
   } catch (error) {
     const allowed = ['AUTH_ERROR','RATE_LIMIT','TIMEOUT','PROVIDER_UNAVAILABLE','RATE_NOT_AVAILABLE','INVALID_REQUEST','INVALID_PROVIDER_RESPONSE','AMBIGUOUS_RECHECK_SELECTION'];
     result.status = 'FAIL';
-    result.operations.push({ operation, hostname: hostname(), status: 'FAIL', httpStatus: client.readiness().httpStatus, code: allowed.includes(error.code) ? error.code : 'READ_ONLY_REQUEST_FAILED' });
+    result.operations.push({ operation, hostname: hostname(), status: 'FAIL', httpStatus: client.readiness().httpStatus, code: allowed.includes(error.code) ? error.code : 'READ_ONLY_REQUEST_FAILED',
+      ...(config.environment === 'test' ? require('../integrations/hotelbeds/accessDiagnostics').publicDiagnostics(error.accessDiagnostics) : {}) });
   } finally {
     result.durationMs = Date.now() - started;
     result.hostname = hostname();

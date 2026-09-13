@@ -198,6 +198,7 @@ class HotelbedsClient {
       logger.warn('Hotelbeds request failed', { environment: this.config.environment, category, status, duration: Date.now() - started, errorCategory: code });
       const wrapped = Object.assign(new Error('Предложение временно недоступно. Повторите поиск позже.'), { status: status >= 500 ? 503 : status === 429 ? 503 : 409, code, provider: 'hotelbeds' });
       const retryAfter = error.response?.headers?.['retry-after'];
+      if (this.config.environment === 'test') wrapped.accessDiagnostics = require('./accessDiagnostics').normalizeAccessError(error.response);
       wrapped.retryAfterMs = Math.min(30000, Math.max(0, Number(retryAfter) * 1000 || Date.parse(retryAfter) - Date.now() || 0));
       if (code === "RATE_LIMIT") this.lastRequestAt = Date.now() + Math.max(wrapped.retryAfterMs, 1000);
       throw wrapped;

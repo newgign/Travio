@@ -52,7 +52,11 @@ export default function HotelbedsStatus() {
       {probe.blockers?.map(code => <p key={code}>Причина: {code}</p>)}
       {probe.requestedAvailability && !probe.operations?.some(operation => operation.operation === 'availability') && <p>Availability: {probe.status === 'BLOCKED' ? 'BLOCKED' : 'NOT RUN'}</p>}
       {probe.operations?.map(operation => <div key={operation.operation}>
-        <p>Operation: {operation.operation} · Hostname: {operation.hostname || '—'} · {operation.status} · HTTP: {operation.httpStatus ?? '—'} {operation.code || ''}</p>
+        <p>Operation: {operation.operation} · Hostname: {operation.hostname || '—'} · {operation.status} · HTTP: {operation.httpStatus ?? '—'} · Категория: {operation.code || '—'}</p>
+        {operation.providerReason && <p>Причина HBX: {operation.providerReason}</p>}
+        {operation.rateLimit !== undefined && <p>Quota limit: {operation.rateLimit}</p>}
+        {operation.rateLimitRemaining !== undefined && <p>Quota remaining: {operation.rateLimitRemaining}</p>}
+        {operation.retryAfterSeconds !== undefined && <p>Retry after: {operation.retryAfterSeconds} sec</p>}
         {operation.operation === 'availability' && <p>Availability: {operation.status} · hotelCount: {operation.hotelCount ?? '—'} · rateCount: {operation.rateCount ?? '—'} · currencies: {operation.currencies?.join(', ') || '—'} · priceSources: {operation.priceSources?.join(', ') || '—'}</p>}
       </div>)}
     </div>}

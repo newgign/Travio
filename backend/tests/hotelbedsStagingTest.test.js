@@ -180,6 +180,44 @@ test('missing mTLS does not prevent signed status but blocks Availability/CheckR
   assert.equal(blocked.status,'BLOCKED');assert.equal(calls,before);
 });
 
+test('TEST auth diagnostics use strict reason enum and numeric headers only', () => {
+  const {normalizeAccessError,publicDiagnostics}=require('../integrations/hotelbeds/accessDiagnostics');
+  for(const [message,reason] of [
+    ['Access to this API has been disallowed','HBX_API_DISALLOWED'],
+    ['Access to this resource has been disallowed','HBX_RESOURCE_DISALLOWED'],
+    ['Quota exceeded','HBX_QUOTA_EXCEEDED'],
+    ['Request signature verification failed','HBX_SIGNATURE_FAILED'],
+    ['Authorization field missing','HBX_AUTH_MISSING'],
+    ['unknown confidential text','HBX_UNKNOWN_AUTH_ERROR'],
+  ]) for(const status of [401,403]) {
+    assert.deepEqual(normalizeAccessError({status,data:{error:{message}}}),{providerReason:reason});
+    assert.deepEqual(normalizeAccessError({status,data:{message}}),{providerReason:reason});
+  }
+  assert.deepEqual(normalizeAccessError({status:429}),{providerReason:'HBX_RATE_LIMITED'});
+  assert.deepEqual(normalizeAccessError({status:500,data:{message:'Quota exceeded'}}),{});
+  assert.deepEqual(normalizeAccessError({status:403,data:'Quota exceeded'}),{providerReason:'HBX_UNKNOWN_AUTH_ERROR'});
+  assert.deepEqual(normalizeAccessError({status:403,headers:{'X-RateLimit-Limit':'50','X-RateLimit-Remaining':'0','Retry-After':'60','Authorization':'secret'}}),
+    {providerReason:'HBX_UNKNOWN_AUTH_ERROR',rateLimit:50,rateLimitRemaining:0,retryAfterSeconds:60});
+  for(const value of ['',null,'secret','-1','Infinity','1.2','9007199254740992']) {
+    assert.deepEqual(normalizeAccessError({status:403,headers:{'retry-after':value,'x-ratelimit-remaining':value}}),{providerReason:'HBX_UNKNOWN_AUTH_ERROR'});
+  }
+  assert.deepEqual(publicDiagnostics({providerReason:'raw secret',rawBody:'private',retryAfterSeconds:'secret'}),{});
+});
+
+test('actual client-to-TEST-probe error path never exposes raw body/material and invokes status only', async () => {
+  const secrets=['offline-api-secret-value','offline-passphrase-value','/private/secret-file','offline-private-key-content'];
+  const client=new HotelbedsClient(buildConfig(safe));let calls=0;
+  client.bookingHttp.request=async options=>{
+    calls++;assert.equal(options.url,'/hotel-api/1.0/status');
+    throw {response:{status:403,data:{error:{message:'Access to this API has been disallowed'},raw:secrets,rateKey:'hidden-rate-key'},headers:{'x-ratelimit-remaining':'0','retry-after':'7'}}};
+  };
+  const result=await service.run({env:safe,validateTls:()=>{},createClient:()=>client});
+  assert.equal(calls,1);assert.equal(result.status,'FAIL');
+  const operation=result.operations[0];assert.equal(operation.httpStatus,403);assert.equal(operation.code,'AUTH_ERROR');assert.equal(operation.providerReason,'HBX_API_DISALLOWED');
+  assert.equal(operation.rateLimitRemaining,0);assert.equal(operation.retryAfterSeconds,7);
+  for(const value of [...secrets,'hidden-rate-key',safe.HOTELBEDS_API_KEY,safe.HOTELBEDS_API_SECRET,'Access to this API has been disallowed'])assert.equal(JSON.stringify(result).includes(value),false);
+});
+
 test('missing selection blocks before transport while status-only is independent; output omits raw data', async () => {
   const missing={...safe,HOTELBEDS_TEST_PROBE_HOTEL_CODES:''};let calls=0;
   const createClient=()=>{calls++;return {status:async()=>({secret:'never-render-this',rateKey:'never-render-key'}),readiness:()=>({httpStatus:200})};};
