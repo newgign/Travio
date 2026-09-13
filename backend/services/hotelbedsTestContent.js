@@ -10,7 +10,7 @@ class ContentClient extends HotelbedsClient {
         this.config.contentBaseUrl !== 'https://api.test.hotelbeds.com') throw blocked('CONTENT_OPERATION_BLOCKED');
   }
 }
-function selection(env = process.env) {
+function legacySelection(env = process.env) {
   const destinationCode = env.HOTELBEDS_TEST_CONTENT_DESTINATION || '';
   const countryCode = env.HOTELBEDS_TEST_CONTENT_COUNTRY || '';
   const from = Number(env.HOTELBEDS_TEST_CONTENT_FROM || 1);
@@ -19,10 +19,28 @@ function selection(env = process.env) {
       !Number.isInteger(count) || count < 1 || count > limits.hotels) throw blocked('CONTENT_SCOPE_BLOCKED');
   return { countryCode, destinationCode, from, to: from + count - 1, count };
 }
+function scopes(env = process.env) {
+  if (env.HOTELBEDS_TEST_CONTENT_SCOPES === undefined || env.HOTELBEDS_TEST_CONTENT_SCOPES === '') {
+    const scope = legacySelection(env);
+    return [{ ...scope, id: `${scope.countryCode}:${scope.destinationCode}` }];
+  }
+  const pairs = env.HOTELBEDS_TEST_CONTENT_SCOPES.split(',').map(value => value.trim());
+  if (pairs.length > 5 || !pairs.length || pairs.some(value => !/^[A-Z]{2}:[A-Z0-9]{2,10}$/.test(value)) || new Set(pairs.map(value => value.split(':')[1])).size !== pairs.length) throw blocked('CONTENT_SCOPE_BLOCKED');
+  return pairs.map(id => {
+    const [country, destination] = id.split(':');
+    return { ...legacySelection({...env,HOTELBEDS_TEST_CONTENT_COUNTRY:country,HOTELBEDS_TEST_CONTENT_DESTINATION:destination}), id };
+  });
+}
+function selection(env = process.env, scopeId) {
+  const allowed = scopes(env);
+  const scope = scopeId === undefined && allowed.length === 1 ? allowed[0] : allowed.find(value => value.id === scopeId);
+  if (!scope) throw blocked('CONTENT_SCOPE_BLOCKED');
+  return scope;
+}
 let running = false;
 let lastAttempt = 0;
-async function run({ env = process.env, client, repository, pool } = {}) {
-  const scope = selection(env);
+async function run({ env = process.env, scopeId, client, repository, pool } = {}) {
+  const scope = selection(env, scopeId);
   const readiness = require('./hotelbedsLiveReadOnlyService').preflight(env, undefined, 'test', false);
   if (readiness.blockers.length) throw blocked('CONTENT_CONFIGURATION_BLOCKED');
   if (running || Date.now() - lastAttempt < 60000) throw blocked('CONTENT_BUSY_OR_COOLDOWN');
@@ -54,11 +72,15 @@ async function run({ env = process.env, client, repository, pool } = {}) {
       return mapper.mapHotel(raw);
     });
     await db.query('BEGIN');
+    const previousDestination = await db.query("SELECT country_code FROM provider_destinations WHERE provider='hotelbeds' AND content_environment='test' AND code=$1 FOR UPDATE",[scope.destinationCode]);
+    if (previousDestination.rows.some(row => row.country_code && row.country_code !== scope.countryCode)) throw blocked('CONTENT_IDENTITY_CONFLICT');
     await repository.upsertDestination(mapper.mapDestination(destination), db);
     for (const hotel of hotels) {
+      const previous = await db.query("SELECT destination_code,country_code FROM provider_hotels WHERE provider='hotelbeds' AND content_environment='test' AND provider_hotel_id=$1 FOR UPDATE",[hotel.providerHotelId]);
+      if (previous.rows.some(row => row.destination_code !== scope.destinationCode || row.country_code !== scope.countryCode)) throw blocked('CONTENT_IDENTITY_CONFLICT');
       await repository.upsertHotel(hotel, db);
     }
-    const result = { status: hotels.length ? 'PASS' : 'EMPTY', environment: 'test', upsertedHotels: hotels.length, requests: 2 };
+    const result = { status: hotels.length ? 'PASS' : 'EMPTY', environment: 'test', scopeId: scope.id, upsertedHotels: hotels.length, requests: 2 };
     await db.query("UPDATE provider_job_state SET last_success=NOW(),last_error_category=NULL,details=$1::jsonb WHERE job='test_content_import' AND environment='test'", [JSON.stringify(result)]);
     await db.query('COMMIT');
     return result;
@@ -71,4 +93,4 @@ async function run({ env = process.env, client, repository, pool } = {}) {
     db?.release(); running = false;
   }
 }
-module.exports = { limits, selection, run, ContentClient };
+module.exports = { limits: {...limits, configuredDestinations:5}, scopes, selection, run, ContentClient };

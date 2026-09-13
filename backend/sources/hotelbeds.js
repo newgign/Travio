@@ -11,7 +11,8 @@ class HotelbedsProvider {
     const preparedFilters = await this.prepareFilters(filters);
     const request = this.buildAvailabilityRequest(preparedFilters);
     const response = await hotelbedsClient.availability(request);
-    const hotels = response?.hotels?.hotels || [];
+    const requestedCodes = new Set(this.parseHotelCodes(preparedFilters.hotelCodes || preparedFilters.hotelCode).map(String));
+    const hotels = (response?.hotels?.hotels || []).filter(hotel => !hotelbedsClient.config.stagingTestAllowed || requestedCodes.has(String(hotel.code)));
 
     const contentRows = await providerCatalogRepository.findHotelsByIds(
       "hotelbeds",
@@ -49,7 +50,7 @@ class HotelbedsProvider {
 
     const request = this.buildAvailabilityRequest(preparedFilters);
     const response = await hotelbedsClient.availability(request);
-    const hotel = response?.hotels?.hotels?.[0];
+    const hotel = response?.hotels?.hotels?.find(item => String(item.code) === String(id));
 
     return hotel
       ? this.normalizeHotel(hotel, preparedFilters, content)
@@ -317,7 +318,10 @@ class HotelbedsProvider {
     const requestedRoom = String(filters.roomType || filters.roomCode || "");
     if (requestedRoom) {
       for (let i = supportedCandidates.length - 1; i >= 0; i--) {
-        if (supportedCandidates[i].room.code !== requestedRoom) supportedCandidates.splice(i, 1);
+        const room = supportedCandidates[i].room;
+        const matches = room.code === requestedRoom || (!filters.roomCode && hotelbedsClient.config.stagingTestAllowed &&
+          String(room.name || '').toLowerCase().includes(requestedRoom.toLowerCase()));
+        if (!matches) supportedCandidates.splice(i, 1);
       }
       if (!supportedCandidates.length) return null;
     }

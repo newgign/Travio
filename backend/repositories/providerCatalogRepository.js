@@ -161,7 +161,11 @@ class ProviderCatalogRepository {
 
     const result = await pool.query(
       `
-      SELECT *
+      SELECT *, (SELECT COUNT(*)::int FROM provider_hotels h
+        WHERE h.provider=provider_destinations.provider
+          AND h.content_environment=provider_destinations.content_environment
+          AND h.destination_code=provider_destinations.code
+          AND h.country_code=provider_destinations.country_code) AS hotel_count
       FROM provider_destinations
       WHERE ${conditions.join(" AND ")}
       ORDER BY name ASC

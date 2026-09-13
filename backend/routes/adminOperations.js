@@ -29,8 +29,8 @@ router.get('/providers/hotelbeds/content', requirePermission('admin.system.read'
   try {
     const service = require('../services/hotelbedsTestContent');
     const config = require('../config/providers').hotelbeds;
-    let scope = null;
-    try { scope = service.selection(); } catch { /* Unconfigured import remains disabled. */ }
+    let scopes = [];
+    try { scopes = service.scopes(); } catch { /* Unconfigured import remains disabled. */ }
     const repository = require('../repositories/providerCatalogRepository');
     const destinations = await repository.findDestinations({ provider: 'hotelbeds' });
     const counts = await repository.getCounts();
@@ -40,13 +40,19 @@ router.get('/providers/hotelbeds/content', requirePermission('admin.system.read'
       last_error_category: job.last_error_category ? 'CONTENT_IMPORT_FAILED' : null,
       details: { status: ['PASS','EMPTY'].includes(job.details?.status) ? job.details.status : 'NOT RUN',
         upsertedHotels: Number.isInteger(job.details?.upsertedHotels) ? job.details.upsertedHotels : null } } : null;
-    res.json({ environment: config.environment, enabled: config.stagingTestAllowed && Boolean(scope), scope, limits: service.limits,
+    res.json({ environment: config.environment, enabled: config.stagingTestAllowed && scopes.length > 0, scope: scopes[0] || null,
+      scopes: scopes.map(scope => ({...scope, name: destinations.find(row=>row.code===scope.destinationCode && row.country_code===scope.countryCode)?.name || null})), limits: service.limits,
+      destinationsDetail: destinations.map(row=>({code:row.code,countryCode:row.country_code,name:row.name,hotelCount:Number(row.hotel_count)||0})),
       countries: new Set(destinations.map(row => row.country_code).filter(Boolean)).size, ...counts, lastImport });
   } catch (error) { next(error); }
 });
 router.post('/providers/hotelbeds/content', requirePermission('admin.system.selftest'), async (req, res) => {
-  if (req.body && (typeof req.body !== 'object' || Array.isArray(req.body) || Object.keys(req.body).length)) return res.status(400).json({ status: 'BLOCKED', code: 'CONTENT_SCOPE_SERVER_ONLY' });
-  try { res.json(await require('../services/hotelbedsTestContent').run()); }
+  if (req.body && (typeof req.body !== 'object' || Array.isArray(req.body) || Object.keys(req.body).some(key=>key!=='scopeId') || (req.body.scopeId !== undefined && typeof req.body.scopeId !== 'string'))) return res.status(400).json({ status: 'BLOCKED', code: 'CONTENT_SCOPE_SERVER_ONLY' });
+  try {
+    const service = require('../services/hotelbedsTestContent');
+    const scope = service.selection(process.env, req.body?.scopeId);
+    res.json(await service.run({scopeId:scope.id}));
+  }
   catch { res.status(409).json({ status: 'BLOCKED', code: 'CONTENT_IMPORT_BLOCKED_OR_FAILED' }); }
 });
 

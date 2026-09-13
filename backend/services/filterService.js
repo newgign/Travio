@@ -143,6 +143,7 @@ class FilterService {
 
             results = results.filter(
                 hotel =>
+                    (hotel.provider === 'hotelbeds' && hotel.stagingTestAllowed && String(hotel.roomName || '').toLowerCase().includes(filters.roomType.toLowerCase())) ||
                     Array.isArray(hotel.roomTypes) &&
                     hotel.roomTypes.some(
                         room =>
