@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useFavorites } from "../context/FavoritesContext";
 import { offerDetailsLink } from "../utils/hotTours";
 import { formatMoney } from "../utils/money";
+import HotelImage from './HotelImage';
 import "./TourCard.css";
 
 function labelFood(tour) {
@@ -20,7 +21,7 @@ export default function TourCard({ tour }) {
   const publicPrice = !import.meta.env.PROD || (visibleProviderOffer(tour) && now - Date.parse(tour.observedAt) < 900000);
   const id = tour.id;
   const hotelName = tour.name || tour.title || tour.hotel || "Отель";
-  const displayImage = tour.image || tour.images?.[0] || "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=85";
+  const displayImage = tour.image || tour.images?.[0] || null;
   const numericPrice = Number(tour.price) || 0;
   const numericBasePrice = Number(tour.discountEvidence?.originalPrice) || 0;
   const formattedPrice = formatMoney(numericPrice, tour.currency || "KZT");
@@ -65,7 +66,7 @@ export default function TourCard({ tour }) {
         <button type="button" className={`tour-card-favorite ${favoriteActive ? "active" : ""}`} onClick={handleFavorite} aria-label={favoriteActive ? "Удалить из избранного" : "Добавить в избранное"}>
           {favoriteActive ? "♥" : "♡"}
         </button>
-        <img src={displayImage} alt={hotelName} loading="lazy" onError={(event) => { event.currentTarget.src = "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=85"; }} />
+        <HotelImage key={`${tour.provider}:${tour.providerHotelId || tour.id}`} src={displayImage} alt={hotelName} loading="lazy" />
         <div className="tour-card-overlay-top">
           {Number(tour.stars) > 0 && <span className="tour-card-stars">{"★".repeat(Math.min(Number(tour.stars), 5))}</span>}
           {providerName === "hotelbeds" && <span className="tour-card-test-badge">Hotelbeds {tour.priceEnvironment === "test" ? "TEST · без бронирования" : ""}</span>}

@@ -289,6 +289,8 @@ class HotelbedsProvider {
   }
 
   normalizeHotel(hotel, filters = {}, content = null) {
+    // Static metadata must belong to this exact provider hotel, never a prior selection.
+    if (content && String(content.provider_hotel_id) !== String(hotel.code)) content = null;
     const candidates = [];
 
     for (const room of hotel.rooms || []) {

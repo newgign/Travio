@@ -9,6 +9,18 @@ const config = require('../config/hotelbeds').buildConfig(safe);
 const resolve = require('../services/hotelbedsTestDestination');
 const input = { destinationCode:'AVE', departureDate:'2030-04-01', nights:1, people:2 };
 
+test('static images remain attached to the exact hotel code, including reversed catalog rows', async t => {
+  const api=require('../integrations/hotelbeds/client'),repo=require('../repositories/providerCatalogRepository'),provider=require('../sources/hotelbeds');
+  const hotels=[1,3424].map(code=>({code,name:'Offline hotel '+code,currency:'EUR',rooms:[{code:'DBL',rates:[{rateKey:'offline-'+code,rateType:'BOOKABLE',net:'10',boardCode:'RO',paymentType:'AT_WEB',rooms:1,adults:2,children:0}]}]}));
+  const rows=[3424,1].map(code=>({provider_hotel_id:String(code),name:'Content '+code,image_url:'https://photos.hotelbeds.com/giata/bigger/offline-'+code+'.jpg',images:[]}));
+  t.mock.method(api,'availability',async()=>({hotels:{hotels}}));
+  t.mock.method(repo,'findHotelsByIds',async()=>rows);
+  const result=await provider.searchHotels({...input,destinationCode:'',hotelCodes:'1,3424'});
+  assert.equal(result[0].image,rows[1].image_url);assert.equal(result[1].image,rows[0].image_url);
+  assert.equal(provider.normalizeHotel(hotels[0],input,rows[0]).image,null);
+  assert.equal(provider.normalizeHotel(hotels[0],input,{provider_hotel_id:'1',images:[]}).image,null);
+});
+
 test('bounded Content scope rejects missing/oversized configuration before any adapter', () => {
   assert.equal(service.selection(safe).count,1);
   for (const patch of [{HOTELBEDS_TEST_CONTENT_DESTINATION:''},{HOTELBEDS_TEST_CONTENT_COUNTRY:''},{HOTELBEDS_TEST_CONTENT_COUNT:'21'},{HOTELBEDS_TEST_CONTENT_FROM:'101'},{HOTELBEDS_TEST_CONTENT_DESTINATION:'https://invalid'}]) assert.throws(()=>service.selection({...safe,...patch}),{code:'CONTENT_SCOPE_BLOCKED'});

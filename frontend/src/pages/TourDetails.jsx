@@ -1,5 +1,6 @@
 import { visibleProviderOffer } from "../utils/providerEnvironment";
 import RateConditions from "../components/RateConditions";
+import HotelImage from '../components/HotelImage';
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import Navbar from "../components/Navbar";
@@ -9,7 +10,6 @@ import API_URL from "../services/api";
 import { formatMoney } from "../utils/money";
 import "../styles/TourDetails.css";
 
-const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1400&q=85";
 
 function formatDate(value) {
   if (!value) return "—";
@@ -37,7 +37,7 @@ export default function TourDetails() {
   const [activeImage, setActiveImage] = useState(0);
   const selectedOffer = location.state?.selectedOffer || null;
 
-  const loadTour = useCallback(async () => {
+  const loadTour = useCallback(async (signal) => {
     try {
       setLoading(true);
       setError("");
@@ -46,26 +46,29 @@ export default function TourDetails() {
         return;
       }
       const params = new URLSearchParams(location.search);
-      const response = await fetch(`${API_URL}/offers/${encodeURIComponent(provider)}/${encodeURIComponent(id)}?${params.toString()}`);
+      const response = await fetch(`${API_URL}/offers/${encodeURIComponent(provider)}/${encodeURIComponent(id)}?${params.toString()}`, {signal});
       const result = await response.json();
       if (!response.ok || !result?.success || !result?.data) throw new Error(result?.message || "Не удалось загрузить информацию о туре");
+      if (signal.aborted) return;
+      if (String(result.data.providerHotelId ?? result.data.id) !== String(id)) throw new Error('Предложение недоступно');
       setTour(result.data);
     } catch (err) {
+      if (signal.aborted) return;
       console.error(err);
       setError(err.message || "Ошибка загрузки тура");
       setTour(null);
     } finally {
-      setLoading(false);
+      if (!signal.aborted) setLoading(false);
     }
   }, [provider, id, location.search, selectedOffer]);
 
-  useEffect(() => { const timer = setTimeout(loadTour, 0); return () => clearTimeout(timer); }, [loadTour]);
+  useEffect(() => { const controller = new AbortController(); const timer = setTimeout(() => loadTour(controller.signal), 0); return () => { clearTimeout(timer); controller.abort(); }; }, [loadTour]);
   useEffect(() => { const timer = setTimeout(() => setActiveImage(0), 0); return () => clearTimeout(timer); }, [tour?.id, tour?.providerHotelId]);
 
   const images = useMemo(() => {
-    if (!tour) return [FALLBACK_IMAGE];
+    if (!tour) return [null];
     const unique = [...new Set([tour.image, ...(Array.isArray(tour.images) ? tour.images : [])].filter(Boolean))].slice(0, 6);
-    return unique.length ? unique : [FALLBACK_IMAGE];
+    return unique.length ? unique : [null];
   }, [tour]);
 
   if (import.meta.env.PROD && tour && !visibleProviderOffer(tour)) return <><Navbar /><main className="help-page"><h1>Предложение недоступно</h1><p>Вернитесь к поиску актуальных предложений.</p><a href="/results">Найти туры</a></main><Footer /></>;
@@ -124,8 +127,8 @@ export default function TourDetails() {
         </section>
 
         <section className="tour-gallery-grid">
-          <div className="tour-gallery-main"><img src={images[activeImage] || FALLBACK_IMAGE} alt={`${hotelName} — фото ${activeImage + 1}`} onError={(e) => { e.currentTarget.src = FALLBACK_IMAGE; }} />{Number(tour.beachLine) === 1 && <span className="tour-hot">🌊 1-я береговая линия</span>}<span className="gallery-counter">{activeImage + 1} / {images.length}</span></div>
-          <div className="tour-thumbnails">{images.slice(0, 5).map((src, index) => <button type="button" key={`${src}-${index}`} className={activeImage === index ? "active" : ""} onClick={() => setActiveImage(index)}><img src={src} alt="" onError={(e) => { e.currentTarget.src = FALLBACK_IMAGE; }} /></button>)}</div>
+          <div className="tour-gallery-main"><HotelImage key={`${provider}:${id}:${images[activeImage]}`} src={images[activeImage]} alt={`${hotelName} — фото ${activeImage + 1}`} />{Number(tour.beachLine) === 1 && <span className="tour-hot">🌊 1-я береговая линия</span>}<span className="gallery-counter">{activeImage + 1} / {images.length}</span></div>
+          <div className="tour-thumbnails">{images.slice(0, 5).map((src, index) => <button type="button" key={`${provider}:${id}:${src}-${index}`} className={activeImage === index ? "active" : ""} onClick={() => setActiveImage(index)}><HotelImage src={src} alt="" /></button>)}</div>
         </section>
 
         <section className="tour-detail-layout">

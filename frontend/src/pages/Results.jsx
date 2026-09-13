@@ -6,6 +6,8 @@ import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import TourCard from "../components/TourCard";
 import ResultsFilters from "../components/ResultsFilters";
+import API_URL from '../services/api';
+import { destinationTitle } from '../utils/destinationTitle';
 import { searchTours } from "../services/tourService";
 import "../styles/Results.css";
 
@@ -29,6 +31,17 @@ export default function Results() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [destinations, setDestinations] = useState([]);
+  useEffect(() => {
+    if (!searchParams.get('destinationCode') || searchParams.get('stagingTestHotel')) return;
+    const controller = new AbortController();
+    fetch(`${API_URL}/catalog/test-options`, {signal:controller.signal}).then(async response => {
+      if (!response.ok) return;
+      const data = await response.json();
+      if (!controller.signal.aborted) setDestinations(data.destinations || []);
+    }).catch(() => { /* A missing catalog name never becomes a guessed title. */ });
+    return () => controller.abort();
+  }, [searchParams]);
 
   const sortBy = searchParams.get("sort") || "priceAsc";
   const provider = searchParams.get("provider") || "hotelbeds";
@@ -148,7 +161,7 @@ export default function Results() {
           <div className="results-top">
             <div>
               <span className="results-kicker">SPRINT 3A · PRODUCT EXPERIENCE</span>
-              <h1>{searchParams.get("country") ? `Отели: ${searchParams.get("country")}` : "Найденные предложения"}</h1>
+              <h1>{destinationTitle(searchParams, destinations)}</h1>
               <p>Найдено <strong>{meta.total}</strong> предложений · цены можно уточнить перед бронированием</p>
               {provider === "hotelbeds" && (
                 <div className="live-provider-badge"><span>●</span> Проживание в отеле · перелёт не включён</div>
