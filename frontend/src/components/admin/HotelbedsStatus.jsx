@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import authFetch from '../../services/authFetch';
+import HotelbedsContentStatus from './HotelbedsContentStatus';
 import { canProbeTest, probeOptions } from '../../utils/hotelbedsProbe';
 export default function HotelbedsStatus() {
   const [status, setStatus] = useState(null);
@@ -68,5 +69,6 @@ export default function HotelbedsStatus() {
     <p>Booking: {status.bookingDisabled ? 'выключен' : 'проверьте flags'} · Payments: {status.paymentsDisabled ? 'выключены' : 'проверьте flags'}. Успешное подключение не разрешает продажи.</p>
     <p>Мониторинг: {status.monitor.enabled ? 'включён' : 'выключен'} · Отслеживается: {status.trackedOffers} · Горящих предложений: {status.confirmedHotDealsCount}</p>
     {status.jobs.map(job => <p key={job.job}>{job.job}: {job.last_success || 'Нет успешных запусков'} {job.last_error_category || ''}</p>)}
+    {status.environment === 'test' && <HotelbedsContentStatus />}
   </section>;
 }

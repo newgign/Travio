@@ -25,6 +25,31 @@ const {
 router.use(authMiddleware, requireRole("admin"));
 router.use(requirePermission("admin.operations.read"));
 
+router.get('/providers/hotelbeds/content', requirePermission('admin.system.read'), async (req, res, next) => {
+  try {
+    const service = require('../services/hotelbedsTestContent');
+    const config = require('../config/providers').hotelbeds;
+    let scope = null;
+    try { scope = service.selection(); } catch { /* Unconfigured import remains disabled. */ }
+    const repository = require('../repositories/providerCatalogRepository');
+    const destinations = await repository.findDestinations({ provider: 'hotelbeds' });
+    const counts = await repository.getCounts();
+    const jobs = await require('../db').query("SELECT last_run,last_success,last_error_category,details FROM provider_job_state WHERE job='test_content_import' AND environment=$1", [config.environment]);
+    const job = jobs.rows[0];
+    const lastImport = job ? { last_run: job.last_run, last_success: job.last_success,
+      last_error_category: job.last_error_category ? 'CONTENT_IMPORT_FAILED' : null,
+      details: { status: ['PASS','EMPTY'].includes(job.details?.status) ? job.details.status : 'NOT RUN',
+        upsertedHotels: Number.isInteger(job.details?.upsertedHotels) ? job.details.upsertedHotels : null } } : null;
+    res.json({ environment: config.environment, enabled: config.stagingTestAllowed && Boolean(scope), scope, limits: service.limits,
+      countries: new Set(destinations.map(row => row.country_code).filter(Boolean)).size, ...counts, lastImport });
+  } catch (error) { next(error); }
+});
+router.post('/providers/hotelbeds/content', requirePermission('admin.system.selftest'), async (req, res) => {
+  if (req.body && (typeof req.body !== 'object' || Array.isArray(req.body) || Object.keys(req.body).length)) return res.status(400).json({ status: 'BLOCKED', code: 'CONTENT_SCOPE_SERVER_ONLY' });
+  try { res.json(await require('../services/hotelbedsTestContent').run()); }
+  catch { res.status(409).json({ status: 'BLOCKED', code: 'CONTENT_IMPORT_BLOCKED_OR_FAILED' }); }
+});
+
 router.get('/providers/hotelbeds', requirePermission('admin.system.read'), async (req, res, next) => {
   try {
     const client = require('../integrations/hotelbeds/client');

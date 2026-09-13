@@ -2,8 +2,8 @@ const pool = require("../db");
 const { getCountryCode } = require("../config/providerCountries");
 
 class ProviderCatalogRepository {
-  async upsertDestination(destination) {
-    const result = await pool.query(
+  async upsertDestination(destination, executor = pool) {
+    const result = await executor.query(
       `
       INSERT INTO provider_destinations
       (
@@ -20,7 +20,7 @@ class ProviderCatalogRepository {
         updated_at
       )
       VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8::jsonb,$9,NOW(),NOW())
-      ON CONFLICT (provider, code)
+      ON CONFLICT (provider, code, content_environment)
       DO UPDATE SET
         country_code = EXCLUDED.country_code,
         country_name = EXCLUDED.country_name,
@@ -49,8 +49,8 @@ class ProviderCatalogRepository {
     return result.rows[0];
   }
 
-  async upsertHotel(hotel) {
-    const result = await pool.query(
+  async upsertHotel(hotel, executor = pool) {
+    const result = await executor.query(
       `
       INSERT INTO provider_hotels
       (
@@ -87,7 +87,7 @@ class ProviderCatalogRepository {
         $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,
         $20::jsonb,$21::jsonb,$22::jsonb,$23::jsonb,$24::jsonb,$25,NOW(),NOW()
       )
-      ON CONFLICT (provider, provider_hotel_id)
+      ON CONFLICT (provider, provider_hotel_id, content_environment)
       DO UPDATE SET
         country_code = EXCLUDED.country_code,
         country_name = EXCLUDED.country_name,
@@ -253,12 +253,12 @@ class ProviderCatalogRepository {
   async getCounts(provider = "hotelbeds") {
     const [destinations, hotels] = await Promise.all([
       pool.query(
-        `SELECT COUNT(*)::int AS count FROM provider_destinations WHERE provider = $1`,
-        [provider]
+        `SELECT COUNT(*)::int AS count FROM provider_destinations WHERE provider = $1 AND content_environment = $2`,
+        [provider, require("../config/providers").hotelbeds.environment]
       ),
       pool.query(
-        `SELECT COUNT(*)::int AS count FROM provider_hotels WHERE provider = $1`,
-        [provider]
+        `SELECT COUNT(*)::int AS count FROM provider_hotels WHERE provider = $1 AND content_environment = $2`,
+        [provider, require("../config/providers").hotelbeds.environment]
       ),
     ]);
 

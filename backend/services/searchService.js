@@ -24,6 +24,9 @@ class SearchService {
         // =====================================
 
         const provider = providerManager.getProvider(filters.provider || undefined);
+        if (provider.name === 'hotelbeds' && filters.destinationCode) {
+            filters = await require('./hotelbedsTestDestination')(filters, require('../config/providers').hotelbeds, require('../repositories/providerCatalogRepository'));
+        }
         const cacheKey = JSON.stringify({ environment: priceHistory.priceEnvironment(), provider: provider.name, filters });
 
         if (cache.has(cacheKey) && (provider.name !== "hotelbeds" || !require("../integrations/hotelbeds/client").readiness().lastErrorCategory)) {

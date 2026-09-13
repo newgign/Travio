@@ -42,7 +42,8 @@
     "hotelbeds:test-preflight": "node scripts/hotelbedsTestReadOnly.js --preflight",
     "hotelbeds:test-smoke": "node scripts/hotelbedsTestReadOnly.js",
     "test:sprint3e": "node --test tests/hotelbedsStagingTest.test.js",
-    "test:sprint3f": "node --test tests/hotelbedsPublicSearch.test.js"
+    "test:sprint3f": "node --test tests/hotelbedsPublicSearch.test.js",
+    "test:sprint3g": "node --test tests/hotelbedsContent.test.js"
   },
   "keywords": [],
   "author": "",

@@ -170,6 +170,7 @@ class HotelbedsProvider {
   }
 
   async prepareFilters(filters = {}) {
+    filters = await require("../services/hotelbedsTestDestination")(filters, require("../config/providers").hotelbeds, providerCatalogRepository);
     const explicitHotelCodes = this.parseHotelCodes(
       filters.hotelCodes || filters.hotelCode
     );

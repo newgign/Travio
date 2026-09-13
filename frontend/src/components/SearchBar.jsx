@@ -1,13 +1,29 @@
 ﻿import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useEffect } from 'react';
+import API_URL from '../services/api';
 
 import "./SearchBar.css";
 
 export default function SearchBar() {
   const navigate = useNavigate();
+  const testCatalog = import.meta.env.VITE_HOTELBEDS_STAGING_TEST_ENABLED === 'true';
+  const [destinations, setDestinations] = useState([]);
+  const [catalogState, setCatalogState] = useState('loading');
+  useEffect(() => {
+    if (!testCatalog) return;
+    const controller = new AbortController();
+    fetch(`${API_URL}/catalog/test-options`, { signal: controller.signal }).then(async response => {
+      if (!response.ok) throw new Error('catalog');
+      const data = await response.json();
+      setDestinations(data.destinations || []); setCatalogState('ready');
+    }).catch(() => { if (!controller.signal.aborted) setCatalogState('error'); });
+    return () => controller.abort();
+  }, [testCatalog]);
 
   const [filters, setFilters] = useState({
     country: "",
+    destinationCode: '',
     departureDate: "",
     people: 2,
     children: 0,
@@ -46,6 +62,7 @@ export default function SearchBar() {
     setFilters((prev) => ({
       ...prev,
       [name]: value,
+      ...(name === 'country' ? { destinationCode: '' } : {}),
     }));
 
     if (error) {
@@ -76,6 +93,12 @@ export default function SearchBar() {
     }
 
     const params = new URLSearchParams();
+    if (testCatalog && filters.country !== 'TEST_3424') {
+      if (!destinations.some(row => row.code === filters.destinationCode && row.countryCode === filters.country)) {
+        setError('Направление пока не загружено в тестовый каталог'); return;
+      }
+      params.set('destinationCode', filters.destinationCode);
+    }
 
     params.set("provider", "hotelbeds");
     params.set("country", filters.country);
@@ -118,13 +141,23 @@ export default function SearchBar() {
           >
             <option value="">Выберите страну</option>
             {import.meta.env.VITE_HOTELBEDS_STAGING_TEST_ENABLED === 'true' && <option value="TEST_3424">Hotelbeds TEST — отель 3424 (1 номер)</option>}
+            {testCatalog ? [...new Map(destinations.filter(row => row.countryCode).map(row => [row.countryCode, row])).values()].map(row => <option key={row.countryCode} value={row.countryCode}>{row.countryName || row.countryCode}</option>) : <>
             <option value="Египет">🇪🇬 Египет</option>
             <option value="Турция">🇹🇷 Турция</option>
             <option value="ОАЭ">🇦🇪 ОАЭ</option>
             <option value="Таиланд">🇹🇭 Таиланд</option>
+            </>}
           </select>
         </div>
 
+          {testCatalog && filters.country !== 'TEST_3424' && <div className="search-item">
+            <label htmlFor="search-destination">Направление / город</label>
+            <select id="search-destination" name="destinationCode" value={filters.destinationCode} onChange={handleChange} required disabled={!filters.country}>
+              <option value="">Выберите направление</option>
+              {destinations.filter(row => row.countryCode === filters.country).map(row => <option key={row.code} value={row.code}>{row.name || row.code}</option>)}
+            </select>
+            {catalogState === 'loading' ? <small>Загрузка каталога…</small> : catalogState === 'error' ? <small>Каталог временно недоступен</small> : !destinations.length && <small>Hotelbeds TEST каталог пока не загружен</small>}
+          </div>}
         <div className="search-item">
           <label htmlFor="search-departureDate">📅 Дата заезда</label>
 
