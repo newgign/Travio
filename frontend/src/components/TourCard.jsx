@@ -1,3 +1,4 @@
+import { countryLabel } from '../utils/testDestinationLabels';
 import { visibleProviderOffer } from "../utils/providerEnvironment";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -78,7 +79,7 @@ export default function TourCard({ tour }) {
         <div className="tour-card-header">
           <div>
             <h3>{hotelName}</h3>
-            <p className="tour-card-location">📍 {tour.city}{tour.city && tour.country ? ", " : ""}{tour.country}</p>
+            <p className="tour-card-location">📍 {tour.city}{tour.city && tour.country ? ", " : ""}{countryLabel(tour.country)}</p>
           </div>
           {Number(tour.rating) > 0 && (
             <div className="tour-card-rating"><strong>{Number(tour.rating).toFixed(1)}</strong>{Number(tour.reviewsCount) > 0 && <span>{Number(tour.reviewsCount).toLocaleString("ru-RU")} отзывов</span>}</div>

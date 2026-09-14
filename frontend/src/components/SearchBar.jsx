@@ -1,5 +1,6 @@
-﻿import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { countryLabel } from '../utils/testDestinationLabels';
+import { useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect } from 'react';
 import API_URL from '../services/api';
 import DestinationOptions from './DestinationOptions';
@@ -7,6 +8,10 @@ import DestinationOptions from './DestinationOptions';
 import "./SearchBar.css";
 
 export default function SearchBar() {
+  const [params] = useSearchParams();
+  return <SearchBarForm key={params.toString()} params={params} />;
+}
+function SearchBarForm({params}) {
   const navigate = useNavigate();
   const testCatalog = import.meta.env.VITE_HOTELBEDS_STAGING_TEST_ENABLED === 'true';
   const [destinations, setDestinations] = useState([]);
@@ -23,8 +28,8 @@ export default function SearchBar() {
   }, [testCatalog]);
 
   const [filters, setFilters] = useState({
-    country: "",
-    destinationCode: '',
+    country: params.get('countryCode') || params.get('country') || '',
+    destinationCode: params.get('destinationCode') || '',
     departureDate: "",
     people: 2,
     children: 0,
@@ -142,7 +147,7 @@ export default function SearchBar() {
           >
             <option value="">Выберите страну</option>
             {import.meta.env.VITE_HOTELBEDS_STAGING_TEST_ENABLED === 'true' && <option value="TEST_3424">Hotelbeds TEST — отель 3424 (1 номер)</option>}
-            {testCatalog ? [...new Map(destinations.filter(row => row.countryCode).map(row => [row.countryCode, row])).values()].map(row => <option key={row.countryCode} value={row.countryCode}>{row.countryName || row.countryCode}</option>) : <>
+            {testCatalog ? [...new Map(destinations.filter(row => row.countryCode).map(row => [row.countryCode, row])).values()].map(row => <option key={row.countryCode} value={row.countryCode}>{countryLabel(row.countryCode, row.countryName)}</option>) : <>
             <option value="Египет">🇪🇬 Египет</option>
             <option value="Турция">🇹🇷 Турция</option>
             <option value="ОАЭ">🇦🇪 ОАЭ</option>

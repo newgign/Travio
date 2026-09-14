@@ -9,6 +9,9 @@
 .destination-caption h3 { margin:8px 0 0; font-size:28px; color:#fff; }
 .destination-card:hover { transform:translateY(-4px); box-shadow:0 16px 34px #0f172a22; }
 .destination-card:hover img { transform:scale(1.04); }
+.destination-card[aria-disabled="true"] { cursor:default; opacity:.75; }
+.destination-card[aria-disabled="true"]:hover { transform:none; }
+.destination-card[aria-disabled="true"]:hover img { transform:none; }
 .collection-note { text-align:center; color:#64748b; margin:-16px 0 24px; font-size:14px; line-height:1.5; }
 .hot-trip-card { min-width:0; display:flex; flex-direction:column; overflow:hidden; border-radius:22px; background:#fff; color:#0f172a; box-shadow:0 10px 30px #0f172a12; transition:transform 200ms,box-shadow 200ms; }
 .hot-trip-card:hover { transform:translateY(-4px); box-shadow:0 16px 34px #0f172a22; }

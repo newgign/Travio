@@ -1,3 +1,4 @@
+import { resetOfferFilters } from '../utils/localOfferFilters';
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import "./ResultsFilters.css";
@@ -26,17 +27,16 @@ function ResultsFiltersForm({ currency, onApplied }) {
       const value = form[key];
       if (value) params.set(key, value); else params.delete(key);
     });
+    if (form.nights !== (searchParams.get("nights") || "7")) params.delete("checkOut");
     params.set("page", "1");
     setSearchParams(params);
     onApplied?.();
   }
 
   function resetFilters() {
-    const params = new URLSearchParams(searchParams);
-    FILTER_KEYS.forEach((key) => params.delete(key));
-    params.set("nights", "7");
+    const params = resetOfferFilters(searchParams);
     params.set("page", "1");
-    setForm({ maxPrice: "", stars: "", rating: "", food: "", nights: "7", beachLine: "", roomType: "" });
+    setForm({ maxPrice: "", stars: "", rating: "", food: "", nights: searchParams.get("nights") || "7", beachLine: "", roomType: "" });
     setSearchParams(params);
     onApplied?.();
   }
@@ -45,7 +45,7 @@ function ResultsFiltersForm({ currency, onApplied }) {
 
   return (
     <aside className="results-filters-panel">
-      <div className="filter-title-row"><div><h2>Фильтры</h2><p>Уточните подходящий вариант</p></div>{activeCount > 0 && <span>{activeCount}</span>}</div>
+      <div className="filter-title-row"><div><h2>Фильтры</h2><p>Уточните подходящий вариант</p><small>Изменение числа ночей запускает новый поиск по датам.</small></div>{activeCount > 0 && <span>{activeCount}</span>}</div>
       <form onSubmit={applyFilters}>
         <div className="filter-block"><h3>Цена до</h3><input className="filter-input" type="number" name="maxPrice" min="0" step="1" placeholder={`Например 500 ${currency}`} value={form.maxPrice} onChange={handleChange} /><small>В валюте поставщика: {currency}</small></div>
         <div className="filter-block"><h3>Категория отеля</h3><select className="filter-input" name="stars" value={form.stars} onChange={handleChange}><option value="">Любая</option><option value="3">3★ и выше</option><option value="4">4★ и выше</option><option value="5">5★</option></select></div>

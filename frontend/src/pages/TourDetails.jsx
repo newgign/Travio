@@ -1,3 +1,4 @@
+import { countryLabel } from '../utils/testDestinationLabels';
 import { visibleProviderOffer } from "../utils/providerEnvironment";
 import RateConditions from "../components/RateConditions";
 import HotelImage from '../components/HotelImage';
@@ -115,7 +116,7 @@ export default function TourDetails() {
 
         <section className="tour-product-head">
           <div>
-            <div className="tour-location">📍 {tour.city}{tour.city && tour.country ? ", " : ""}{tour.country}</div>
+            <div className="tour-location">📍 {tour.city}{tour.city && tour.country ? ", " : ""}{countryLabel(tour.country)}</div>
             <h1>{hotelName}</h1>
             <div className="tour-head-meta">
               {Number(tour.stars) > 0 && <span className="stars-pill">{"★".repeat(Math.min(Number(tour.stars), 5))}</span>}

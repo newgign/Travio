@@ -1,4 +1,6 @@
-﻿import { useCallback, useEffect, useMemo, useState } from "react";
+import { countryLabel } from '../utils/testDestinationLabels';
+import { providerQuery, filterOffers, resetOfferFilters, filterEmptyMessage } from '../utils/localOfferFilters';
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import SearchBar from "../components/SearchBar";
@@ -9,7 +11,7 @@ import ResultsFilters from "../components/ResultsFilters";
 import API_URL from '../services/api';
 import { destinationTitle } from '../utils/destinationTitle';
 import { useRef } from 'react';
-import { searchQuery, catalogEmptyMessage, noRatesMessage } from '../utils/catalogUx';
+import { catalogEmptyMessage, noRatesMessage } from '../utils/catalogUx';
 import { searchTours } from "../services/tourService";
 import "../styles/Results.css";
 
@@ -49,6 +51,10 @@ export default function Results() {
 
   const sortBy = searchParams.get("sort") || "priceAsc";
   const provider = searchParams.get("provider") || "hotelbeds";
+  const localFilters = import.meta.env.VITE_HOTELBEDS_STAGING_TEST_ENABLED === 'true' && provider === 'hotelbeds';
+  const requestQuery = providerQuery(searchParams, localFilters);
+  const visibleTours = localFilters ? filterOffers(tours, searchParams) : tours;
+  const filterEmpty = localFilters && tours.length > 0 && visibleTours.length === 0;
   const currency = tours[0]?.currency || (provider === "hotelbeds" ? "EUR" : "KZT");
 
   const activeFilters = useMemo(() => {
@@ -66,10 +72,10 @@ export default function Results() {
     const beachLine = searchParams.get("beachLine");
     const maxPrice = searchParams.get("maxPrice");
 
-    if (country) items.push({ key: "country", label: `🌍 ${country}`, locked: true });
+    if (country) items.push({ key: "country", label: `🌍 ${countryLabel(country)}`, locked: true });
     if (city) items.push({ key: "city", label: `📍 ${city}` });
     if (departureDate) items.push({ key: "departureDate", label: `📅 ${new Date(`${departureDate}T00:00:00`).toLocaleDateString("ru-RU")}`, locked: true });
-    if (nights) items.push({ key: "nights", label: `🌙 ${nights} ночей` });
+    if (nights) items.push({ key: "nights", label: `🌙 ${nights} ночей`, locked: true });
     if (people) items.push({ key: "people", label: `👥 ${pluralGuests(people)}`, locked: true });
     if (children > 0) items.push({ key: "children", label: `👶 ${children} дет.` , locked: true });
     if (food) items.push({ key: "food", label: `🍽 ${FOOD_LABELS[food] || food}` });
@@ -83,12 +89,12 @@ export default function Results() {
 
   const loadTours = useCallback(async () => {
     const version=++requestVersion.current.version;
-    if (provider === "hotelbeds" && !searchParams.get("departureDate") && !searchParams.get('checkIn')) { setTours([]); setLoading(false); return; }
+    const filters = JSON.parse(requestQuery);
+    if (provider === "hotelbeds" && !filters.departureDate && !filters.checkIn) { setTours([]); setLoading(false); return; }
     try {
       setLoading(true);
       setError("");
       setCatalogEmpty(false);
-      const filters = searchQuery(searchParams);
       const result = await searchTours(filters);
       if (version !== requestVersion.current.version) return;
       setTours(Array.isArray(result?.data) ? result.data : []);
@@ -108,7 +114,7 @@ export default function Results() {
     } finally {
       if (version === requestVersion.current.version) setLoading(false);
     }
-  }, [provider, searchParams]);
+  }, [provider, requestQuery]);
 
   useEffect(() => { const state = requestVersion.current; const timer = setTimeout(loadTours, 0); return () => { clearTimeout(timer); state.version++; }; }, [loadTours]);
 
@@ -145,7 +151,7 @@ export default function Results() {
             <div>
               <span className="results-kicker">SPRINT 3A · PRODUCT EXPERIENCE</span>
               <h1>{destinationTitle(searchParams, destinations)}</h1>
-              <p>Найдено <strong>{meta.total}</strong> предложений · цены можно уточнить перед бронированием</p>
+              <p>Найдено <strong>{meta.total}</strong> предложений{localFilters ? ' · Hotelbeds TEST · бронирование отключено' : ' · цены можно уточнить перед бронированием'}</p>
               {provider === "hotelbeds" && (
                 <div className="live-provider-badge"><span>●</span> Проживание в отеле · перелёт не включён</div>
               )}
@@ -183,6 +189,8 @@ export default function Results() {
             </div>
           )}
 
+          <button type="button" className="filter-reset" onClick={() => setSearchParams(resetOfferFilters(searchParams))}>Сбросить фильтры</button>
+
           {loading && (
             <div className="results-layout loading-layout">
               <div className="filter-skeleton" />
@@ -208,16 +216,16 @@ export default function Results() {
 
               <div className="results-content">
                 <div className="results-content-head">
-                  <span>{tours.length ? `Показано ${tours.length} из ${meta.total}` : "Нет предложений"}</span>
+                  <span>{`Показано ${visibleTours.length} из ${meta.total}`}</span>
                   <span>Страница {meta.page} / {meta.pages}</span>
                 </div>
 
-                {tours.length === 0 ? (
-                  <div className="no-results"><h2>{catalogEmpty ? catalogEmptyMessage : noRatesMessage}</h2><p>{catalogEmpty ? 'Выберите другое готовое направление.' : 'Измените дату, питание, категорию или диапазон цены.'}</p></div>
+                {visibleTours.length === 0 ? (
+                  <div className="no-results"><h2>{catalogEmpty ? catalogEmptyMessage : filterEmpty ? filterEmptyMessage : noRatesMessage}</h2><p>{catalogEmpty ? 'Выберите другое готовое направление.' : 'Измените дату, питание, категорию или диапазон цены.'}</p></div>
                 ) : (
                   <>
                     <div className="tour-grid">
-                      {tours.map((tour) => <TourCard key={`${tour.provider || "hotel"}-${tour.providerHotelId || tour.id}`} tour={tour} />)}
+                      {visibleTours.map((tour) => <TourCard key={`${tour.provider || "hotel"}-${tour.providerHotelId || tour.id}`} tour={tour} />)}
                     </div>
                     {meta.pages > 1 && (
                       <div className="results-pagination">
