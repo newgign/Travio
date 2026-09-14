@@ -42,17 +42,20 @@ router.get('/providers/hotelbeds/content', requirePermission('admin.system.read'
       details: { status: ['PASS','EMPTY'].includes(job.details?.status) ? job.details.status : 'NOT RUN',
         upsertedHotels: Number.isInteger(job.details?.upsertedHotels) ? job.details.upsertedHotels : null } } : null;
     res.json({ environment: config.environment, enabled: config.stagingTestAllowed && scopes.length > 0, scope: scopes[0] || null,
-      scopes: scopes.map(scope => ({...scope,...readiness.find(row=>row.code===scope.destinationCode && row.countryCode===scope.countryCode)})), limits: service.limits,
+      scopes: scopes.map(scope => {
+        const row=readiness.find(row=>row.code===scope.destinationCode && row.countryCode===scope.countryCode);
+        return {...scope,...row,batch:service.batchPlan(row?.hotelCount || 0)};
+      }), limits: service.limits,
       destinationsDetail: destinations.map(row=>({code:row.code,countryCode:row.country_code,name:row.name,hotelCount:Number(row.hotel_count)||0})),
       countries: new Set(destinations.map(row => row.country_code).filter(Boolean)).size, ...counts, lastImport });
   } catch (error) { next(error); }
 });
 router.post('/providers/hotelbeds/content', requirePermission('admin.system.selftest'), async (req, res) => {
-  if (req.body && (typeof req.body !== 'object' || Array.isArray(req.body) || Object.keys(req.body).some(key=>key!=='scopeId') || (req.body.scopeId !== undefined && typeof req.body.scopeId !== 'string'))) return res.status(400).json({ status: 'BLOCKED', code: 'CONTENT_SCOPE_SERVER_ONLY' });
+  if (req.body && (typeof req.body !== 'object' || Array.isArray(req.body) || Object.keys(req.body).some(key=>!['scopeId','action'].includes(key)) || (req.body.scopeId !== undefined && typeof req.body.scopeId !== 'string') || (req.body.action !== undefined && req.body.action !== 'next'))) return res.status(400).json({ status: 'BLOCKED', code: 'CONTENT_SCOPE_SERVER_ONLY' });
   try {
     const service = require('../services/hotelbedsTestContent');
     const scope = service.selection(process.env, req.body?.scopeId);
-    res.json(await service.run({scopeId:scope.id}));
+    res.json(await service.run({scopeId:scope.id,...(req.body?.action ? {action:req.body.action} : {})}));
   }
   catch { res.status(409).json({ status: 'BLOCKED', code: 'CONTENT_IMPORT_BLOCKED_OR_FAILED' }); }
 });

@@ -211,7 +211,7 @@ class ProviderCatalogRepository {
       SELECT *
       FROM provider_hotels
       WHERE ${conditions.join(" AND ")}
-      ORDER BY stars DESC, name ASC
+      ORDER BY stars DESC, name ASC, provider_hotel_id ASC
       LIMIT $${params.length}
       `,
       params

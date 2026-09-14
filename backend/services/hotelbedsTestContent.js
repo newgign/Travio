@@ -1,6 +1,13 @@
 const { HotelbedsClient } = require('../integrations/hotelbeds/client');
 const limits = Object.freeze({ destinations: 1, destinationRows: 100, destinationWindows: 2, pages: 1, hotels: 20, requests: 3, timeoutMs: 12000, intervalMs: 1000, retries: 0 });
 const blocked = code => Object.assign(new Error(code), { code, status: 409 });
+function batchPlan(currentCount) {
+  if (!Number.isInteger(currentCount) || currentCount < 0) throw blocked('CONTENT_COUNT_INVALID');
+  const complete = currentCount >= 20;
+  const count = complete ? 0 : Math.min(10, 20 - currentCount);
+  return { currentCount, maximum:20, complete, next:complete ? null : {from:currentCount+1,count,to:currentCount+count} };
+}
+const catalogIds = db => async destinationCode => (await db.query("SELECT provider_hotel_id FROM provider_hotels WHERE provider='hotelbeds' AND content_environment='test' AND destination_code=$1",[destinationCode])).rows.map(row=>String(row.provider_hotel_id));
 // Reuse signing, queue, error redaction and HTTP implementation. This instance
 // cannot perform even Booking-channel reads; the public provider never uses it.
 class ContentClient extends HotelbedsClient {
@@ -39,8 +46,9 @@ function selection(env = process.env, scopeId) {
 }
 let running = false;
 let lastAttempt = 0;
-async function run({ env = process.env, scopeId, client, repository, pool } = {}) {
-  const scope = selection(env, scopeId);
+async function run({ env = process.env, scopeId, action, client, repository, pool } = {}) {
+  let scope = selection(env, scopeId);
+  if (action !== undefined && action !== 'next') throw blocked('CONTENT_SCOPE_BLOCKED');
   const readiness = require('./hotelbedsLiveReadOnlyService').preflight(env, undefined, 'test', false);
   if (readiness.blockers.length) throw blocked('CONTENT_CONFIGURATION_BLOCKED');
   if (running || Date.now() - lastAttempt < 60000) throw blocked('CONTENT_BUSY_OR_COOLDOWN');
@@ -56,6 +64,9 @@ async function run({ env = process.env, scopeId, client, repository, pool } = {}
     db = await pool.connect();
     locked = (await db.query('SELECT pg_try_advisory_lock(319030) AS locked')).rows[0].locked;
     if (!locked) throw blocked('CONTENT_BUSY_OR_COOLDOWN');
+    const plan = batchPlan((await catalogIds(db)(scope.destinationCode)).length);
+    if (plan.complete) throw blocked('CONTENT_IMPORT_COMPLETE');
+    if (action === 'next') scope = {...scope,...plan.next};
     const recent = await db.query("SELECT last_run FROM provider_job_state WHERE job='test_content_import' AND environment='test'");
     if (recent.rows[0]?.last_run && Date.now() - new Date(recent.rows[0].last_run).getTime() < 60000) throw blocked('CONTENT_BUSY_OR_COOLDOWN');
     await db.query("INSERT INTO provider_job_state(job,environment,last_run) VALUES('test_content_import','test',NOW()) ON CONFLICT(job,environment) DO UPDATE SET last_run=NOW()");
@@ -77,6 +88,10 @@ async function run({ env = process.env, scopeId, client, repository, pool } = {}
       return mapper.mapHotel(raw);
     });
     await db.query('BEGIN');
+    // Serialize the final union check with other catalog writers as well.
+    await db.query('LOCK TABLE provider_hotels IN SHARE ROW EXCLUSIVE MODE');
+    const existingIds = await catalogIds(db)(scope.destinationCode);
+    if (new Set([...existingIds,...hotels.map(hotel=>String(hotel.providerHotelId))]).size > 20) throw blocked('CONTENT_CATALOG_LIMIT');
     const previousDestination = await db.query("SELECT country_code FROM provider_destinations WHERE provider='hotelbeds' AND content_environment='test' AND code=$1 FOR UPDATE",[scope.destinationCode]);
     if (previousDestination.rows.some(row => row.country_code && row.country_code !== scope.countryCode)) throw blocked('CONTENT_IDENTITY_CONFLICT');
     await repository.upsertDestination(mapper.mapDestination(destination), db);
@@ -85,7 +100,7 @@ async function run({ env = process.env, scopeId, client, repository, pool } = {}
       if (previous.rows.some(row => row.destination_code !== scope.destinationCode || row.country_code !== scope.countryCode)) throw blocked('CONTENT_IDENTITY_CONFLICT');
       await repository.upsertHotel(hotel, db);
     }
-    const result = { status: hotels.length ? 'PASS' : 'EMPTY', environment: 'test', scopeId: scope.id, upsertedHotels: hotels.length, requests: metadataRequests + 1 };
+    const result = { status: hotels.length ? 'PASS' : 'EMPTY', environment: 'test', scopeId: scope.id, from:scope.from, count:scope.count, upsertedHotels: hotels.length, requests: metadataRequests + 1 };
     await db.query("UPDATE provider_job_state SET last_success=NOW(),last_error_category=NULL,details=$1::jsonb WHERE job='test_content_import' AND environment='test'", [JSON.stringify(result)]);
     await db.query('COMMIT');
     return result;
@@ -98,4 +113,4 @@ async function run({ env = process.env, scopeId, client, repository, pool } = {}
     db?.release(); running = false;
   }
 }
-module.exports = { limits: {...limits, configuredDestinations:5}, scopes, selection, run, ContentClient };
+module.exports = { limits: {...limits, configuredDestinations:5, catalogHotels:20, nextBatchHotels:10}, batchPlan, scopes, selection, run, ContentClient };

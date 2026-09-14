@@ -25,12 +25,14 @@ test('admin HTTP accepts only configured scope IDs; catalog API exposes counts w
   try {
     const data=await (await fetch(base+'/catalog/test-options')).json();assert.equal(data.countriesCount,2);assert.equal(data.hotelsCount,13);assert.equal(data.destinations[1].hotelCount,0);assert.equal(JSON.stringify(data).includes('raw_data'),false);
     const headers={'Content-Type':'application/json',Authorization:'Bearer '+jwt.sign({id:1,role:'admin'},process.env.JWT_SECRET)};
-    for(const body of [{scopeId:'PT:NOPE'},{scopeId:'PT:CEN',url:'https://invalid'},{scopeId:'PT:CEN',from:101},{scopeId:'PT:CEN',to:200},{scopeId:'PT:CEN',page:2},{scopeId:4},{}]) {
+    for(const body of [{scopeId:'PT:NOPE'},{scopeId:'PT:CEN',url:'https://invalid'},{scopeId:'PT:CEN',from:101},{scopeId:'PT:CEN',count:20},{scopeId:'PT:CEN',action:'all'},{scopeId:['PT:CEN','PT:ALT']},{scopeId:'PT:CEN',to:200},{scopeId:'PT:CEN',page:2},{scopeId:4},{}]) {
       const response=await fetch(base+'/admin/providers/hotelbeds/content',{method:'POST',headers,body:JSON.stringify(body)});assert.ok([400,409].includes(response.status));
     }
     assert.equal(calls.length,0);
     assert.equal((await fetch(base+'/admin/providers/hotelbeds/content',{method:'POST',headers,body:JSON.stringify({scopeId:'PT:CEN'})})).status,200);
     assert.deepEqual(calls,[{scopeId:'PT:CEN'}]);
+    assert.equal((await fetch(base+'/admin/providers/hotelbeds/content',{method:'POST',headers,body:JSON.stringify({scopeId:'PT:CEN',action:'next'})})).status,200);
+    assert.deepEqual(calls[1],{scopeId:'PT:CEN',action:'next'});
   } finally {await new Promise(resolve=>server.close(resolve));}
 });
 test('multi-scope imports, catalog counts, search filters, signed details and isolation in local rollback schema',async t=>{
