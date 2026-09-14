@@ -9,6 +9,30 @@ const config = require('../config/hotelbeds').buildConfig(safe);
 const resolve = require('../services/hotelbedsTestDestination');
 const input = { destinationCode:'AVE', departureDate:'2030-04-01', nights:1, people:2 };
 
+test('bounded metadata windows stop at target, second miss, invalid response or auth error', async t => {
+  let now=Date.now()-600000;
+  t.mock.method(Date,'now',()=>now);
+  for (const mode of ['first','second','missing','auth','invalid']) {
+    now+=61000;
+    const calls=[],saved=[];
+    const db={query:async sql=>({rows:sql.includes('pg_try')?[{locked:true}]:[]}),release(){}};
+    const target={code:'HKT',countryCode:'TH',name:{content:'Phuket'}};
+    const client={contentDestinations:async params=>{
+      calls.push(params);
+      if(mode==='auth')throw Object.assign(Error('offline auth'),{code:'AUTH_ERROR'});
+      if(mode==='invalid')return {};
+      return {destinations:(mode==='first'||mode==='second'&&params.from===101)?[target]:[{code:'OTHER',countryCode:'TH',name:{content:'Offline other'}}]};
+    },contentHotels:async()=>{calls.push('hotels');return {hotels:[]};}};
+    const repository={upsertDestination:async row=>saved.push(row.code),upsertHotel:async()=>assert.fail('No fixture hotels')};
+    const options={env:{...safe,HOTELBEDS_TEST_CONTENT_COUNTRY:'TH',HOTELBEDS_TEST_CONTENT_DESTINATION:'HKT',HOTELBEDS_TEST_CONTENT_SCOPES:''},client,repository,pool:{connect:async()=>db}};
+    if(['first','second'].includes(mode)) {
+      const result=await service.run(options);assert.equal(result.requests,mode==='first'?2:3);assert.deepEqual(saved,['HKT']);assert.equal(calls.at(-1),'hotels');
+    } else {await assert.rejects(service.run(options));assert.deepEqual(saved,[]);assert.equal(calls.includes('hotels'),false);}
+    const windows=calls.filter(row=>typeof row==='object').map(({from,to})=>[from,to]);
+    assert.deepEqual(windows,['second','missing'].includes(mode)?[[1,100],[101,200]]:[[1,100]]);
+  }
+});
+
 test('static images remain attached to the exact hotel code, including reversed catalog rows', async t => {
   const api=require('../integrations/hotelbeds/client'),repo=require('../repositories/providerCatalogRepository'),provider=require('../sources/hotelbeds');
   const hotels=[1,3424].map(code=>({code,name:'Offline hotel '+code,currency:'EUR',rooms:[{code:'DBL',rates:[{rateKey:'offline-'+code,rateType:'BOOKABLE',net:'10',boardCode:'RO',paymentType:'AT_WEB',rooms:1,adults:2,children:0}]}]}));

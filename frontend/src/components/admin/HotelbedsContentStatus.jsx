@@ -28,7 +28,7 @@ export default function HotelbedsContentStatus() {
       </select></label>
       <p>Страница: {selectedScope?.from ?? '—'}–{selectedScope?.to ?? '—'}</p>
       {data.destinationsDetail?.map(row=><p key={`${row.countryCode}:${row.code}`}>{row.name || row.code} ({row.countryCode} / {row.code}): {row.hotelCount} отелей</p>)}
-      <p>Лимиты: {data.limits.destinations} направление, {data.limits.pages} страница, {data.limits.hotels} отелей, {data.limits.requests} запрос; retries={data.limits.retries}, timeout={data.limits.timeoutMs} ms.</p>
+      <p>Лимиты: {data.limits.destinations} направление, до {data.limits.destinationWindows ?? 1} окон метаданных, {data.limits.pages} страница отелей, до {data.limits.hotels} отелей и {data.limits.requests} запросов; retries={data.limits.retries}, timeout={data.limits.timeoutMs} ms.</p>
       <button type="button" disabled={busy || !data.enabled || !selectedScope} onClick={run}>Импортировать выбранное направление</button>
       <p>Только настроенный сервером scope. Повторный импорт — не чаще раза в минуту. Scheduler отключён.</p>
     </>}

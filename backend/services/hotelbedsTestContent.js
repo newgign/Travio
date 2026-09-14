@@ -1,5 +1,5 @@
 const { HotelbedsClient } = require('../integrations/hotelbeds/client');
-const limits = Object.freeze({ destinations: 1, destinationRows: 100, pages: 1, hotels: 20, requests: 2, timeoutMs: 12000, intervalMs: 1000, retries: 0 });
+const limits = Object.freeze({ destinations: 1, destinationRows: 100, destinationWindows: 2, pages: 1, hotels: 20, requests: 3, timeoutMs: 12000, intervalMs: 1000, retries: 0 });
 const blocked = code => Object.assign(new Error(code), { code, status: 409 });
 // Reuse signing, queue, error redaction and HTTP implementation. This instance
 // cannot perform even Booking-channel reads; the public provider never uses it.
@@ -60,9 +60,14 @@ async function run({ env = process.env, scopeId, client, repository, pool } = {}
     if (recent.rows[0]?.last_run && Date.now() - new Date(recent.rows[0].last_run).getTime() < 60000) throw blocked('CONTENT_BUSY_OR_COOLDOWN');
     await db.query("INSERT INTO provider_job_state(job,environment,last_run) VALUES('test_content_import','test',NOW()) ON CONFLICT(job,environment) DO UPDATE SET last_run=NOW()");
     lastAttempt = Date.now(); attempted = true;
-    const locations = await client.contentDestinations({ countryCodes: scope.countryCode, fields: 'all', language: 'ENG', from: 1, to: limits.destinationRows });
-    if (!Array.isArray(locations?.destinations) || locations.destinations.length > limits.destinationRows) throw blocked('CONTENT_RESPONSE_INVALID');
-    const destination = locations.destinations.find(row => row.code === scope.destinationCode && row.countryCode === scope.countryCode);
+    let destination;
+    let metadataRequests = 0;
+    for (let window = 0; window < limits.destinationWindows && !destination; window++) {
+      metadataRequests++;
+      const locations = await client.contentDestinations({ countryCodes: scope.countryCode, fields: 'all', language: 'ENG', from: window * limits.destinationRows + 1, to: (window + 1) * limits.destinationRows });
+      if (!Array.isArray(locations?.destinations) || locations.destinations.length > limits.destinationRows) throw blocked('CONTENT_RESPONSE_INVALID');
+      destination = locations.destinations.find(row => row.code === scope.destinationCode && row.countryCode === scope.countryCode);
+    }
     if (!destination) throw blocked('CONTENT_DESTINATION_NOT_IN_PAGE');
     const response = await client.contentHotels({ destinationCode: scope.destinationCode, fields: 'all', language: 'ENG', from: scope.from, to: scope.to });
     if (!Array.isArray(response?.hotels) || response.hotels.length > scope.count) throw blocked('CONTENT_RESPONSE_INVALID');
@@ -80,7 +85,7 @@ async function run({ env = process.env, scopeId, client, repository, pool } = {}
       if (previous.rows.some(row => row.destination_code !== scope.destinationCode || row.country_code !== scope.countryCode)) throw blocked('CONTENT_IDENTITY_CONFLICT');
       await repository.upsertHotel(hotel, db);
     }
-    const result = { status: hotels.length ? 'PASS' : 'EMPTY', environment: 'test', scopeId: scope.id, upsertedHotels: hotels.length, requests: 2 };
+    const result = { status: hotels.length ? 'PASS' : 'EMPTY', environment: 'test', scopeId: scope.id, upsertedHotels: hotels.length, requests: metadataRequests + 1 };
     await db.query("UPDATE provider_job_state SET last_success=NOW(),last_error_category=NULL,details=$1::jsonb WHERE job='test_content_import' AND environment='test'", [JSON.stringify(result)]);
     await db.query('COMMIT');
     return result;
