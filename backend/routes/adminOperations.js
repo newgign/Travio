@@ -34,6 +34,7 @@ router.get('/providers/hotelbeds/content', requirePermission('admin.system.read'
     const repository = require('../repositories/providerCatalogRepository');
     const destinations = await repository.findDestinations({ provider: 'hotelbeds' });
     const counts = await repository.getCounts();
+    const readiness = require('../services/testCatalogReadiness')(destinations,scopes);
     const jobs = await require('../db').query("SELECT last_run,last_success,last_error_category,details FROM provider_job_state WHERE job='test_content_import' AND environment=$1", [config.environment]);
     const job = jobs.rows[0];
     const lastImport = job ? { last_run: job.last_run, last_success: job.last_success,
@@ -41,7 +42,7 @@ router.get('/providers/hotelbeds/content', requirePermission('admin.system.read'
       details: { status: ['PASS','EMPTY'].includes(job.details?.status) ? job.details.status : 'NOT RUN',
         upsertedHotels: Number.isInteger(job.details?.upsertedHotels) ? job.details.upsertedHotels : null } } : null;
     res.json({ environment: config.environment, enabled: config.stagingTestAllowed && scopes.length > 0, scope: scopes[0] || null,
-      scopes: scopes.map(scope => ({...scope, name: destinations.find(row=>row.code===scope.destinationCode && row.country_code===scope.countryCode)?.name || null})), limits: service.limits,
+      scopes: scopes.map(scope => ({...scope,...readiness.find(row=>row.code===scope.destinationCode && row.countryCode===scope.countryCode)})), limits: service.limits,
       destinationsDetail: destinations.map(row=>({code:row.code,countryCode:row.country_code,name:row.name,hotelCount:Number(row.hotel_count)||0})),
       countries: new Set(destinations.map(row => row.country_code).filter(Boolean)).size, ...counts, lastImport });
   } catch (error) { next(error); }

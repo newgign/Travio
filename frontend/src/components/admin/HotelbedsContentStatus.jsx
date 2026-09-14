@@ -27,6 +27,7 @@ export default function HotelbedsContentStatus() {
         {data.scopes?.map(scope=><option key={scope.id} value={scope.id}>{scope.name || scope.destinationCode} ({scope.countryCode} / {scope.destinationCode})</option>)}
       </select></label>
       <p>Страница: {selectedScope?.from ?? '—'}–{selectedScope?.to ?? '—'}</p>
+      {data.scopes?.map(scope=><p key={scope.id}>{scope.name || scope.destinationCode} ({scope.countryCode} / {scope.destinationCode}) · {scope.hotelCount} отелей · {scope.state} · environment={scope.environment}</p>)}
       {data.destinationsDetail?.map(row=><p key={`${row.countryCode}:${row.code}`}>{row.name || row.code} ({row.countryCode} / {row.code}): {row.hotelCount} отелей</p>)}
       <p>Лимиты: {data.limits.destinations} направление, до {data.limits.destinationWindows ?? 1} окон метаданных, {data.limits.pages} страница отелей, до {data.limits.hotels} отелей и {data.limits.requests} запросов; retries={data.limits.retries}, timeout={data.limits.timeoutMs} ms.</p>
       <button type="button" disabled={busy || !data.enabled || !selectedScope} onClick={run}>Импортировать выбранное направление</button>

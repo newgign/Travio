@@ -2,6 +2,7 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect } from 'react';
 import API_URL from '../services/api';
+import DestinationOptions from './DestinationOptions';
 
 import "./SearchBar.css";
 
@@ -154,7 +155,7 @@ export default function SearchBar() {
             <label htmlFor="search-destination">Направление / город</label>
             <select id="search-destination" name="destinationCode" value={filters.destinationCode} onChange={handleChange} required disabled={!filters.country}>
               <option value="">Выберите направление</option>
-              {destinations.filter(row => row.countryCode === filters.country).map(row => <option key={row.code} value={row.code} disabled={!row.hotelCount}>{row.name || row.code}{!row.hotelCount ? ' — отели пока не загружены' : ''}</option>)}
+              <DestinationOptions destinations={destinations} country={filters.country} />
             </select>
             {catalogState === 'loading' ? <small>Загрузка каталога…</small> : catalogState === 'error' ? <small>Каталог временно недоступен</small> : !destinations.length && <small>Hotelbeds TEST каталог пока не загружен</small>}
           </div>}

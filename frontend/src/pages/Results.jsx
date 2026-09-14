@@ -8,6 +8,8 @@ import TourCard from "../components/TourCard";
 import ResultsFilters from "../components/ResultsFilters";
 import API_URL from '../services/api';
 import { destinationTitle } from '../utils/destinationTitle';
+import { useRef } from 'react';
+import { searchQuery, catalogEmptyMessage, noRatesMessage } from '../utils/catalogUx';
 import { searchTours } from "../services/tourService";
 import "../styles/Results.css";
 
@@ -30,6 +32,8 @@ export default function Results() {
   const [meta, setMeta] = useState({ page: 1, limit: 20, total: 0, pages: 1, provider: null });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [catalogEmpty, setCatalogEmpty] = useState(false);
+  const requestVersion = useRef({version:0});
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [destinations, setDestinations] = useState([]);
   useEffect(() => {
@@ -49,11 +53,11 @@ export default function Results() {
 
   const activeFilters = useMemo(() => {
     const items = [];
-    const country = searchParams.get("country");
+    const country = searchParams.get("country") || searchParams.get("countryCode");
     const city = searchParams.get("city");
-    const departureDate = searchParams.get("departureDate");
+    const departureDate = searchParams.get("departureDate") || searchParams.get("checkIn");
     const nights = searchParams.get("nights");
-    const people = searchParams.get("people");
+    const people = searchParams.get("adults") || searchParams.get("people");
     const children = Number(searchParams.get("children") || 0);
     const food = searchParams.get("food");
     const stars = searchParams.get("stars");
@@ -78,38 +82,15 @@ export default function Results() {
   }, [searchParams, currency]);
 
   const loadTours = useCallback(async () => {
+    const version=++requestVersion.current.version;
     if (provider === "hotelbeds" && !searchParams.get("departureDate") && !searchParams.get('checkIn')) { setTours([]); setLoading(false); return; }
     try {
       setLoading(true);
       setError("");
-      const filters = {
-        stagingTestHotel: searchParams.get('stagingTestHotel') || '',
-        hotelCodes: searchParams.get('hotelCodes') || '',
-        checkIn: searchParams.get('checkIn') || '',
-        checkOut: searchParams.get('checkOut') || '',
-        rooms: searchParams.get('rooms') || '1',
-        adults: searchParams.get('adults') || '',
-        provider,
-        destinationCode: searchParams.get("destinationCode") || "",
-        country: searchParams.get("country") || "",
-        city: searchParams.get("city") || "",
-        departureDate: searchParams.get("departureDate") || "",
-        people: searchParams.get("people") || "",
-        children: searchParams.get("children") || "0",
-        childrenAges: searchParams.get("childrenAges") || "",
-        nights: searchParams.get("nights") || "",
-        food: searchParams.get("food") || "",
-        rating: searchParams.get("rating") || "",
-        maxPrice: searchParams.get("maxPrice") || "",
-        stars: searchParams.get("stars") || "",
-        beachLine: searchParams.get("beachLine") || "",
-        beachType: searchParams.get("beachType") || "",
-        roomType: searchParams.get("roomType") || "",
-        sort: sortBy,
-        page: searchParams.get("page") || "1",
-        limit: searchParams.get("limit") || "20",
-      };
+      setCatalogEmpty(false);
+      const filters = searchQuery(searchParams);
       const result = await searchTours(filters);
+      if (version !== requestVersion.current.version) return;
       setTours(Array.isArray(result?.data) ? result.data : []);
       setMeta({
         page: Number(result?.meta?.page) || 1,
@@ -119,15 +100,17 @@ export default function Results() {
         provider: result?.meta?.provider || provider,
       });
     } catch (err) {
+      if (version !== requestVersion.current.version) return;
       console.error("Ошибка загрузки результатов:", err);
       setTours([]);
-      setError(err.message || "Не удалось загрузить предложения.");
+      if (err.code === 'TEST_CATALOG_EMPTY') { setCatalogEmpty(true); setError(''); setMeta({page:1,limit:20,total:0,pages:1,provider}); }
+      else setError(err.message || "Не удалось загрузить предложения.");
     } finally {
-      setLoading(false);
+      if (version === requestVersion.current.version) setLoading(false);
     }
-  }, [provider, searchParams, sortBy]);
+  }, [provider, searchParams]);
 
-  useEffect(() => { const timer = setTimeout(loadTours, 0); return () => clearTimeout(timer); }, [loadTours]);
+  useEffect(() => { const state = requestVersion.current; const timer = setTimeout(loadTours, 0); return () => { clearTimeout(timer); state.version++; }; }, [loadTours]);
 
   function handleSortChange(event) {
     const params = new URLSearchParams(searchParams);
@@ -156,8 +139,8 @@ export default function Results() {
     <>
       <Navbar />
       <main className="results-page">
-        {provider === "hotelbeds" && !searchParams.get("departureDate") && <section className="catalogue-search"><h1>Найдите подходящий отдых</h1><p>Укажите направление, даты и гостей для проверки доступности.</p><SearchBar /></section>}
-        {(provider !== "hotelbeds" || searchParams.get("departureDate")) && <section className="results-shell">
+        {provider === "hotelbeds" && !searchParams.get("departureDate") && !searchParams.get("checkIn") && <section className="catalogue-search"><h1>Найдите подходящий отдых</h1><p>Укажите направление, даты и гостей для проверки доступности.</p><SearchBar /></section>}
+        {(provider !== "hotelbeds" || searchParams.get("departureDate") || searchParams.get("checkIn")) && <section className="results-shell">
           <div className="results-top">
             <div>
               <span className="results-kicker">SPRINT 3A · PRODUCT EXPERIENCE</span>
@@ -230,7 +213,7 @@ export default function Results() {
                 </div>
 
                 {tours.length === 0 ? (
-                  <div className="no-results"><h2>😔 На выбранные даты предложений нет</h2><p>Измените дату, питание, категорию или диапазон цены.</p></div>
+                  <div className="no-results"><h2>{catalogEmpty ? catalogEmptyMessage : noRatesMessage}</h2><p>{catalogEmpty ? 'Выберите другое готовое направление.' : 'Измените дату, питание, категорию или диапазон цены.'}</p></div>
                 ) : (
                   <>
                     <div className="tour-grid">

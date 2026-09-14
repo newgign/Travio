@@ -69,10 +69,12 @@ export async function searchTours(filters = {}) {
   if (!response.ok) {
 
     let message = "Ошибка поиска туров";
+    let code = null;
 
     try {
 
       const errorData = await response.json();
+      code = errorData?.code;
 
       if (errorData?.message) {
         message = errorData.message;
@@ -83,7 +85,7 @@ export async function searchTours(filters = {}) {
       // оставляем стандартное сообщение.
     }
 
-    throw new Error(message);
+    throw Object.assign(new Error(message), {code});
   }
 
   const result = await response.json();
