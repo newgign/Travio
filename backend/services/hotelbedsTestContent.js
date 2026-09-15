@@ -46,12 +46,20 @@ function selection(env = process.env, scopeId) {
 }
 let running = false;
 let lastAttempt = 0;
+function cooldownStatus(persistedLastRun, now = Date.now()) {
+  const persisted = persistedLastRun ? new Date(persistedLastRun).getTime() : 0;
+  const readyAt = Math.max(lastAttempt, Number.isFinite(persisted) ? persisted : now) + 60000;
+  return {state:running || now < readyAt ? 'WAIT' : 'READY',remainingMs:Math.max(0,readyAt-now)};
+}
+async function localHotelCount(db, destinationCode) {
+  return (await catalogIds(db)(destinationCode)).length;
+}
 async function run({ env = process.env, scopeId, action, client, repository, pool } = {}) {
   let scope = selection(env, scopeId);
   if (action !== undefined && action !== 'next') throw blocked('CONTENT_SCOPE_BLOCKED');
   const readiness = require('./hotelbedsLiveReadOnlyService').preflight(env, undefined, 'test', false);
   if (readiness.blockers.length) throw blocked('CONTENT_CONFIGURATION_BLOCKED');
-  if (running || Date.now() - lastAttempt < 60000) throw blocked('CONTENT_BUSY_OR_COOLDOWN');
+  if (cooldownStatus().state === 'WAIT') throw blocked('CONTENT_BUSY_OR_COOLDOWN');
   const config = require('../config/hotelbeds').buildConfig(env);
   client ||= new ContentClient({ ...config, maxRetries: 0, requestIntervalMs: limits.intervalMs, timeout: limits.timeoutMs });
   repository ||= require('../repositories/providerCatalogRepository');
@@ -64,11 +72,11 @@ async function run({ env = process.env, scopeId, action, client, repository, poo
     db = await pool.connect();
     locked = (await db.query('SELECT pg_try_advisory_lock(319030) AS locked')).rows[0].locked;
     if (!locked) throw blocked('CONTENT_BUSY_OR_COOLDOWN');
-    const plan = batchPlan((await catalogIds(db)(scope.destinationCode)).length);
+    const plan = batchPlan(await localHotelCount(db,scope.destinationCode));
     if (plan.complete) throw blocked('CONTENT_IMPORT_COMPLETE');
     if (action === 'next') scope = {...scope,...plan.next};
     const recent = await db.query("SELECT last_run FROM provider_job_state WHERE job='test_content_import' AND environment='test'");
-    if (recent.rows[0]?.last_run && Date.now() - new Date(recent.rows[0].last_run).getTime() < 60000) throw blocked('CONTENT_BUSY_OR_COOLDOWN');
+    if (cooldownStatus(recent.rows[0]?.last_run).remainingMs > 0) throw blocked('CONTENT_BUSY_OR_COOLDOWN');
     await db.query("INSERT INTO provider_job_state(job,environment,last_run) VALUES('test_content_import','test',NOW()) ON CONFLICT(job,environment) DO UPDATE SET last_run=NOW()");
     lastAttempt = Date.now(); attempted = true;
     let destination;
@@ -118,4 +126,4 @@ async function runControl(options = {}) {
   const scope = selection(options.env || process.env, options.scopeId);
   return require('./hotelbedsTestAccess').withControl('CONTENT',scope.id,()=>run({...options,scopeId:scope.id,action:'next'}));
 }
-module.exports = { limits: {...limits, configuredDestinations:5, catalogHotels:20, nextBatchHotels:10}, batchPlan, scopes, selection, run, runControl, ContentClient };
+module.exports = { limits: {...limits, configuredDestinations:5, catalogHotels:20, nextBatchHotels:10}, batchPlan, scopes, selection, run, runControl, ContentClient, cooldownStatus, localHotelCount };

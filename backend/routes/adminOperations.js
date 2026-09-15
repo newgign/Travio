@@ -25,6 +25,12 @@ const {
 router.use(authMiddleware, requireRole("admin"));
 router.use(requirePermission("admin.operations.read"));
 
+router.get('/providers/hotelbeds/catalog-plan', requirePermission('admin.system.read'), async (req,res) => {
+  if (Object.keys(req.query).length) return res.status(400).json({code:'CATALOG_PLAN_SERVER_ONLY'});
+  try {res.json(await require('../services/hotelbedsCatalogPlan').inspect());}
+  catch {res.status(503).json({code:'CATALOG_PLAN_UNAVAILABLE'});}
+});
+
 router.get('/providers/hotelbeds/access', requirePermission('admin.system.read'), async (req,res) => {
   try { res.json(await require('../services/hotelbedsTestAccess').inspect()); }
   catch { res.status(503).json({code:'HOTELBEDS_ACCESS_UNAVAILABLE'}); }

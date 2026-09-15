@@ -1,11 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import authFetch from '../../services/authFetch';
-import HotelbedsContentStatus from './HotelbedsContentStatus';
-import HotelbedsAccess from './HotelbedsAccess';
+import HotelbedsTestWorkspace from './HotelbedsTestWorkspace';
 import { canProbeTest, probeOptions } from '../../utils/hotelbedsProbe';
 export default function HotelbedsStatus() {
   const [status, setStatus] = useState(null);
-  const [accessVersion,setAccessVersion] = useState(0);
   const [error, setError] = useState(false);
   const [probe, setProbe] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -70,7 +68,7 @@ export default function HotelbedsStatus() {
     <p>Availability: {status.liveProbe?.lastAvailabilityStatus || 'NOT RUN'}. История probe относится к текущему процессу и сбрасывается после перезапуска.</p>
     <p>Booking: {status.bookingDisabled ? 'выключен' : 'проверьте flags'} · Payments: {status.paymentsDisabled ? 'выключены' : 'проверьте flags'}. Успешное подключение не разрешает продажи.</p>
     <p>Мониторинг: {status.monitor.enabled ? 'включён' : 'выключен'} · Отслеживается: {status.trackedOffers} · Горящих предложений: {status.confirmedHotDealsCount}</p>
-    {status.jobs.map(job => <p key={job.job}>{job.job}: {job.last_success || 'Нет успешных запусков'} {job.last_error_category || ''}</p>)}
-    {status.environment === 'test' && <><HotelbedsAccess onChange={()=>setAccessVersion(value=>value+1)} /><HotelbedsContentStatus key={accessVersion} /></>}
+    {status.jobs.filter(job=>status.environment!=='test' || job.job!=='test_content_import').map(job => <p key={job.job}>{job.job}: {job.last_success || 'Нет успешных запусков'} {job.last_error_category || ''}</p>)}
+    {status.environment === 'test' && <HotelbedsTestWorkspace />}
   </section>;
 }

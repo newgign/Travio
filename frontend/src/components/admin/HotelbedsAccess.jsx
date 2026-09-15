@@ -1,5 +1,4 @@
-import {useEffect,useState} from 'react';
-import authFetch from '../../services/authFetch';
+import {useState} from 'react';
 export function CircuitPanel({name,circuit,scopes=[],selectedScope,setSelectedScope,busy,act}) {
   const content=name==='content';
   const operation=content?'CONTENT':'AVAILABILITY_3424';
@@ -26,27 +25,9 @@ export function CircuitPanel({name,circuit,scopes=[],selectedScope,setSelectedSc
     <p>{content?'Один bounded import выбранного направления.':'Отель 3424, 1 номер, 2 взрослых, 1 ночь; заезд через 7 дней (UTC).'} Вооружение не отправляет запрос Hotelbeds.</p>
   </section>;
 }
-export default function HotelbedsAccess({onChange}) {
-  const [data,setData]=useState(null),[scopes,setScopes]=useState([]),[selectedScope,setSelectedScope]=useState('');
-  const [busy,setBusy]=useState(false),[message,setMessage]=useState('');
-  useEffect(()=>{
-    let active=true;
-    authFetch('/admin/providers/hotelbeds/access').then(value=>{if(active)setData(value);}).catch(()=>{if(active)setMessage('Защита доступа недоступна. Запросы блокируются.');});
-    authFetch('/admin/providers/hotelbeds/content').then(value=>{if(active)setScopes(value.scopes || []);}).catch(()=>{});
-    return()=>{active=false;};
-  },[]);
-  async function act(action,operation,scopeId) {
-    setBusy(true);setMessage('');
-    try {
-      await authFetch(`/admin/providers/hotelbeds/access/${action}`,{method:'POST',body:JSON.stringify({operation,...(scopeId?{scopeId}:{})})});
-      setMessage(action==='arm'?'Одна контрольная операция разрешена':'Контрольная операция успешна');
-    } catch {setMessage('Операция заблокирована или завершилась ошибкой.');}
-    finally {
-      try {setData(await authFetch('/admin/providers/hotelbeds/access'));} catch {setData(null);}
-      setBusy(false);onChange?.();
-    }
-  }
-  return <section><h4>Hotelbeds TEST access</h4><p role="status">{message}</p>
+export default function HotelbedsAccess({data,scopes=[],busy=false,act}) {
+  const [selectedScope,setSelectedScope]=useState('');
+  return <section><h4>Hotelbeds TEST access</h4>
     {data && <>
       <p>Общее состояние доступа: {data.summary}. Content и Booking read проверяются независимо.</p>
       {Object.entries(data.circuits).map(([name,circuit])=><CircuitPanel key={name} {...{name,circuit,scopes,selectedScope,setSelectedScope,busy,act}} />)}

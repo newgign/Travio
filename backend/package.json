@@ -48,7 +48,8 @@
     "test:sprint3j": "node --test tests/hotelbedsCatalogReadiness.test.js",
     "test:sprint3l": "node --test tests/hotelbedsScale.test.js",
     "test:sprint3m": "node --test tests/hotelbedsAccess.test.js",
-    "test:sprint3m1": "node --test tests/hotelbedsAccess.test.js"
+    "test:sprint3m1": "node --test tests/hotelbedsAccess.test.js",
+    "test:sprint3n": "node --test tests/hotelbedsCatalogPlan.test.js"
   },
   "keywords": [],
   "author": "",
