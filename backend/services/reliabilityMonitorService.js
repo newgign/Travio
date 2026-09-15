@@ -134,6 +134,14 @@ function hotelbedsConfigured() {
 async function hotelbedsComponent(t) {
   const config = hotelbedsConfigured();
   if (!config.enabled) return stateComponent("hotelbeds", "healthy", "Hotelbeds TEST", "Booking API отключён конфигурацией", { enabled: false, recentErrors: 0 });
+  if (require('../config/providers').hotelbeds.environment === 'test') {
+    const access = await pool.query("SELECT job,details->>'state' AS state,details->>'inFlight' AS pending FROM provider_job_state WHERE job IN ('hotelbeds_test_access_content','hotelbeds_test_access_booking_read') AND environment='test'");
+    const state = suffix => access.rows.find(row=>row.job === 'hotelbeds_test_access_'+suffix);
+    const content=state('content'), booking=state('booking_read');
+    if (content?.state !== 'READY' || booking?.state !== 'READY' || content?.pending || booking?.pending) return stateComponent('hotelbeds','degraded','Hotelbeds TEST',
+      `Content: ${content?.state || 'UNKNOWN_BLOCKED'}; Booking read: ${booking?.state || 'UNKNOWN_BLOCKED'}`,
+      {enabled:true,contentAccess:content?.state || 'UNKNOWN_BLOCKED',bookingReadAccess:booking?.state || 'UNKNOWN_BLOCKED'});
+  }
   if (!config.transportReady) return stateComponent("hotelbeds", "unhealthy", "Hotelbeds TEST", "mTLS transport не готов", { enabled: true, transportReady: false, recentErrors: 0 });
 
   const result = await pool.query(

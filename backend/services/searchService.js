@@ -29,6 +29,10 @@ class SearchService {
         }
         const cacheKey = JSON.stringify({ environment: priceHistory.priceEnvironment(), provider: provider.name, filters });
 
+        if (provider.name === 'hotelbeds' && require('../config/providers').hotelbeds.environment === 'test') {
+            await require('./hotelbedsTestAccess').assertAvailable('availability');
+        }
+
         if (cache.has(cacheKey) && (provider.name !== "hotelbeds" || !require("../integrations/hotelbeds/client").readiness().lastErrorCategory)) {
 
             logger.info(`CACHE HIT | ${cacheKey}`);

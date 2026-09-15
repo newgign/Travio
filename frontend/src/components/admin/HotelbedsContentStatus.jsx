@@ -14,12 +14,16 @@ export default function HotelbedsContentStatus() {
       const response = await authFetch('/admin/providers/hotelbeds/content', { method: 'POST', body: JSON.stringify({scopeId:selectedScope.id,action:'next'}) });
       setResult(response.status);
       setData(await authFetch('/admin/providers/hotelbeds/content'));
-    } catch { setResult('Импорт заблокирован или завершился ошибкой'); }
+    } catch (error) {
+      setResult(error.code === 'HOTELBEDS_AUTH_BLOCKED' ? 'Импорт заблокирован защитой доступа Hotelbeds TEST.' : 'Импорт заблокирован или завершился ошибкой');
+      try { setData(await authFetch('/admin/providers/hotelbeds/content')); } catch { /* Preserve the last local plan. */ }
+    }
     finally { setBusy(false); }
   }
   return <section><h4>Hotelbeds Content TEST</h4>
     <p>{result}</p>
     {data && <>
+      {['AUTH_BLOCKED','UNKNOWN_BLOCKED'].includes(data.accessState) && <p>Импорт заблокирован защитой доступа Hotelbeds TEST. {data.accessState === 'UNKNOWN_BLOCKED' ? 'Сначала выполните контрольный Content import.' : ''}</p>}
       <p>Environment: {data.environment} · Страны: {data.countries} · Направления: {data.destinations} · Отели: {data.hotels}</p>
       <p>Последний импорт: {data.lastImport?.last_run || 'NOT RUN'} · Результат: {data.lastImport?.last_error_category || data.lastImport?.details?.status || 'NOT RUN'} · Upserted: {data.lastImport?.details?.upsertedHotels ?? '—'}</p>
       <label>Разрешённое направление <select value={selectedScope?.id || ''} disabled={busy} onChange={event=>setScopeId(event.target.value)}>

@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import authFetch from '../../services/authFetch';
 import HotelbedsContentStatus from './HotelbedsContentStatus';
+import HotelbedsAccess from './HotelbedsAccess';
 import { canProbeTest, probeOptions } from '../../utils/hotelbedsProbe';
 export default function HotelbedsStatus() {
   const [status, setStatus] = useState(null);
+  const [accessVersion,setAccessVersion] = useState(0);
   const [error, setError] = useState(false);
   const [probe, setProbe] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -35,7 +37,7 @@ export default function HotelbedsStatus() {
   }, []);
   if (error) return <p>Статус Hotelbeds недоступен.</p>;
   if (!status) return <p>Загрузка статуса Hotelbeds…</p>;
-  return <section className="admin-card"><h3>Hotelbeds {status.environment.toUpperCase()} · {status.status}</h3>
+  return <section className="admin-card"><h3>Hotelbeds {status.environment.toUpperCase()} · {status.environment === 'test' ? 'доступ по категориям' : status.status}</h3>
     <p>Staging TEST allowed: {String(Boolean(status.stagingTestAllowed))} · Availability hotels/rates: {status.liveProbe?.lastAvailability?.hotelCount ?? '—'} / {status.liveProbe?.lastAvailability?.rateCount ?? '—'} · Sales ready: false</p>
     {status.message && <p>{status.message}</p>}
     <p>Последний успешный запрос: {status.lastSuccessfulRequest || '—'}</p>
@@ -69,6 +71,6 @@ export default function HotelbedsStatus() {
     <p>Booking: {status.bookingDisabled ? 'выключен' : 'проверьте flags'} · Payments: {status.paymentsDisabled ? 'выключены' : 'проверьте flags'}. Успешное подключение не разрешает продажи.</p>
     <p>Мониторинг: {status.monitor.enabled ? 'включён' : 'выключен'} · Отслеживается: {status.trackedOffers} · Горящих предложений: {status.confirmedHotDealsCount}</p>
     {status.jobs.map(job => <p key={job.job}>{job.job}: {job.last_success || 'Нет успешных запусков'} {job.last_error_category || ''}</p>)}
-    {status.environment === 'test' && <HotelbedsContentStatus />}
+    {status.environment === 'test' && <><HotelbedsAccess onChange={()=>setAccessVersion(value=>value+1)} /><HotelbedsContentStatus key={accessVersion} /></>}
   </section>;
 }

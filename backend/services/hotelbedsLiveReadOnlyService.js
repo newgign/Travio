@@ -121,6 +121,12 @@ async function run({ env = process.env, availability = false, checkRate = false,
     result.status = 'PASS';
   } catch (error) {
     const allowed = ['AUTH_ERROR','RATE_LIMIT','TIMEOUT','PROVIDER_UNAVAILABLE','RATE_NOT_AVAILABLE','INVALID_REQUEST','INVALID_PROVIDER_RESPONSE','AMBIGUOUS_RECHECK_SELECTION'];
+    if (['HOTELBEDS_AUTH_BLOCKED','HOTELBEDS_UNKNOWN_BLOCKED','HOTELBEDS_ACCESS_UNAVAILABLE'].includes(error.code)) {
+      if (!result.operations.length) result.networkAttempted = false;
+      result.status = 'BLOCKED';
+      result.blockers = [error.code];
+      return result;
+    }
     result.status = 'FAIL';
     result.operations.push({ operation, hostname: hostname(), status: 'FAIL', httpStatus: client.readiness().httpStatus, code: allowed.includes(error.code) ? error.code : 'READ_ONLY_REQUEST_FAILED',
       ...(config.environment === 'test' ? require('../integrations/hotelbeds/accessDiagnostics').publicDiagnostics(error.accessDiagnostics) : {}) });

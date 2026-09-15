@@ -107,10 +107,15 @@ async function run({ env = process.env, scopeId, action, client, repository, poo
   } catch (error) {
     if (db) await db.query('ROLLBACK').catch(() => {});
     if (attempted) await db.query("UPDATE provider_job_state SET last_error_category='CONTENT_IMPORT_FAILED' WHERE job='test_content_import' AND environment='test'").catch(() => {});
+    if (['HOTELBEDS_AUTH_BLOCKED','HOTELBEDS_UNKNOWN_BLOCKED','HOTELBEDS_ACCESS_UNAVAILABLE'].includes(error.code)) throw error;
     throw blocked('CONTENT_IMPORT_FAILED');
   } finally {
     if (locked) await db.query('SELECT pg_advisory_unlock(319030)').catch(() => {});
     db?.release(); running = false;
   }
 }
-module.exports = { limits: {...limits, configuredDestinations:5, catalogHotels:20, nextBatchHotels:10}, batchPlan, scopes, selection, run, ContentClient };
+async function runControl(options = {}) {
+  const scope = selection(options.env || process.env, options.scopeId);
+  return require('./hotelbedsTestAccess').withControl('CONTENT',scope.id,()=>run({...options,scopeId:scope.id,action:'next'}));
+}
+module.exports = { limits: {...limits, configuredDestinations:5, catalogHotels:20, nextBatchHotels:10}, batchPlan, scopes, selection, run, runControl, ContentClient };

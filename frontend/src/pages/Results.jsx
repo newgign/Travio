@@ -110,6 +110,9 @@ export default function Results() {
       console.error("Ошибка загрузки результатов:", err);
       setTours([]);
       if (err.code === 'TEST_CATALOG_EMPTY') { setCatalogEmpty(true); setError(''); setMeta({page:1,limit:20,total:0,pages:1,provider}); }
+      else if (err.code === 'HOTELBEDS_AUTH_BLOCKED') setError('Hotelbeds TEST временно недоступен. Последняя проверка доступа завершилась ошибкой авторизации.');
+      else if (err.code === 'HOTELBEDS_ACCESS_UNAVAILABLE') setError('Hotelbeds TEST временно недоступен. Повторите поиск позже.');
+      else if (err.code === 'HOTELBEDS_UNKNOWN_BLOCKED') setError('Hotelbeds TEST временно недоступен. Доступ к Availability ещё не подтверждён контрольной проверкой.');
       else setError(err.message || "Не удалось загрузить предложения.");
     } finally {
       if (version === requestVersion.current.version) setLoading(false);

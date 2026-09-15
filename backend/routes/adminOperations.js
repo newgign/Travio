@@ -25,6 +25,24 @@ const {
 router.use(authMiddleware, requireRole("admin"));
 router.use(requirePermission("admin.operations.read"));
 
+router.get('/providers/hotelbeds/access', requirePermission('admin.system.read'), async (req,res) => {
+  try { res.json(await require('../services/hotelbedsTestAccess').inspect()); }
+  catch { res.status(503).json({code:'HOTELBEDS_ACCESS_UNAVAILABLE'}); }
+});
+for (const action of ['arm','control']) router.post(`/providers/hotelbeds/access/${action}`, requirePermission('admin.system.selftest'), async (req,res) => {
+  const body = req.body;
+  if (require('../config/providers').hotelbeds.environment !== 'test' || !body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some(k=>!['operation','scopeId'].includes(k))) return res.status(400).json({code:'INVALID_CONTROL_OPERATION'});
+  const access = require('../services/hotelbedsTestAccess');
+  try { access.controlSpec(body.operation,body.scopeId); } catch {return res.status(400).json({code:'INVALID_CONTROL_OPERATION'});}
+  try {
+    if (action === 'arm') return res.json(await access.arm(body.operation,body.scopeId));
+    const result = body.operation === 'CONTENT'
+      ? await require('../services/hotelbedsTestContent').runControl({scopeId:body.scopeId})
+      : await require('../services/hotelbedsBookingReadControl').run();
+    res.json(result);
+  } catch (error) { res.status(503).json({status:'BLOCKED_OR_FAILED',code:['HOTELBEDS_AUTH_BLOCKED','HOTELBEDS_UNKNOWN_BLOCKED','HOTELBEDS_ACCESS_UNAVAILABLE','HOTELBEDS_PERMIT_NOT_ARMABLE','AUTH_ERROR'].includes(error.code)?error.code:'CONTROL_FAILED'}); }
+});
+
 router.get('/providers/hotelbeds/content', requirePermission('admin.system.read'), async (req, res, next) => {
   try {
     const service = require('../services/hotelbedsTestContent');
@@ -37,11 +55,12 @@ router.get('/providers/hotelbeds/content', requirePermission('admin.system.read'
     const readiness = require('../services/testCatalogReadiness')(destinations,scopes);
     const jobs = await require('../db').query("SELECT last_run,last_success,last_error_category,details FROM provider_job_state WHERE job='test_content_import' AND environment=$1", [config.environment]);
     const job = jobs.rows[0];
+    const access = config.environment === 'test' ? (await require('../db').query("SELECT details->>'state' AS state FROM provider_job_state WHERE job='hotelbeds_test_access_content' AND environment='test'")).rows[0] : null;
     const lastImport = job ? { last_run: job.last_run, last_success: job.last_success,
       last_error_category: job.last_error_category ? 'CONTENT_IMPORT_FAILED' : null,
       details: { status: ['PASS','EMPTY'].includes(job.details?.status) ? job.details.status : 'NOT RUN',
         upsertedHotels: Number.isInteger(job.details?.upsertedHotels) ? job.details.upsertedHotels : null } } : null;
-    res.json({ environment: config.environment, enabled: config.stagingTestAllowed && scopes.length > 0, scope: scopes[0] || null,
+    res.json({ environment: config.environment, accessState: access?.state || 'UNKNOWN_BLOCKED', enabled: config.stagingTestAllowed && scopes.length > 0, scope: scopes[0] || null,
       scopes: scopes.map(scope => {
         const row=readiness.find(row=>row.code===scope.destinationCode && row.countryCode===scope.countryCode);
         return {...scope,...row,batch:service.batchPlan(row?.hotelCount || 0)};
@@ -57,7 +76,7 @@ router.post('/providers/hotelbeds/content', requirePermission('admin.system.self
     const scope = service.selection(process.env, req.body?.scopeId);
     res.json(await service.run({scopeId:scope.id,...(req.body?.action ? {action:req.body.action} : {})}));
   }
-  catch { res.status(409).json({ status: 'BLOCKED', code: 'CONTENT_IMPORT_BLOCKED_OR_FAILED' }); }
+  catch (error) { res.status(409).json({ status: 'BLOCKED', code: ['HOTELBEDS_AUTH_BLOCKED','HOTELBEDS_UNKNOWN_BLOCKED'].includes(error.code) ? error.code : 'CONTENT_IMPORT_BLOCKED_OR_FAILED' }); }
 });
 
 router.get('/providers/hotelbeds', requirePermission('admin.system.read'), async (req, res, next) => {

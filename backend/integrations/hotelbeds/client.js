@@ -161,7 +161,7 @@ class HotelbedsClient {
           this.lastRequestAt = Date.now();
           try { return await this.performRequest(options); }
           catch (error) {
-            if (mutation || attempt >= this.config.maxRetries || !['RATE_LIMIT', 'TIMEOUT', 'PROVIDER_UNAVAILABLE'].includes(error.code)) throw error;
+            if (this.config.environment === 'test' || mutation || attempt >= this.config.maxRetries || !['RATE_LIMIT', 'TIMEOUT', 'PROVIDER_UNAVAILABLE'].includes(error.code)) throw error;
             await new Promise(resolve => setTimeout(resolve, Math.min(30000, Math.max(error.retryAfterMs || 0, 1000 * 2 ** attempt))));
           }
         }
@@ -177,13 +177,23 @@ class HotelbedsClient {
     const started = Date.now();
     const category = channel === 'content' ? 'content' : url.endsWith('/hotels') ? 'availability' : url.endsWith('/checkrates') ? 'checkrate' : url.endsWith('/status') ? 'status' : 'booking';
     const logger = require('../../utils/logger');
+    const access = require('../../services/hotelbedsTestAccess');
+    const guarded = this.config.environment === 'test' && category !== 'booking';
+    const ticket = guarded ? await access.begin(category) : null;
+    let attempted = false;
+    let observedHttpStatus = null;
+    let observation = {success:false};
     try {
       const http = channel === 'booking' ? this.bookingHttp : this.contentHttp;
       const isStatus = channel === 'booking' && String(method).toUpperCase() === 'GET' && url === '/hotel-api/1.0/status';
-      const response = await http.request({ method, url, data, params, timeout: timeout || this.config.timeout,
+      const requestConfig = { method, url, data, params, timeout: timeout || this.config.timeout,
         baseURL: channel === 'booking' ? (isStatus ? this.config.baseUrl : this.config.bookingBaseUrl) : this.config.contentBaseUrl,
-        maxRedirects: 0, headers: this.createHeaders(), ...(channel === 'booking' && !isStatus ? { httpsAgent: this.getBookingAgent() } : {}) });
+        maxRedirects: 0, headers: this.createHeaders(), ...(channel === 'booking' && !isStatus ? { httpsAgent: this.getBookingAgent() } : {}) };
+      attempted = true;
+      const response = await http.request(requestConfig);
+      observedHttpStatus = response.status;
       if (response.data?.error) throw { response: { status: 502 } };
+      observation = {success:true,httpStatus:response.status};
       this.health = { providerReachable: true, lastSuccessfulRequest: new Date().toISOString(), lastErrorCategory: null, httpStatus: response.status };
       logger.info('Hotelbeds request', { environment: this.config.environment, category, status: response.status, duration: Date.now() - started,
         hotelCount: response.data?.hotels?.hotels?.length });
@@ -194,6 +204,7 @@ class HotelbedsClient {
         ['ECONNABORTED', 'ETIMEDOUT'].includes(error.code) ? 'TIMEOUT' : status >= 500 ? 'PROVIDER_UNAVAILABLE' :
         category === 'checkrate' ? 'RATE_NOT_AVAILABLE' : category === 'booking' && method === 'DELETE' ? 'CANCELLATION_FAILED' :
         category === 'booking' && method === 'POST' ? 'BOOKING_REJECTED' : 'INVALID_REQUEST';
+      observation = {success:false,httpStatus:observedHttpStatus || Number(error.response?.status) || null,errorCategory:code};
       this.health = { ...this.health, providerReachable: false, lastErrorCategory: code, httpStatus: Number(error.response?.status) || null };
       logger.warn('Hotelbeds request failed', { environment: this.config.environment, category, status, duration: Date.now() - started, errorCategory: code });
       const wrapped = Object.assign(new Error('Предложение временно недоступно. Повторите поиск позже.'), { status: status >= 500 ? 503 : status === 429 ? 503 : 409, code, provider: 'hotelbeds' });
@@ -202,7 +213,14 @@ class HotelbedsClient {
       wrapped.retryAfterMs = Math.min(30000, Math.max(0, Number(retryAfter) * 1000 || Date.parse(retryAfter) - Date.now() || 0));
       if (code === "RATE_LIMIT") this.lastRequestAt = Date.now() + Math.max(wrapped.retryAfterMs, 1000);
       throw wrapped;
+    } finally {
+      if (ticket) await access.finish(ticket, {...observation,attempted,duration:Date.now()-started});
     }
+  }
+
+  controlStatus() {
+    // Legacy entry point cannot consume a permit or prove mTLS Availability access.
+    throw require('../../services/hotelbedsTestAccess').failure('HOTELBEDS_CONTROL_INVALID');
   }
 
   status() {
