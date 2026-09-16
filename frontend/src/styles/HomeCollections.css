@@ -1,4 +1,14 @@
 .collection-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:28px; align-items:stretch; }
+.destination-grid { display:flex; flex-wrap:wrap; justify-content:center; gap:20px; }
+.destination-grid>.destination-card,.destination-grid>.destination-skeleton { flex:0 1 calc((100% - 80px)/5); min-width:0; height:auto; aspect-ratio:3/4; }
+.destination-grid .destination-caption { left:18px; right:18px; bottom:20px; }
+.destination-grid .destination-caption h3 { font-size:21px; line-height:1.2; }
+.destination-skeleton { border-radius:22px; background:linear-gradient(120deg,#e1e9f2,#f1f5f9,#e1e9f2); }
+.home-catalog-message { text-align:center; color:#64748b; padding:32px; }
+@media(prefers-reduced-motion:reduce) { .home-page .collection-pulse { animation:none; } .home-page .destination-card,.home-page .destination-card img,.home-page .adv-card { transition:none; } }
+@media(max-width:1100px) { .destination-grid>.destination-card,.destination-grid>.destination-skeleton { flex-basis:calc((100% - 40px)/3); } }
+@media(max-width:760px) { .destination-grid>.destination-card,.destination-grid>.destination-skeleton { flex-basis:calc((100% - 20px)/2); } }
+@media(max-width:600px) { .destination-grid>.destination-card,.destination-grid>.destination-skeleton { flex-basis:100%; aspect-ratio:4/3; } }
 .destination-card { position:relative; display:block; height:300px; min-width:0; overflow:hidden; border-radius:22px; color:#fff; cursor:pointer; box-shadow:0 10px 30px #0f172a12; transition:transform 200ms,box-shadow 200ms; }
 .collection-image { width:100%; height:100%; background:#dbe7ef; }
 .collection-image img { display:block; width:100%; height:100%; object-fit:cover; transition:transform 200ms; }

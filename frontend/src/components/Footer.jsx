@@ -4,9 +4,9 @@ import "./Footer.css";
 export default function Footer() {
   return <footer id="contacts" className="footer">
     <div className="footer-container">
-      <div className="footer-column"><h2>✈️ {site.siteName}</h2><p>Сервис поиска и бронирования путешествий.</p></div>
+      <div className="footer-column"><h2>{site.siteName}</h2><p>Поиск отелей для вашего следующего путешествия.</p></div>
       <div className="footer-column"><h3>Навигация</h3>
-        <Link to="/">Главная</Link><Link to="/results">Туры</Link><Link to="/favorites">Избранное</Link><Link to="/my-bookings">Мои бронирования</Link>
+        <Link to="/">Главная</Link><Link to="/results">Отели</Link><Link to="/favorites">Избранное</Link><Link to="/my-bookings">Мои бронирования</Link>
       </div>
       <div className="footer-column"><h3>Контакты</h3>
         {site.supportPhone && <a href={`tel:${site.supportPhone.replace(/[^+\d]/g, "")}`}>{site.supportPhone}</a>}

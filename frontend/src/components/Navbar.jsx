@@ -32,7 +32,7 @@ export default function Navbar() {
           <Link to="/">Главная</Link>
           <Link to="/results">Туры</Link>
           <Link to="/#countries">Страны</Link>
-          <Link to="/#offers">Акции</Link>
+          <Link to="/#home-search">Поиск</Link>
           <Link to="/#contacts">Контакты</Link>
           <div className="mobile-nav-account">
             <Link to="/favorites">❤️ Избранное {favorites.length > 0 ? `(${favorites.length})` : ""}</Link>
