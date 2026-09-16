@@ -49,6 +49,9 @@
     "test:sprint3l": "node --test tests/hotelbedsScale.test.js",
     "test:sprint3m": "node --test tests/hotelbedsAccess.test.js",
     "test:sprint3m1": "node --test tests/hotelbedsAccess.test.js",
+    "test:sprint3o2": "node --require ./tests/offlineNetwork.cjs --test tests/hotelbedsSearchQuality.test.js",
+    "test:sprint3o1": "node --require ./tests/offlineNetwork.cjs --test tests/hotelbedsSearchQuality.test.js",
+    "test:sprint3o": "node --require ./tests/offlineNetwork.cjs --test tests/hotelbedsSearchQuality.test.js",
     "test:sprint3n": "node --test tests/hotelbedsCatalogPlan.test.js"
   },
   "keywords": [],

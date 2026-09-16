@@ -1,3 +1,5 @@
+import StayPrice from '../components/StayPrice';
+import { normalizeBoardDisplay, normalizeRoomDisplay } from '../utils/hotelOfferDisplay';
 import { countryLabel } from '../utils/testDestinationLabels';
 import { visibleProviderOffer } from "../utils/providerEnvironment";
 import { useEffect, useState } from "react";
@@ -9,7 +11,7 @@ import HotelImage from './HotelImage';
 import "./TourCard.css";
 
 function labelFood(tour) {
-  return tour.boardName || tour.food || tour.boardCode || null;
+  return normalizeBoardDisplay(tour.boardCode || tour.food, tour.boardName);
 }
 
 export default function TourCard({ tour }) {
@@ -33,7 +35,7 @@ export default function TourCard({ tour }) {
   const testBookingDisabled = providerName === 'hotelbeds' && tour.priceEnvironment === 'test' && tour.stagingTestAllowed === true && tour.bookingDisabled === true;
   const providerHotelId = tour.providerHotelId ?? id;
   const foodLabel = labelFood(tour);
-  const roomLabel = tour.roomName || tour.roomType || tour.roomCode || null;
+  const roomLabel = normalizeRoomDisplay(tour.roomName || tour.roomType || tour.roomCode);
 
   function openDetails() {
     navigate(tour.checkIn ? offerDetailsLink(tour) : `/tour/${encodeURIComponent(providerName)}/${encodeURIComponent(providerHotelId)}${location.search}`, { state: { selectedOffer: tour } });
@@ -79,6 +81,7 @@ export default function TourCard({ tour }) {
         <div className="tour-card-header">
           <div>
             <h3>{hotelName}</h3>
+            {tour.stars == null && <small>Категория не указана</small>}
             <p className="tour-card-location">📍 {tour.city}{tour.city && tour.country ? ", " : ""}{countryLabel(tour.country)}</p>
           </div>
           {Number(tour.rating) > 0 && (
@@ -105,7 +108,7 @@ export default function TourCard({ tour }) {
         <div className="tour-card-bottom">
           <div className="tour-card-price">
             {hasDiscount && <span className="tour-card-old-price">{formattedBasePrice}</span>}
-            <div className="tour-card-current-price"><strong>{formattedPrice}</strong></div>
+            <div className="tour-card-current-price">{providerName === "hotelbeds" ? <StayPrice offer={tour} /> : <strong>{formattedPrice}</strong>}</div>
             {tour.priceEnvironment === 'test' && <p>Тестовая цена · provider=hotelbeds · environment=test<br />Источник цены: {tour.priceSource || '—'} · Наблюдение: {tour.observedAt || '—'}</p>}
             <small>{providerName === "hotelbeds" ? "за проживание · за всех гостей" : "стоимость тура"}</small>
           </div>

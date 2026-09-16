@@ -1,3 +1,4 @@
+const displayRates = require('../services/hotelbedsDisplayRates');
 const pricing = require("../services/hotelbedsPriceService");
 const hotelbedsClient = require("../integrations/hotelbeds/client");
 const providerCatalogRepository = require("../repositories/providerCatalogRepository");
@@ -23,15 +24,9 @@ class HotelbedsProvider {
       contentRows.map((row) => [String(row.provider_hotel_id), row])
     );
 
-    return hotels
-      .map((hotel) =>
-        this.normalizeHotel(
-          hotel,
-          preparedFilters,
-          contentById.get(String(hotel.code)) || null
-        )
-      )
-      .filter(Boolean);
+    return displayRates.normalizeHotelOffers(hotels, hotel => this.normalizeHotel(
+      hotel, preparedFilters, contentById.get(String(hotel.code)) || null
+    ), hotelbedsClient.config.environment, hotelbedsClient.config.stagingTestAllowed);
   }
 
   async getHotelById(id, filters = {}) {
@@ -50,11 +45,10 @@ class HotelbedsProvider {
 
     const request = this.buildAvailabilityRequest(preparedFilters);
     const response = await hotelbedsClient.availability(request);
-    const hotel = response?.hotels?.hotels?.find(item => String(item.code) === String(id));
-
-    return hotel
-      ? this.normalizeHotel(hotel, preparedFilters, content)
-      : null;
+    return displayRates.normalizeHotelOffers(
+      (response?.hotels?.hotels || []).filter(item => String(item.code) === String(id)),
+      hotel => this.normalizeHotel(hotel, preparedFilters, content), hotelbedsClient.config.environment
+    )[0] || null;
   }
 
   async checkRate(rateKey) {
@@ -337,9 +331,8 @@ class HotelbedsProvider {
     }
 
     const pool = compatible.length > 0 ? compatible : supportedCandidates;
-    pool.sort((a, b) => this.getRatePrice(a.rate) - this.getRatePrice(b.rate));
-
-    const selected = pool[0];
+    const selected = displayRates.selectBestDisplayRate(pool, hotel.currency);
+    if (!selected) return null;
     const priceDetails = pricing.extract(selected.rate, hotel.currency || selected.rate.currency);
     const selectedPrice = priceDetails.price;
     const selectedBoard = selected.rate.boardCode || null;
@@ -379,9 +372,7 @@ class HotelbedsProvider {
       latitude: this.toNumberOrNull(content?.latitude ?? hotel.latitude),
       longitude: this.toNumberOrNull(content?.longitude ?? hotel.longitude),
 
-      stars:
-        Number(content?.stars) ||
-        this.parseStars(hotel.categoryCode, hotel.categoryName),
+      stars: displayRates.normalizeStars(content?.stars),
       rating: Number(hotel.reviewScore || 0),
       reviewsCount: Number(hotel.reviewCount || 0),
 
@@ -431,7 +422,7 @@ class HotelbedsProvider {
 
       providerOfferId: selected.rate.rateKey,
       rateKey: selected.rate.rateKey,
-      rateType: selected.rate.rateType || "BOOKABLE",
+      rateType: selected.rate.rateType || null,
       recheckRequired:
         String(selected.rate.rateType || "").toUpperCase() === "RECHECK",
       roomCode: selectedRoomCode,

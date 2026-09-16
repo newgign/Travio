@@ -1,7 +1,12 @@
+import { normalizeRoomDisplay, stableSortHotels } from './hotelOfferDisplay';
 import { searchQuery } from './catalogUx';
 
 export const localFilterKeys = ['stars','rating','food','roomType','maxPrice','beachLine','beachType'];
-export const filterEmptyMessage = 'Нет предложений, соответствующих выбранным фильтрам';
+export const filterEmptyMessage = 'Нет отелей, соответствующих выбранным фильтрам';
+export function localPriceCurrency(offers) {
+  return offers.flatMap(offer => offer.candidateOffers || [offer])
+    .map(offer => offer.currency).filter(currency => /^[A-Z]{3}$/.test(currency || '')).sort()[0] || 'EUR';
+}
 export function resetOfferFilters(params) {
   const next = new URLSearchParams(params);
   localFilterKeys.forEach(key => next.delete(key));
@@ -20,17 +25,24 @@ export function providerQuery(params, local) {
 }
 export function filterOffers(offers, params) {
   const value = key => params.get(key);
-  const filtered = offers.filter(offer => {
+  // The displayed budget has one fixed currency across all local filter edits.
+  const budgetCurrency = localPriceCurrency(offers);
+  const filtered = offers.flatMap(offer => {
     for (const key of ['stars','rating']) {
-      if (value(key) && !(offer[key] != null && Number(offer[key]) >= Number(value(key)))) return false;
+      if (value(key) && !(offer[key] != null && Number(offer[key]) >= Number(value(key)))) return [];
     }
-    if (value('maxPrice') && !(offer.price != null && Number(offer.price) <= Number(value('maxPrice')))) return false;
-    if (value('food') && offer.boardCode !== value('food')) return false;
-    if (value('roomType') && !String(offer.roomName || offer.roomType || '').toLowerCase().includes(value('roomType').toLowerCase())) return false;
-    if (value('beachLine') && Number(offer.beachLine) !== Number(value('beachLine'))) return false;
-    if (value('beachType') && offer.beachType !== value('beachType')) return false;
-    return true;
+    if (value('beachLine') && Number(offer.beachLine) !== Number(value('beachLine'))) return [];
+    if (value('beachType') && offer.beachType !== value('beachType')) return [];
+    // Candidate order is authoritative backend price/identity order.
+    // Every rate-level predicate must match the SAME signed candidate.
+    const candidates = offer.candidateOffers || [offer];
+    const selected = candidates.find(candidate =>
+      (!value('food') || candidate.boardCode === value('food')) &&
+      (!value('roomType') || normalizeRoomDisplay(candidate.roomName || candidate.roomType || '').toLowerCase().includes(normalizeRoomDisplay(value('roomType')).toLowerCase())) &&
+      (!value('maxPrice') || ((!candidate.currency || candidate.currency === budgetCurrency) && candidate.price != null && Number(candidate.price) <= Number(value('maxPrice'))))
+    );
+    return selected ? [selected] : [];
   });
   const sort=value('sort') || 'priceAsc';
-  return filtered.sort((a,b) => sort==='priceDesc' ? b.price-a.price : sort==='stars' ? (b.stars||0)-(a.stars||0) : sort==='rating' ? (b.rating||0)-(a.rating||0) : a.price-b.price);
+  return stableSortHotels(filtered, sort);
 }

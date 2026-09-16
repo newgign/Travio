@@ -69,14 +69,20 @@ class SearchService {
             // =====================================
 
             const offers = filteredHotels.map(hotel => {
+                const { candidateHotels, ...displayHotel } = hotel;
                 const offer = offerService.generateOffer(
-                    hotel,
+                    displayHotel,
                     filters
                 );
 
                 return {
                     ...offer,
                     offerToken: offerTokenService.sign(offer),
+                    ...(candidateHotels ? { candidateOffers: candidateHotels.map(candidate => {
+                        const generated = offerService.generateOffer(candidate, filters);
+                        const safe = require('./hotelbedsPublicCandidate')(generated);
+                        return { ...safe, offerToken: offerTokenService.sign(safe) };
+                    }) } : {}),
                 };
             });
 

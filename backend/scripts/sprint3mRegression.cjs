@@ -6,7 +6,7 @@ const {Pool}=require('pg');
 const config=require('../config/database').databaseConfig();
 const host=config.connectionString?new URL(config.connectionString).hostname:config.host||'localhost';
 if(!['localhost','127.0.0.1','::1','[::1]'].includes(host))throw Error('LOCAL_DATABASE_REQUIRED');
-const files=['hotelbedsCatalogPlan','hotelbedsAccess','hotelbedsScale','hotelbedsCatalogReadiness','hotelbedsMultiDestination','hotelbedsContent','hotelbedsPublicSearch','hotelbedsStagingTest','hotelbedsReadOnly','hotelbedsLive','hotelbedsIsolation'];
+const files=['hotelbedsSearchQuality','hotelbedsCatalogPlan','hotelbedsAccess','hotelbedsScale','hotelbedsCatalogReadiness','hotelbedsMultiDestination','hotelbedsContent','hotelbedsPublicSearch','hotelbedsStagingTest','hotelbedsReadOnly','hotelbedsLive','hotelbedsIsolation'];
 (async()=>{
   const pool=new Pool(config);let failed=false;
   try {for(const file of files){

@@ -1,5 +1,6 @@
+import { normalizeBoardDisplay } from '../utils/hotelOfferDisplay';
 import { countryLabel } from '../utils/testDestinationLabels';
-import { providerQuery, filterOffers, resetOfferFilters, filterEmptyMessage } from '../utils/localOfferFilters';
+import { providerQuery, filterOffers, resetOfferFilters, filterEmptyMessage, localPriceCurrency } from '../utils/localOfferFilters';
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
@@ -14,14 +15,6 @@ import { useRef } from 'react';
 import { catalogEmptyMessage, noRatesMessage } from '../utils/catalogUx';
 import { searchTours } from "../services/tourService";
 import "../styles/Results.css";
-
-const FOOD_LABELS = {
-  RO: "Без питания",
-  BB: "Завтрак",
-  HB: "Полупансион",
-  FB: "Полный пансион",
-  AI: "All Inclusive",
-};
 
 function pluralGuests(value) {
   const count = Number(value) || 0;
@@ -55,7 +48,7 @@ export default function Results() {
   const requestQuery = providerQuery(searchParams, localFilters);
   const visibleTours = localFilters ? filterOffers(tours, searchParams) : tours;
   const filterEmpty = localFilters && tours.length > 0 && visibleTours.length === 0;
-  const currency = tours[0]?.currency || (provider === "hotelbeds" ? "EUR" : "KZT");
+  const currency = localFilters ? localPriceCurrency(tours) : tours[0]?.currency || (provider === "hotelbeds" ? "EUR" : "KZT");
 
   const activeFilters = useMemo(() => {
     const items = [];
@@ -78,7 +71,7 @@ export default function Results() {
     if (nights) items.push({ key: "nights", label: `🌙 ${nights} ночей`, locked: true });
     if (people) items.push({ key: "people", label: `👥 ${pluralGuests(people)}`, locked: true });
     if (children > 0) items.push({ key: "children", label: `👶 ${children} дет.` , locked: true });
-    if (food) items.push({ key: "food", label: `🍽 ${FOOD_LABELS[food] || food}` });
+    if (food) items.push({ key: "food", label: `🍽 ${normalizeBoardDisplay(food)}` });
     if (stars) items.push({ key: "stars", label: `⭐ ${stars}★+` });
     if (rating) items.push({ key: "rating", label: `👍 рейтинг ${rating}+` });
     if (roomType) items.push({ key: "roomType", label: `🛏 ${roomType}` });
@@ -154,7 +147,7 @@ export default function Results() {
             <div>
               <span className="results-kicker">SPRINT 3A · PRODUCT EXPERIENCE</span>
               <h1>{destinationTitle(searchParams, destinations)}</h1>
-              <p>Найдено <strong>{meta.total}</strong> предложений{localFilters ? ' · Hotelbeds TEST · бронирование отключено' : ' · цены можно уточнить перед бронированием'}</p>
+              <p>Найдено <strong>{meta.total}</strong> {provider === 'hotelbeds' ? 'отелей' : 'предложений'}{localFilters ? ' · Hotelbeds TEST · бронирование отключено' : ' · цены можно уточнить перед бронированием'}</p>
               {provider === "hotelbeds" && (
                 <div className="live-provider-badge"><span>●</span> Проживание в отеле · перелёт не включён</div>
               )}
@@ -169,7 +162,9 @@ export default function Results() {
                 <select value={sortBy} onChange={handleSortChange}>
                   <option value="priceAsc">Сначала дешевле</option>
                   <option value="priceDesc">Сначала дороже</option>
-                  <option value="stars">По звёздам</option>
+                  {localFilters && <option value="pricePerNight">Цена за ночь</option>}
+                  <option value="stars">Категория отеля</option>
+                  {localFilters && <option value="name">По названию</option>}
                   <option value="rating">По рейтингу</option>
                 </select>
               </label>
@@ -213,7 +208,7 @@ export default function Results() {
                 <button type="button" className="filters-backdrop" aria-label="Закрыть фильтры" onClick={() => setFiltersOpen(false)} />
                 <div className="filters-drawer">
                   <div className="filters-mobile-head"><strong>Фильтры</strong><button type="button" onClick={() => setFiltersOpen(false)}>×</button></div>
-                  <ResultsFilters key={searchParams.toString()} currency={currency} onApplied={() => setFiltersOpen(false)} />
+                  <ResultsFilters key={searchParams.toString()} currency={currency} boards={localFilters ? [...new Map(tours.flatMap(tour => tour.candidateOffers || [tour]).filter(tour => tour.boardCode).map(tour => [tour.boardCode, {code:tour.boardCode,name:tour.boardName}])).values()] : undefined} onApplied={() => setFiltersOpen(false)} />
                 </div>
               </div>
 

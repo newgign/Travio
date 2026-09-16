@@ -98,6 +98,41 @@ test('3M / 3M.1 persistent PostgreSQL gates and offline transport',async t=>{
     assert.equal((await access.inspect()).last24h,0);
     const ticket=await access.begin('status');await access.finish(ticket,{attempted:false,success:false});assert.equal((await access.inspect()).last24h,0);
   });
+  await t.test('3O.2 normalization overflow preserves the completed Availability transport observation',async sub=>{
+    await reset();
+    const singleton=require('../integrations/hotelbeds/client');
+    const catalog=require('../repositories/providerCatalogRepository');
+    const cache=require('../services/memoryCache');
+    cache.clear();sub.after(()=>cache.clear());
+    const {rate,hotel}=require('./fixtures/hotelbedsSearchQuality');
+    const {MAX_CANDIDATES_PER_HOTEL}=require('../services/hotelbedsDisplayRates');
+    const response={hotels:{hotels:[hotel(101,Array.from({length:MAX_CANDIDATES_PER_HOTEL+1},(_,i)=>rate(`overflow-${i}`,'100',{boardCode:`B${i}`})))]}};
+    let availability=0,checkrate=0,contentCalls=0,signing=0;
+    sub.mock.method(api.bookingHttp,'request',async options=>{
+      assert.equal(options.url,'/hotel-api/1.0/hotels');calls++;
+      return {status:200,data:response};
+    });
+    sub.mock.method(singleton,'availability',async payload=>{
+      availability++;
+      const result=await api.availability(payload); // Real request/performRequest/finish, stub HTTP only.
+      assert.equal((await access.inspect()).breakdown.availability.today,before+1);
+      return result;
+    });
+    sub.mock.method(singleton,'checkRates',async()=>{checkrate++;assert.fail('CheckRate forbidden');});
+    for(const name of ['contentHotels','contentHotelDetails','contentDestinations','contentCountries'])sub.mock.method(singleton,name,async()=>{contentCalls++;assert.fail('Content forbidden');});
+    sub.mock.method(catalog,'findDestinations',async()=>[{code:'CEN',country_code:'PT'}]);
+    sub.mock.method(catalog,'findHotels',async()=>[{provider_hotel_id:'101'}]);
+    sub.mock.method(catalog,'findHotelsByIds',async()=>[]);
+    sub.mock.method(require('../services/offerTokenService'),'sign',()=>{signing++;assert.fail('Signing after overflow');});
+    sub.mock.method(require('../utils/logger'),'error',()=>{});
+    const before=(await access.inspect()).breakdown.availability.today;
+    await assert.rejects(require('../services/searchService').search({provider:'hotelbeds',countryCode:'PT',destinationCode:'CEN',checkIn:'2030-04-01',nights:7,adults:2}),{
+      code:'TEST_CANDIDATE_LIMIT_EXCEEDED',status:422,message:'Слишком много вариантов размещения. Уточните параметры поиска.'
+    });
+    assert.equal(availability,1);assert.equal(calls,1);assert.equal(checkrate,0);assert.equal(contentCalls,0);assert.equal(signing,0);
+    // Recreate the access service to verify persisted state, not an in-memory counter.
+    assert.equal((await module.create(fixture).inspect()).breakdown.availability.today,before+1);
+  });
   await t.test('K persistence, API and logs omit credentials, rateKey and raw response',async sub=>{
     await reset();status=403;const logs=[];
     sub.mock.method(require('../utils/logger'),'warn',(...args)=>logs.push(args));

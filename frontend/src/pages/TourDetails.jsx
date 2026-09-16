@@ -1,3 +1,6 @@
+import StayPrice from '../components/StayPrice';
+import { selectedOfferSnapshot } from '../utils/selectedOfferSnapshot';
+import { normalizeBoardDisplay, normalizeRoomDisplay, stayLabel } from '../utils/hotelOfferDisplay';
 import { countryLabel } from '../utils/testDestinationLabels';
 import { visibleProviderOffer } from "../utils/providerEnvironment";
 import RateConditions from "../components/RateConditions";
@@ -32,20 +35,23 @@ export default function TourDetails() {
   const location = useLocation();
   const navigate = useNavigate();
   const { toggleFavorite, isFavorite } = useFavorites();
-  const [tour, setTour] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const selectedOffer = location.state?.selectedOffer || null;
+  const initialSnapshot = selectedOfferSnapshot(selectedOffer, provider, id, location.search);
+  const [tour, setTour] = useState(initialSnapshot);
+  const [loading, setLoading] = useState(!initialSnapshot);
   const [error, setError] = useState("");
   const [activeImage, setActiveImage] = useState(0);
-  const selectedOffer = location.state?.selectedOffer || null;
 
   const loadTour = useCallback(async (signal) => {
     try {
       setLoading(true);
       setError("");
-      if (selectedOffer && Date.now() - Date.parse(selectedOffer.observedAt) < 900000 && (!import.meta.env.PROD || visibleProviderOffer(selectedOffer)) && String(selectedOffer.provider || provider) === String(provider) && String(selectedOffer.providerHotelId ?? selectedOffer.id) === String(id)) {
-        setTour(selectedOffer);
+      const snapshot = selectedOfferSnapshot(selectedOffer, provider, id, location.search);
+      if (snapshot) {
+        setTour(snapshot);
         return;
       }
+      if (selectedOffer?.provider === 'hotelbeds' && selectedOffer.priceEnvironment === 'test') throw new Error('Предложение устарело или параметры изменились. Выполните новый поиск.');
       const params = new URLSearchParams(location.search);
       const response = await fetch(`${API_URL}/offers/${encodeURIComponent(provider)}/${encodeURIComponent(id)}?${params.toString()}`, {signal});
       const result = await response.json();
@@ -88,8 +94,8 @@ export default function TourDetails() {
   const checkOut = tour.checkOut || tour.departureEndDate || addDays(checkIn, nights);
   const adults = Number(tour.adults || params.get("people") || 2);
   const children = Number(tour.children || params.get("children") || 0);
-  const foodLabel = tour.boardName || tour.food || tour.boardCode || "По тарифу";
-  const roomLabel = tour.roomName || tour.roomType || tour.roomCode || "Номер по выбранному тарифу";
+  const foodLabel = normalizeBoardDisplay(tour.boardCode || tour.food, tour.boardName);
+  const roomLabel = normalizeRoomDisplay(tour.roomName || tour.roomType || tour.roomCode) || "Номер по выбранному тарифу";
   const isHotelbeds = (tour.provider || provider) === "hotelbeds";
   const isHotelbedsTest = isHotelbeds && tour.priceEnvironment === 'test';
   const favoriteActive = isFavorite(tour.providerHotelId ?? tour.id, tour.provider || provider);
@@ -120,6 +126,7 @@ export default function TourDetails() {
             <h1>{hotelName}</h1>
             <div className="tour-head-meta">
               {Number(tour.stars) > 0 && <span className="stars-pill">{"★".repeat(Math.min(Number(tour.stars), 5))}</span>}
+              {tour.stars == null && <span>Категория не указана</span>}
               {Number(tour.rating) > 0 && <span className="rating-pill">⭐ {Number(tour.rating).toFixed(1)}{Number(tour.reviewsCount) > 0 ? ` · ${tour.reviewsCount} отзывов` : ""}</span>}
               {isHotelbeds && <span className="provider-pill">Hotelbeds</span>}
             </div>
@@ -169,8 +176,8 @@ export default function TourDetails() {
           <aside className="tour-sidebar"><div className="price-card">
             <div className="price-label">{isHotelbeds ? "Стоимость проживания" : "Стоимость тура"}</div>
             {hasDiscount && <div className="old-price">{formattedBasePrice}</div>}
-            <div className="current-price">{formattedPrice}</div>
-            <div className="price-caption">{isHotelbeds ? `за ${nights} ночей · ${adults + children} гост.` : "итоговая стоимость предложения"}</div>
+            <div className="current-price">{isHotelbeds ? <StayPrice offer={tour} /> : formattedPrice}</div>
+            <div className="price-caption">{isHotelbeds ? `${stayLabel(nights)} · ${adults + children} гост.` : "итоговая стоимость предложения"}</div>
             <div className="price-checks"><span>{isHotelbedsTest ? 'Цена выбранного TEST-предложения' : '✓ Цена из выбранного предложения'}</span><span>✓ Параметры гостей сохранены</span><span>{isHotelbedsTest ? 'Для будущего реального оформления нужна повторная проверка' : '✓ Перед подтверждением будет проверка'}</span></div>
             <button type="button" className="book-btn" disabled={tour.bookingDisabled} onClick={goCheckout}>{tour.bookingDisabled ? 'Бронирование отключено' : 'Перейти к оформлению →'}</button>
             <div className="secure-booking">{isHotelbedsTest ? '🔒 Оплата и бронирование в TEST-режиме отключены' : '🔒 Оплата и подтверждение доступны после проверки условий'}</div>
