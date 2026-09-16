@@ -109,6 +109,32 @@ test('3P Home offline UX, URL contract and responsive semantics',async t=>{
       assert.equal(faq.includes('Как забронировать тур'),false);
       const footer=render(Footer);for(const path of ['/','/results','/favorites','/my-bookings','/#faq','/help/booking','/help/cancellation','/help/privacy'])assert.ok(footer.includes(`href="${path}"`));
     });
+    await t.test('3P.1 background clips independently; dropdown bounds fit below/above viewport',async()=>{
+      const html=render(Hero,{destinations:rows,catalogState:'ready'});
+      assert.match(html,/class="hero hero-unclipped"/);assert.match(html,/class="hero-visual"[^>]*aria-hidden="true"/);assert.match(html,/class="hero-overlay hero-interactive"/);
+      const css=await readFile(new URL('../src/styles/HeroBanner.css',import.meta.url),'utf8');
+      assert.match(css,/\.app \.hero\.hero-unclipped\s*\{[^}]*overflow:visible;[^}]*z-index:2/);
+      assert.match(css,/\.hero-visual\s*\{[^}]*border-radius:inherit;[^}]*overflow:hidden/);
+      assert.match(css,/\.hero-overlay\.hero-interactive\s*\{[^}]*overflow:visible/);
+      const panelCss=await readFile(new URL('../src/components/HomeSearch.css',import.meta.url),'utf8');
+      assert.match(panelCss,/\.home-guest-floating\s*\{[^}]*overflow-y:auto/);
+      assert.match(panelCss,/@media\(max-width:600px\)\s*\{ \.home-guest-floating \{ max-height:none; overflow:visible/);
+      const {guestPanelLayout}=await server.ssrLoadModule('/src/utils/guestPanelLayout.js');
+      const parent={top:350,bottom:430};
+      const below=guestPanelLayout({top:378,bottom:430},parent,900);
+      assert.equal(below.top,'88px');assert.equal(below.bottom,'auto');assert.equal(below.maxHeight,'454px');
+      const above=guestPanelLayout({top:650,bottom:702},{top:622,bottom:702},760);
+      assert.equal(above.top,'auto');assert.equal(above.bottom,'60px');assert.equal(above.maxHeight,'634px');
+      for(const viewport of [320,600,900])for(const anchorTop of [10,100,280]){
+        const parent={top:anchorTop-28,bottom:anchorTop+52};
+        const result=guestPanelLayout({top:anchorTop,bottom:anchorTop+52},parent,viewport);
+        const maxHeight=parseFloat(result.maxHeight);
+        const top=result.top==='auto'?parent.bottom-parseFloat(result.bottom)-maxHeight:parent.top+parseFloat(result.top);
+        assert.ok(top>=8);assert.ok(top+maxHeight<=viewport-8);
+      }
+      const guests=render(Guest,{form:{...form,children:3,childrenAges:['0','6','17']},onChange:()=>{},onClose:()=>{}});
+      assert.match(guests,/home-guest-floating/);assert.match(guests,/>Готово<\/button>/);
+    });
     await t.test('desktop/tablet/mobile CSS contracts and no provider entrypoints in Home',async()=>{
       const css=await readFile(new URL('../src/components/HomeSearch.css',import.meta.url),'utf8');
       assert.match(css,/grid-template-columns:minmax\(190px/);assert.match(css,/@media\(max-width:1100px\)/);assert.match(css,/repeat\(2,minmax\(0,1fr\)\)/);assert.match(css,/@media\(max-width:600px\)/);assert.match(css,/grid-template-columns:1fr/);assert.match(css,/position:static/);assert.match(css,/:focus-visible/);

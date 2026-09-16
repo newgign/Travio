@@ -20,6 +20,8 @@
 .home-guest-row button:disabled { opacity:.4; cursor:default; }
 .home-child-age { display:grid; gap:6px; margin-bottom:12px; }
 .home-guest-done { width:100%; min-height:40px; background:#245de0; color:white; border:0; border-radius:8px; cursor:pointer; }
+.home-guest-floating { overflow-y:auto; overscroll-behavior:contain; max-height:calc(100dvh - 32px); }
 .home-diagnostic { padding:12px; background:#fff4ce; color:#594713; border-radius:10px; margin-bottom:12px; }
 @media(max-width:1100px) { .home-search-surface { grid-template-columns:repeat(2,minmax(0,1fr)); } .home-search-submit { grid-column:1/-1; margin-top:0; } }
 @media(max-width:600px) { .home-search-surface { grid-template-columns:1fr; padding:18px; gap:16px; } .home-guest-panel { position:static; width:100%; max-width:none; margin-top:8px; box-shadow:none; } .home-search-note { line-height:1.6; } }
+@media(max-width:600px) { .home-guest-floating { max-height:none; overflow:visible; } }

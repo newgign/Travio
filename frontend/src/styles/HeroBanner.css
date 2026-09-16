@@ -1,4 +1,8 @@
 .hero { position:relative; background-size:cover; background-position:center; }
+.app .hero.hero-unclipped { overflow:visible; z-index:2; }
+.hero-visual { position:absolute; inset:0; border-radius:inherit; overflow:hidden; background-size:cover; background-position:center; pointer-events:none; }
+.hero-visual::after { content:""; position:absolute; inset:0; background:linear-gradient(110deg,#071d36b8,#15375265); }
+.hero-overlay.hero-interactive { position:relative; z-index:1; overflow:visible; background:none; }
 .hero-overlay { width:100%; background:linear-gradient(110deg,#071d36b8,#15375265); padding:148px 24px 86px; }
 .hero-content { max-width:1220px; margin:auto; text-align:center; display:flex; flex-direction:column; align-items:center; }
 .hero-badge { color:#e4f1ff; font-size:14px; font-weight:600; letter-spacing:.04em; margin-bottom:22px; }
