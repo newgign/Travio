@@ -1,97 +1,72 @@
-.tour-page { width: min(1320px, calc(100% - 40px)); margin: 0 auto; padding: var(--travio-page-top) 0 70px; }
-.tour-breadcrumbs { display: flex; align-items: center; gap: 8px; margin-bottom: 18px; color: #94a3b8; font-size: 12px; overflow: hidden; white-space: nowrap; }
-.tour-breadcrumbs button { padding: 0; border: 0; background: transparent; color: #2563eb; font-weight: 800; cursor: pointer; }
-.tour-breadcrumbs strong { overflow: hidden; color: #64748b; text-overflow: ellipsis; }
-.tour-product-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 22px; margin-bottom: 22px; }
-.tour-location { color: #64748b; font-size: 14px; }
-.tour-product-head h1 { margin: 6px 0 11px; color: #0f172a; font-size: 38px; line-height: 1.12; }
-.tour-head-meta { display: flex; flex-wrap: wrap; gap: 8px; }
-.stars-pill, .rating-pill, .provider-pill { padding: 7px 10px; border-radius: 999px; font-size: 12px; font-weight: 900; }
-.stars-pill { background: #0f172a; color: #fbbf24; letter-spacing: .05em; }
-.rating-pill { background: #ecfdf5; color: #047857; }
-.provider-pill { background: #eff6ff; color: #1d4ed8; }
-.tour-favorite { padding: 11px 15px; border: 1px solid #fecdd3; border-radius: 12px; background: #fff; color: #e11d48; font-weight: 800; cursor: pointer; }
-.tour-favorite.active { background: #fff1f2; }
-
-.tour-gallery-grid { display: grid; grid-template-columns: minmax(0, 1fr) 145px; gap: 12px; margin-bottom: 24px; }
-.tour-gallery-main { position: relative; height: 520px; overflow: hidden; border-radius: 24px; background: #e2e8f0; box-shadow: 0 14px 42px rgba(15,23,42,.11); }
-.tour-gallery-main > img { width: 100%; height: 100%; object-fit: cover; }
-.tour-hot { position: absolute; top: 18px; left: 18px; padding: 9px 13px; border-radius: 11px; background: #2563eb; color: #fff; font-size: 12px; font-weight: 900; }
-.gallery-counter { position: absolute; right: 18px; bottom: 18px; padding: 8px 11px; border-radius: 999px; background: rgba(15,23,42,.82); color: #fff; font-size: 12px; font-weight: 800; }
-.tour-thumbnails { display: grid; grid-template-rows: repeat(5, 1fr); gap: 10px; min-height: 0; }
-.tour-thumbnails button { min-height: 0; padding: 0; overflow: hidden; border: 2px solid transparent; border-radius: 14px; background: #e2e8f0; cursor: pointer; opacity: .76; }
-.tour-thumbnails button.active { border-color: #2563eb; opacity: 1; }
-.tour-thumbnails img { width: 100%; height: 100%; object-fit: cover; }
-
-.tour-detail-layout { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 24px; align-items: start; }
-.tour-detail-main { min-width: 0; display: grid; gap: 18px; }
-.tour-live-provider { display: flex; flex-direction: column; gap: 4px; padding: 15px 17px; border: 1px solid #a7f3d0; border-radius: 16px; background: #ecfdf5; color: #047857; }
-.tour-live-provider strong { font-size: 13px; }
-.tour-live-provider span { color: #15803d; font-size: 12px; }
-.tour-facts-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; }
-.tour-facts-grid > div { padding: 15px; border: 1px solid #e7edf5; border-radius: 15px; background: #fff; }
-.tour-facts-grid span { display: block; margin-bottom: 6px; color: #94a3b8; font-size: 10px; text-transform: uppercase; letter-spacing: .06em; }
-.tour-facts-grid strong { display: block; color: #334155; font-size: 13px; overflow-wrap: anywhere; }
-.tour-section-card { padding: 26px; border: 1px solid #e7edf5; border-radius: 20px; background: #fff; box-shadow: 0 10px 32px rgba(15,23,42,.05); }
-.tour-section-card h2 { margin: 0 0 16px; color: #0f172a; font-size: 22px; }
-.tour-section-card p { margin: 0; color: #475569; line-height: 1.75; }
-.amenities-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; }
-.amenities-grid div { display: flex; align-items: center; gap: 10px; padding: 13px; border-radius: 13px; background: #f8fafc; color: #334155; }
-.amenities-grid span { font-size: 20px; }
-.amenities-grid strong { font-size: 12px; }
-.conditions-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
-.conditions-grid div { padding: 14px; border-radius: 13px; background: #f8fafc; }
-.conditions-grid span { display: block; margin-bottom: 5px; color: #94a3b8; font-size: 10px; text-transform: uppercase; }
-.conditions-grid strong { color: #334155; font-size: 12px; line-height: 1.4; }
-.cancellation-note { margin-top: 12px; padding: 12px 14px; border-radius: 12px; background: #fff7ed; color: #9a3412; font-size: 12px; line-height: 1.5; }
-
-.tour-sidebar { position: sticky; top: 98px; }
-.price-card { padding: 26px; border: 1px solid #dbe5f1; border-radius: 22px; background: #fff; box-shadow: 0 16px 44px rgba(15,23,42,.1); }
-.price-label { color: #64748b; font-size: 13px; }
-.old-price { margin-top: 12px; color: #94a3b8; font-size: 17px; text-decoration: line-through; }
-.current-price { margin: 7px 0; color: #2563eb; font-size: 36px; font-weight: 900; line-height: 1.05; }
-.price-caption { color: #64748b; font-size: 12px; }
-.price-checks { display: grid; gap: 8px; margin: 22px 0; padding: 15px 0; border-top: 1px solid #edf1f6; border-bottom: 1px solid #edf1f6; }
-.price-checks span { color: #475569; font-size: 12px; }
-.book-btn { width: 100%; padding: 15px; border: 0; border-radius: 14px; background: #2563eb; color: #fff; font-size: 15px; font-weight: 900; cursor: pointer; }
-.book-btn:hover { background: #1d4ed8; }
-.secure-booking { margin-top: 13px; color: #059669; font-size: 11px; font-weight: 700; text-align: center; line-height: 1.4; }
-.mobile-booking-bar { display: none; }
-
-.tour-loading { min-height: 80vh; display: grid; place-items: center; padding: var(--travio-page-top) 20px 50px; background: #f5f7fb; }
-.tour-loading-card { width: min(520px, 100%); padding: 45px; border-radius: 22px; background: #fff; text-align: center; box-shadow: 0 15px 45px rgba(15,23,42,.08); }
-.tour-loading-card h2 { margin: 12px 0 8px; color: #0f172a; }
-.tour-loading-card p { color: #64748b; }
-.tour-loading-card button { margin-top: 14px; padding: 11px 16px; border: 0; border-radius: 12px; background: #2563eb; color: #fff; font-weight: 800; }
-.tour-spinner { display: inline-block; width: 34px; height: 34px; border: 4px solid #dbeafe; border-top-color: #2563eb; border-radius: 50%; animation: spin .8s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
-
-@media (max-width: 1000px) {
-  .tour-gallery-grid { grid-template-columns: 1fr; }
-  .tour-gallery-main { height: 440px; }
-  .tour-thumbnails { grid-template-columns: repeat(5, 1fr); grid-template-rows: 88px; }
-  .tour-detail-layout { grid-template-columns: 1fr; }
-  .tour-sidebar { position: static; }
-  .tour-facts-grid { grid-template-columns: repeat(3, 1fr); }
+.details-page { width:min(1320px,calc(100% - 48px)); margin:0 auto; padding:var(--travio-page-top) 0 64px; color:#17243b; }
+.details-page *, .details-page *::before, .details-page *::after { box-sizing:border-box; }
+.details-page :focus-visible { outline:3px solid #5584ee; outline-offset:4px; }
+.details-back { display:inline-flex; align-items:center; min-height:44px; margin-bottom:20px; padding:8px 0; border:0; background:none; color:#245de0; font:inherit; font-weight:600; text-align:left; cursor:pointer; }
+.details-header { display:flex; justify-content:space-between; align-items:start; gap:24px; margin-bottom:28px; }
+.details-header>div { min-width:0; }
+.details-header h1 { margin:0 0 12px; font-size:clamp(28px,3vw,40px); line-height:1.15; overflow-wrap:anywhere; }
+.details-stars { margin:0 0 10px; color:#946d0b; letter-spacing:.12em; }
+.details-category, .details-location { margin:8px 0 0; color:#64748b; overflow-wrap:anywhere; }
+.details-favorite { min-height:44px; padding:12px 18px; border:1px solid #dbe2ea; border-radius:12px; color:#334155; background:#fff; font:inherit; white-space:nowrap; cursor:pointer; }
+.details-favorite[aria-pressed=true] { color:#be123c; border-color:#fecdd3; background:#fff1f2; }
+.details-favorite-wrap>p { font-size:13px; color:#9f1239; max-width:240px; }
+.details-layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(300px,360px); align-items:start; gap:28px; }
+.details-main { min-width:0; display:grid; gap:24px; }
+.details-gallery { min-width:0; }
+.details-gallery-main { position:relative; width:100%; aspect-ratio:16/10; overflow:hidden; border-radius:22px; background:#eef1f4; }
+.details-gallery-main>img { display:block; width:100%; height:100%; object-fit:cover; }
+.details-gallery-counter { position:absolute; right:16px; bottom:16px; padding:7px 12px; border-radius:20px; background:#0f172abf; color:#fff; font-size:13px; }
+.details-thumbnails { display:flex; gap:10px; max-width:100%; overflow-x:auto; padding:8px 4px; margin-top:8px; }
+.details-thumbnails button { flex:0 0 88px; height:68px; padding:0; border:3px solid transparent; border-radius:12px; overflow:hidden; background:#eef1f4; cursor:pointer; }
+.details-thumbnails button[aria-pressed=true] { border-color:#245de0; }
+.details-thumbnails img { display:block; width:100%; height:100%; object-fit:cover; }
+.details-section { min-width:0; padding:24px; border:1px solid #e2e8f0; border-radius:20px; background:#fff; }
+.details-section h2 { font-size:23px; margin:0 0 16px; line-height:1.25; }
+.details-section h3 { font-size:17px; margin:24px 0 12px; }
+.details-section p { margin:0; color:#64748b; line-height:1.65; overflow-wrap:anywhere; }
+.details-offer-facts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:24px; margin:24px 0 0; }
+.details-offer-facts dt { margin-bottom:8px; font-size:13px; color:#64748b; }
+.details-offer-facts dd { margin:0; font-size:17px; line-height:1.45; overflow-wrap:anywhere; }
+.details-amenities { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; list-style:none; margin:0; padding:0; }
+.details-amenities li { padding:12px; border-radius:10px; background:#f5f7fb; font-size:14px; overflow-wrap:anywhere; }
+.details-technical { padding:16px 4px; font-size:13px; color:#64748b; overflow-wrap:anywhere; }
+.details-technical summary { padding:8px 0; cursor:pointer; }
+.details-technical dl { display:grid; gap:14px; }
+.details-technical dt { margin-bottom:5px; }
+.details-technical dd { margin:0; }
+.details-price-card { position:sticky; top:var(--travio-page-top); min-width:0; padding:26px; border:1px solid #dbe2ea; border-radius:22px; background:#fff; box-shadow:0 8px 30px #0f172a0a; }
+.details-price-card h2 { margin:20px 0 14px; font-size:15px; font-weight:500; color:#64748b; }
+.details-price-card .stay-price { display:grid; gap:10px; min-width:0; }
+.details-price-card .stay-price>strong { font-size:clamp(30px,3vw,38px); line-height:1.15; color:#17243b; overflow-wrap:anywhere; }
+.details-price-card .stay-price>div { font-size:16px; color:#64748b; }
+.details-price-card .stay-price>small { font-size:13px; color:#64748b; line-height:1.5; }
+.details-test-badge { display:inline-block; padding:6px 10px; border-radius:8px; background:#f1f5f9; color:#475569; font-size:12px; }
+.details-test-explanation { padding-top:20px; margin-top:20px; border-top:1px solid #e2e8f0; }
+.details-test-explanation h3 { margin:0 0 8px; font-size:14px; font-weight:600; }
+.details-test-explanation p, .details-booking-note { font-size:13px; line-height:1.6; color:#64748b; margin:0; }
+.details-booking:disabled { width:100%; min-height:48px; padding:12px; margin:22px 0 12px; border:1px solid #dbe2ea; border-radius:12px; background:#f1f5f9; color:#64748b; font:inherit; font-weight:600; cursor:not-allowed; }
+.details-state { max-width:680px; margin:32px auto; padding:32px; border:1px solid #e2e8f0; border-radius:20px; background:#fff; overflow-wrap:anywhere; }
+.details-state h1 { margin-top:0; font-size:28px; }
+.details-state p, .details-loading>p { color:#64748b; line-height:1.65; }
+.details-state .details-back { margin-bottom:0; }
+.details-loading { min-height:75vh; }
+.details-skeleton { background:#eef1f4; border-radius:22px; }
+.details-skeleton-gallery { aspect-ratio:16/10; }
+.details-skeleton-price { min-height:300px; }
+@media (max-width:1000px) {
+  .details-layout { grid-template-columns:minmax(0,1fr); }
+  .details-price-card { position:static; width:100%; }
 }
-@media (max-width: 760px) {
-  .tour-page { width: min(100% - 28px, 1320px); padding-top: var(--travio-page-top); padding-bottom: 105px; }
-  .tour-product-head { flex-direction: column; }
-  .tour-product-head h1 { font-size: 29px; }
-  .tour-favorite { width: 100%; }
-  .tour-gallery-main { height: 320px; border-radius: 18px; }
-  .tour-thumbnails { grid-template-rows: 62px; overflow-x: auto; }
-  .tour-facts-grid { grid-template-columns: repeat(2, 1fr); }
-  .amenities-grid { grid-template-columns: repeat(2, 1fr); }
-  .conditions-grid { grid-template-columns: 1fr; }
-  .tour-section-card { padding: 20px; }
-  .mobile-booking-bar { position: fixed; z-index: 2100; left: 0; right: 0; bottom: 0; display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 11px 16px calc(11px + env(safe-area-inset-bottom)); border-top: 1px solid #dbe5f1; background: rgba(255,255,255,.97); box-shadow: 0 -12px 32px rgba(15,23,42,.12); backdrop-filter: blur(12px); }
-  .mobile-booking-bar span { display: block; color: #64748b; font-size: 10px; }
-  .mobile-booking-bar strong { color: #0f172a; font-size: 18px; }
-  .mobile-booking-bar button { min-width: 120px; padding: 12px 16px; border: 0; border-radius: 12px; background: #2563eb; color: #fff; font-weight: 900; }
+@media (max-height:700px) {
+  .details-price-card { position:static; }
 }
-@media (max-width: 480px) {
-  .tour-facts-grid, .amenities-grid { grid-template-columns: 1fr; }
-  .tour-thumbnails { grid-template-columns: repeat(5, 82px); }
-  .current-price { font-size: 32px; }
+@media (max-width:600px) {
+  .details-page { width:calc(100% - 28px); padding-bottom:40px; }
+  .details-header { flex-direction:column; gap:18px; }
+  .details-favorite-wrap, .details-favorite { width:100%; }
+  .details-gallery-main { aspect-ratio:4/3; border-radius:18px; }
+  .details-thumbnails button { flex-basis:76px; height:60px; }
+  .details-section, .details-price-card { padding:20px; }
+  .details-offer-facts, .details-amenities { grid-template-columns:minmax(0,1fr); gap:18px; }
+  .details-state { padding:22px; }
 }

@@ -1,4 +1,5 @@
 import { stayGuests } from '../utils/resultsPresentation';
+import { resultsOrigin } from '../utils/detailsPresentation';
 import StayPrice from '../components/StayPrice';
 import { normalizeBoardDisplay, normalizeRoomDisplay, stayLabel } from '../utils/hotelOfferDisplay';
 import { countryLabel } from '../utils/testDestinationLabels';
@@ -39,7 +40,7 @@ export default function TourCard({ tour }) {
   const roomLabel = normalizeRoomDisplay(tour.roomName || tour.roomType || tour.roomCode);
 
   function openDetails() {
-    navigate(tour.checkIn ? offerDetailsLink(tour) : `/tour/${encodeURIComponent(providerName)}/${encodeURIComponent(providerHotelId)}${location.search}`, { state: { selectedOffer: tour } });
+    navigate(tour.checkIn ? offerDetailsLink(tour) : `/tour/${encodeURIComponent(providerName)}/${encodeURIComponent(providerHotelId)}${location.search}`, { state: { selectedOffer: tour, resultsOrigin: resultsOrigin(location) } });
   }
 
   async function handleFavorite(event) {

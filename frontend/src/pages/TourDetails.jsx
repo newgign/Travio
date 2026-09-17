@@ -1,192 +1,132 @@
+import { useEffect, useState } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
 import StayPrice from '../components/StayPrice';
+import DetailsGallery from '../components/DetailsGallery';
+import { useFavorites } from '../context/FavoritesContext';
 import { selectedOfferSnapshot } from '../utils/selectedOfferSnapshot';
-import { normalizeBoardDisplay, normalizeRoomDisplay, stayLabel } from '../utils/hotelOfferDisplay';
-import { countryLabel } from '../utils/testDestinationLabels';
-import { visibleProviderOffer } from "../utils/providerEnvironment";
-import RateConditions from "../components/RateConditions";
-import HotelImage from '../components/HotelImage';
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
-import { useFavorites } from "../context/FavoritesContext";
-import API_URL from "../services/api";
-import { formatMoney } from "../utils/money";
-import "../styles/TourDetails.css";
-
-
-function formatDate(value) {
-  if (!value) return "—";
-  const date = new Date(`${String(value).slice(0, 10)}T00:00:00`);
-  return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleDateString("ru-RU", { day: "2-digit", month: "short", year: "numeric" });
-}
-
-function addDays(value, nights) {
-  if (!value || !Number(nights)) return null;
-  const date = new Date(`${String(value).slice(0, 10)}T00:00:00`);
-  if (Number.isNaN(date.getTime())) return null;
-  date.setDate(date.getDate() + Number(nights));
-  return date.toISOString().slice(0, 10);
-}
+import { visibleProviderOffer } from '../utils/providerEnvironment';
+import { normalizeBoardDisplay, normalizeRoomDisplay } from '../utils/hotelOfferDisplay';
+import { editSearchLink } from '../utils/resultsPresentation';
+import { detailsBackTarget, detailsError, detailsSummary, displayDate, galleryImages, hotelAmenities, hotelCategory, hotelLocation, stayDates } from '../utils/detailsPresentation';
+import { loadDetailsOffer } from '../services/detailsOffer';
+import { toggleDetailsFavorite } from '../utils/detailsFavorite';
+import '../styles/TourDetails.css';
 
 export default function TourDetails() {
   const { provider: providerParam, id } = useParams();
-  const provider = providerParam || "mock";
   const location = useLocation();
+  // Route/state navigation must not paint the previous hotel's offer while resolving.
+  return <DetailsPage key={`${location.key}:${providerParam}:${id}:${location.search}`} provider={providerParam || 'mock'} id={id} location={location} />;
+}
+
+function DetailsPage({ provider, id, location }) {
   const navigate = useNavigate();
   const { toggleFavorite, isFavorite } = useFavorites();
   const selectedOffer = location.state?.selectedOffer || null;
-  const initialSnapshot = selectedOfferSnapshot(selectedOffer, provider, id, location.search);
+  const [initialSnapshot] = useState(() => selectedOfferSnapshot(selectedOffer, provider, id, location.search));
   const [tour, setTour] = useState(initialSnapshot);
-  const [loading, setLoading] = useState(!initialSnapshot);
-  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(!initialSnapshot && !selectedOffer);
+  const [error, setError] = useState(() => selectedOffer && !initialSnapshot ? detailsError({ code: 'SELECTED_OFFER_STALE' }) : null);
   const [activeImage, setActiveImage] = useState(0);
+  const [favoriteError, setFavoriteError] = useState('');
+  const [favoritePending, setFavoritePending] = useState(false);
 
-  const loadTour = useCallback(async (signal) => {
-    try {
-      setLoading(true);
-      setError("");
-      const snapshot = selectedOfferSnapshot(selectedOffer, provider, id, location.search);
-      if (snapshot) {
-        setTour(snapshot);
-        return;
+  useEffect(() => {
+    const controller = new AbortController();
+    // One mount load only; no polling or fallback for rejected navigation state.
+    const timer = setTimeout(async () => {
+      try {
+        const offer = await loadDetailsOffer({ selectedOffer, provider, id, search: location.search, signal: controller.signal });
+        if (!controller.signal.aborted) { setTour(offer); setError(null); }
+      } catch (err) {
+        if (!controller.signal.aborted) { setError(detailsError(err)); setTour(null); }
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
       }
-      if (selectedOffer?.provider === 'hotelbeds' && selectedOffer.priceEnvironment === 'test') throw new Error('Предложение устарело или параметры изменились. Выполните новый поиск.');
-      const params = new URLSearchParams(location.search);
-      const response = await fetch(`${API_URL}/offers/${encodeURIComponent(provider)}/${encodeURIComponent(id)}?${params.toString()}`, {signal});
-      const result = await response.json();
-      if (!response.ok || !result?.success || !result?.data) throw new Error(result?.message || "Не удалось загрузить информацию о туре");
-      if (signal.aborted) return;
-      if (String(result.data.providerHotelId ?? result.data.id) !== String(id)) throw new Error('Предложение недоступно');
-      setTour(result.data);
-    } catch (err) {
-      if (signal.aborted) return;
-      console.error(err);
-      setError(err.message || "Ошибка загрузки тура");
-      setTour(null);
-    } finally {
-      if (!signal.aborted) setLoading(false);
-    }
+    }, 0);
+    return () => { clearTimeout(timer); controller.abort(); };
   }, [provider, id, location.search, selectedOffer]);
 
-  useEffect(() => { const controller = new AbortController(); const timer = setTimeout(() => loadTour(controller.signal), 0); return () => { clearTimeout(timer); controller.abort(); }; }, [loadTour]);
-  useEffect(() => { const timer = setTimeout(() => setActiveImage(0), 0); return () => clearTimeout(timer); }, [tour?.id, tour?.providerHotelId]);
-
-  const images = useMemo(() => {
-    if (!tour) return [null];
-    const unique = [...new Set([tour.image, ...(Array.isArray(tour.images) ? tour.images : [])].filter(Boolean))].slice(0, 6);
-    return unique.length ? unique : [null];
-  }, [tour]);
-
-  if (import.meta.env.PROD && tour && !visibleProviderOffer(tour)) return <><Navbar /><main className="help-page"><h1>Предложение недоступно</h1><p>Вернитесь к поиску актуальных предложений.</p><a href="/results">Найти туры</a></main><Footer /></>;
-  if (loading) return <><Navbar /><main className="tour-loading"><div className="tour-loading-card"><span className="tour-spinner" /><h2>Проверяем предложение...</h2><p>Загружаем данные отеля и выбранного тарифа</p></div></main><Footer /></>;
-  if (error || !tour) return <><Navbar /><main className="tour-loading"><div className="tour-loading-card"><h2>Тур не найден</h2><p>{error}</p><button type="button" onClick={() => navigate(-1)}>Вернуться назад</button></div></main><Footer /></>;
-
-  const hotelName = tour.name || tour.title || tour.hotel || "Отель";
-  const price = Number(tour.price || 0);
-  const basePrice = Number(tour.discountEvidence?.originalPrice || 0);
-  const hasDiscount = tour.priceEnvironment === "live" && tour.discountEvidence?.source === "price_history" && basePrice > price && price > 0;
-  const formattedPrice = formatMoney(price, tour.currency || "KZT");
-  const formattedBasePrice = formatMoney(basePrice, tour.currency || "KZT");
-  const params = new URLSearchParams(location.search);
-  const checkIn = tour.departureDate || params.get("departureDate") || null;
-  const nights = Number(tour.nights || params.get("nights") || 7);
-  const checkOut = tour.checkOut || tour.departureEndDate || addDays(checkIn, nights);
-  const adults = Number(tour.adults || params.get("people") || 2);
-  const children = Number(tour.children || params.get("children") || 0);
-  const foodLabel = normalizeBoardDisplay(tour.boardCode || tour.food, tour.boardName);
-  const roomLabel = normalizeRoomDisplay(tour.roomName || tour.roomType || tour.roomCode) || "Номер по выбранному тарифу";
-  const isHotelbeds = (tour.provider || provider) === "hotelbeds";
-  const isHotelbedsTest = isHotelbeds && tour.priceEnvironment === 'test';
-  const favoriteActive = isFavorite(tour.providerHotelId ?? tour.id, tour.provider || provider);
-  const cancellationPolicies = Array.isArray(tour.cancellationPolicies) ? tour.cancellationPolicies : [];
-
-  function goCheckout() {
-    if (tour.bookingDisabled) return;
-    navigate(`/checkout/${encodeURIComponent(tour.provider || provider)}/${encodeURIComponent(tour.providerHotelId ?? tour.id)}${location.search}`, { state: { selectedOffer: tour } });
+  const searchLink = editSearchLink(new URLSearchParams(location.state?.resultsOrigin?.search || location.search));
+  function back() {
+    navigate(detailsBackTarget(location.state?.resultsOrigin, window.history.state?.idx, location.search));
   }
+  if (loading) return <><Navbar /><main className="details-page details-loading" role="status" aria-label="Загрузка отеля" aria-busy="true">
+    <h1>Загружаем выбранный отель</h1><p>Получаем данные отеля и тарифа.</p>
+    <div className="details-layout" aria-hidden="true"><div className="details-skeleton details-skeleton-gallery" /><div className="details-skeleton details-skeleton-price" /></div>
+  </main><Footer /></>;
+  const unavailable = import.meta.env.PROD && tour && !visibleProviderOffer(tour);
+  if (error || !tour || unavailable) {
+    const state = error || detailsError({ code: 'OFFER_NOT_FOUND' });
+    return <><Navbar /><main className="details-page"><section className="details-state" role="alert" data-error-code={state.code}>
+      <h1>{state.title}</h1><p>{state.message}</p><button type="button" className="details-back" onClick={() => navigate(searchLink)}>Вернуться к поиску</button>
+    </section></main><Footer /></>;
+  }
+
+  const hotelName = tour.name || tour.title || tour.hotel || 'Отель';
+  const stars = hotelCategory(tour.stars);
+  const place = hotelLocation(tour);
+  const images = galleryImages(tour);
+  const amenities = hotelAmenities(tour);
+  const { checkIn, checkOut } = stayDates(tour);
+  const isTest = tour.provider === 'hotelbeds' && tour.priceEnvironment === 'test';
+  const favoriteActive = isFavorite(tour.providerHotelId ?? tour.id, tour.provider || provider);
+  const room = normalizeRoomDisplay(tour.roomName || tour.roomType || tour.roomCode) || 'Номер по выбранному тарифу';
+  const board = normalizeBoardDisplay(tour.boardCode || tour.food, tour.boardName);
 
   async function handleFavorite() {
-    if (!localStorage.getItem("token")) { navigate("/login"); return; }
-    try { await toggleFavorite(tour); }
-    catch (err) { alert(err.message || "Не удалось обновить избранное"); }
+    setFavoritePending(true);
+    setFavoriteError('');
+    try { await toggleDetailsFavorite(tour, { hasSession: Boolean(localStorage.getItem('token')), toggleFavorite, navigate }); }
+    catch { setFavoriteError('Не удалось обновить избранное. Попробуйте ещё раз.'); }
+    finally { setFavoritePending(false); }
   }
 
-  return (
-    <>
-      <Navbar />
-      <main className="tour-page">
-        {tour.priceEnvironment === "test" && <p role="status">Hotelbeds TEST / Evaluation — только техническое тестирование. Бронирование и оплата недоступны.</p>}
-        {tour.priceEnvironment === 'test' && <p>Тестовая цена · provider=hotelbeds · environment=test · Источник цены: {tour.priceSource || '—'} · Наблюдение: {tour.observedAt || '—'}</p>}
-        <div className="tour-breadcrumbs"><button type="button" onClick={() => navigate(-1)}>← К результатам</button><span>/</span><span>{tour.country || "Направление"}</span><span>/</span><strong>{hotelName}</strong></div>
+  return <><Navbar /><main className="details-page">
+    <button type="button" className="details-back" onClick={back}>← Вернуться к результатам</button>
+    <header className="details-header">
+      <div><h1>{hotelName}</h1>
+        {stars ? <p className="details-stars" aria-label={`Категория отеля: ${stars} звёзд`}>{'★'.repeat(stars)}</p> : <p className="details-category">Категория не указана</p>}
+        {place && <p className="details-location">{place}</p>}
+      </div>
+      <div className="details-favorite-wrap"><button type="button" className="details-favorite" aria-pressed={favoriteActive} aria-label={favoriteActive ? 'Удалить из избранного' : 'Добавить в избранное'} disabled={favoritePending} onClick={handleFavorite}>{favoriteActive ? '♥ В избранном' : '♡ В избранное'}</button>
+        {favoriteError && <p role="alert">{favoriteError}</p>}
+      </div>
+    </header>
 
-        <section className="tour-product-head">
-          <div>
-            <div className="tour-location">📍 {tour.city}{tour.city && tour.country ? ", " : ""}{countryLabel(tour.country)}</div>
-            <h1>{hotelName}</h1>
-            <div className="tour-head-meta">
-              {Number(tour.stars) > 0 && <span className="stars-pill">{"★".repeat(Math.min(Number(tour.stars), 5))}</span>}
-              {tour.stars == null && <span>Категория не указана</span>}
-              {Number(tour.rating) > 0 && <span className="rating-pill">⭐ {Number(tour.rating).toFixed(1)}{Number(tour.reviewsCount) > 0 ? ` · ${tour.reviewsCount} отзывов` : ""}</span>}
-              {isHotelbeds && <span className="provider-pill">Hotelbeds</span>}
-            </div>
-          </div>
-          <button type="button" className={`tour-favorite ${favoriteActive ? "active" : ""}`} onClick={handleFavorite}>{favoriteActive ? "♥ В избранном" : "♡ В избранное"}</button>
+    <div className="details-layout">
+      <div className="details-main">
+        <DetailsGallery images={images} hotelName={hotelName} activeImage={activeImage} onSelect={setActiveImage} />
+        <section className="details-section" aria-labelledby="selected-stay-title">
+          <h2 id="selected-stay-title">Ваш вариант проживания</h2>
+          <p className="details-stay-summary">{detailsSummary(tour)}</p>
+          <dl className="details-offer-facts">
+            <div><dt>Номер</dt><dd>{room}</dd></div><div><dt>Питание</dt><dd>{board}</dd></div>
+            <div><dt>Заезд</dt><dd>{displayDate(checkIn)}</dd></div><div><dt>Выезд</dt><dd>{displayDate(checkOut)}</dd></div>
+          </dl>
         </section>
-
-        <section className="tour-gallery-grid">
-          <div className="tour-gallery-main"><HotelImage key={`${provider}:${id}:${images[activeImage]}`} src={images[activeImage]} alt={`${hotelName} — фото ${activeImage + 1}`} />{Number(tour.beachLine) === 1 && <span className="tour-hot">🌊 1-я береговая линия</span>}<span className="gallery-counter">{activeImage + 1} / {images.length}</span></div>
-          <div className="tour-thumbnails">{images.slice(0, 5).map((src, index) => <button type="button" key={`${provider}:${id}:${src}-${index}`} className={activeImage === index ? "active" : ""} onClick={() => setActiveImage(index)}><HotelImage src={src} alt="" /></button>)}</div>
+        <section className="details-section" aria-labelledby="hotel-info-title"><h2 id="hotel-info-title">Об отеле</h2>
+          {typeof tour.description === 'string' && tour.description.trim() ? <p>{tour.description}</p> : <p>{[hotelName, place].filter(Boolean).join(' · ')}</p>}
+          {amenities.length > 0 && <><h3>Удобства</h3><ul className="details-amenities">{amenities.map(amenity => <li key={amenity}>{amenity}</li>)}</ul></>}
+          {Number(tour.beachLine) > 0 && Number(tour.beachLine) <= 3 && <p>Береговая линия: {tour.beachLine}</p>}
         </section>
+        <section className="details-section"><h2>Условия тарифа</h2><p>Подробные условия тарифа будут доступны после повторной проверки перед оформлением.</p></section>
+        <details className="details-technical"><summary>Техническая информация</summary><dl>
+          <div><dt>Источник цены</dt><dd>{typeof tour.priceSource === 'string' ? tour.priceSource : '—'}</dd></div>
+          <div><dt>Время наблюдения</dt><dd>{typeof tour.observedAt === 'string' ? tour.observedAt : '—'}</dd></div>
+          <div><dt>Тип тарифа поставщика</dt><dd>{typeof tour.rateType === 'string' ? tour.rateType : '—'}</dd></div>
+        </dl></details>
+      </div>
 
-        <section className="tour-detail-layout">
-          <div className="tour-detail-main">
-            {isHotelbeds && <div className="tour-live-provider"><strong>{isHotelbedsTest ? 'Цена выбранного TEST-предложения' : '● Актуальный тариф Hotelbeds'}</strong><span>{isHotelbedsTest ? 'Цена получена из Hotelbeds TEST Availability. Перед будущим реальным оформлением тариф должен быть повторно проверен.' : 'Перед Booking API Asedeliya повторно проверит доступность и цену. Реального списания денег сейчас нет.'}</span></div>}
-
-            <div className="tour-facts-grid">
-              <div><span>Заезд</span><strong>📅 {formatDate(checkIn)}</strong></div>
-              <div><span>Выезд</span><strong>📅 {formatDate(checkOut)}</strong></div>
-              <div><span>Ночей</span><strong>🌙 {nights}</strong></div>
-              <div><span>Гости</span><strong>👥 {adults} взр.{children ? ` · ${children} дет.` : ""}</strong></div>
-              <div><span>Питание</span><strong>🍽 {foodLabel}</strong></div>
-              <div><span>Номер / тариф</span><strong>🛏 {roomLabel}</strong></div>
-            </div>
-
-            <section className="tour-section-card"><h2>Об отеле</h2><p>{tour.description || `${hotelName} — вариант проживания в городе ${tour.city || ""}${tour.city && tour.country ? ", " : ""}${tour.country || ""}. Проверьте параметры выбранного тарифа перед оформлением.`}</p></section>
-
-            <section className="tour-section-card"><h2>Удобства</h2><div className="amenities-grid">
-              {[
-                [tour.privateBeach, "🏖", "Собственный пляж"], [tour.wifi, "📶", "Wi-Fi"], [tour.pool, "🏊", "Бассейн"], [tour.spa, "💆", "SPA"], [tour.gym, "🏋️", "Тренажёрный зал"], [tour.kidsClub, "🧸", "Детский клуб"], [tour.aquapark, "🌊", "Аквапарк"], [tour.restaurant, "🍽", "Ресторан"], [tour.bar, "🍹", "Бар"], [tour.parking, "🚗", "Парковка"]
-              ].filter(([enabled]) => enabled).map(([, icon, label]) => <div key={label}><span>{icon}</span><strong>{label}</strong></div>)}
-              {Array.isArray(tour.amenities) && tour.amenities.filter(Boolean).slice(0, 10).map((amenity) => <div key={amenity}><span>✓</span><strong>{amenity}</strong></div>)}
-              {(!Array.isArray(tour.amenities) || tour.amenities.length === 0) && !tour.privateBeach && !tour.wifi && !tour.pool && !tour.spa && !tour.gym && !tour.kidsClub && !tour.aquapark && !tour.restaurant && !tour.bar && !tour.parking && <div className="amenity-empty"><span>ℹ️</span><strong>Информация уточняется у поставщика</strong></div>}
-            </div></section>
-
-            <section className="tour-section-card"><h2>Условия предложения</h2><div className="conditions-grid">
-              <div><span>{isHotelbedsTest ? 'Тип тарифа Hotelbeds' : 'Подтверждение'}</span><strong>{isHotelbedsTest ? (tour.rateType || 'Не указан') : isHotelbeds ? (tour.recheckRequired ? "Требуется CheckRate" : "Тариф доступен для Booking API") : "По правилам Asedeliya"}</strong>{isHotelbedsTest && <p>Бронирование через Asedeliya в TEST-режиме отключено</p>}</div>
-              <div><span>Отмена</span><strong>{cancellationPolicies.length ? "Есть правила отмены поставщика" : "Уточняется перед бронированием"}</strong></div>
-              <div><span>Что входит</span><strong>{isHotelbeds ? "Проживание по выбранному тарифу" : "Состав тура указан в предложении"}</strong></div>
-              <div><span>Что не входит</span><strong>{isHotelbeds ? "Перелёт и страховка не заявлены Hotelbeds" : "Зависит от выбранного пакета"}</strong></div>
-            </div>
-            {isHotelbeds && <RateConditions offer={tour} />}
-            {cancellationPolicies.length > 0 && <div className="cancellation-note">{isHotelbedsTest ? 'Указано правило отмены Hotelbeds TEST. При будущем реальном оформлении условия должны быть повторно проверены.' : `📋 Asedeliya получил ${cancellationPolicies.length} правил(а) отмены. Точная сумма возможного штрафа перепроверяется в процессе оформления.`}</div>}
-            </section>
-          </div>
-
-          <aside className="tour-sidebar"><div className="price-card">
-            <div className="price-label">{isHotelbeds ? "Стоимость проживания" : "Стоимость тура"}</div>
-            {hasDiscount && <div className="old-price">{formattedBasePrice}</div>}
-            <div className="current-price">{isHotelbeds ? <StayPrice offer={tour} /> : formattedPrice}</div>
-            <div className="price-caption">{isHotelbeds ? `${stayLabel(nights)} · ${adults + children} гост.` : "итоговая стоимость предложения"}</div>
-            <div className="price-checks"><span>{isHotelbedsTest ? 'Цена выбранного TEST-предложения' : '✓ Цена из выбранного предложения'}</span><span>✓ Параметры гостей сохранены</span><span>{isHotelbedsTest ? 'Для будущего реального оформления нужна повторная проверка' : '✓ Перед подтверждением будет проверка'}</span></div>
-            <button type="button" className="book-btn" disabled={tour.bookingDisabled} onClick={goCheckout}>{tour.bookingDisabled ? 'Бронирование отключено' : 'Перейти к оформлению →'}</button>
-            <div className="secure-booking">{isHotelbedsTest ? '🔒 Оплата и бронирование в TEST-режиме отключены' : '🔒 Оплата и подтверждение доступны после проверки условий'}</div>
-          </div></aside>
-        </section>
-      </main>
-
-      <div className="mobile-booking-bar"><div><span>Стоимость</span><strong>{formattedPrice}</strong></div><button type="button" disabled={tour.bookingDisabled} onClick={goCheckout}>{tour.bookingDisabled ? 'Бронирование отключено' : 'Выбрать'}</button></div>
-      <Footer />
-    </>
-  );
+      <aside className="details-price-card" aria-label="Стоимость выбранного проживания">
+        {isTest && <span className="details-test-badge">Hotelbeds TEST</span>}
+        <h2>Стоимость проживания</h2><StayPrice offer={tour} />
+        {isTest && <div className="details-test-explanation"><h3>Тестовая цена Hotelbeds</h3><p>Цена получена из тестовой среды. Перед реальным оформлением тариф потребуется проверить повторно.</p></div>}
+        <button type="button" className="details-booking" disabled>Бронирование отключено</button>
+        <p className="details-booking-note">Бронирование сейчас отключено. Оплата недоступна.</p>
+      </aside>
+    </div>
+  </main><Footer /></>;
 }
