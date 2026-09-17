@@ -7,6 +7,6 @@ export default function StayPrice({offer}) {
   const perNight = calculatePricePerNight(offer.price, offer.nights, currency);
   return <div className="stay-price"><strong>{formatMoney(offer.price,currency)}</strong>
     {perNight != null && Number(offer.nights) > 1 && <div>{formatMoney(perNight,currency)} / ночь</div>}
-    <small>{stayLabel(offer.nights)}</small>
+    <small>{stayLabel(offer.nights)} · за всех гостей</small>
   </div>;
 }

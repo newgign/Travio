@@ -3,11 +3,13 @@ import { resetOfferFilters } from '../utils/localOfferFilters';
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import "./ResultsFilters.css";
+import LocalResultsFilters from './LocalResultsFilters';
 
 const FILTER_KEYS = ["maxPrice", "stars", "rating", "food", "nights", "beachLine", "roomType"];
 
-export default function ResultsFilters({ currency = "EUR", boards, onApplied }) {
+export default function ResultsFilters({ currency = "EUR", boards, onApplied, instant=false }) {
   const [searchParams] = useSearchParams();
+  if(instant)return <LocalResultsFilters currency={currency} boards={boards} />;
   // Discard an old draft whenever navigation changes the authoritative query.
   return <ResultsFiltersForm key={searchParams.toString()} currency={currency} boards={boards} onApplied={onApplied} />;
 }

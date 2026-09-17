@@ -17,5 +17,10 @@
 .filter-input { width: 100%; min-height: 44px; padding: 9px 11px; box-sizing: border-box; border: 1px solid #dbe2ea; border-radius: 11px; background: #fff; color: #0f172a; outline: none; }
 .filter-input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
 .filter-apply, .filter-reset { width: 100%; min-height: 44px; border-radius: 11px; font-weight: 800; cursor: pointer; }
+.filter-block>label { display:block; margin-bottom:8px; color:#334155; font-size:14px; font-weight:600; }
+.filters-secondary { border-top:1px solid #e2e8f0; padding-top:18px; margin-top:20px; }
+.filters-secondary>h3 { font-size:13px; color:#64748b; margin:0 0 16px; }
+.results-page .results-filters-panel { box-shadow:none; padding:20px; }
+.results-page .filter-block small { color:#64748b; line-height:1.5; }
 .filter-apply { border: 0; background: #2563eb; color: #fff; }
 .filter-reset { margin-top: 9px; border: 1px solid #dbe2ea; background: #fff; color: #475569; }

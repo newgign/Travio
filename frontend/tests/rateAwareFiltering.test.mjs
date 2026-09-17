@@ -24,6 +24,8 @@ test('3O.1 rate-aware filtering over one actual search response',async t=>{
     const {default:Details}=await server.ssrLoadModule('/src/pages/TourDetails.jsx');
     const {default:Filters}=await server.ssrLoadModule('/src/components/ResultsFilters.jsx');
     const {offerDetailsLink}=await server.ssrLoadModule('/src/utils/hotTours.js');
+    const {changePresentationFilter,activeFilterChips}=await server.ssrLoadModule('/src/utils/resultsPresentation.js');
+    const {default:Panel}=await server.ssrLoadModule('/src/components/ResultsFilterPanel.jsx');
     const client=require('../../backend/integrations/hotelbeds/client');
     const catalog=require('../../backend/repositories/providerCatalogRepository');
     const {rate}=require('../../backend/tests/fixtures/hotelbedsSearchQuality');
@@ -100,6 +102,22 @@ test('3O.1 rate-aware filtering over one actual search response',async t=>{
       const details=renderToStaticMarkup(React.createElement(MemoryRouter,{initialEntries:[{pathname:'/tour/hotelbeds/101',search:'?'+url.split('?')[1],state:{selectedOffer:selected}}]},React.createElement(Routes,{},React.createElement(Route,{path:'/tour/:provider/:id',element:React.createElement(Details)}))));
       assert.match(details,/120,00/);assert.match(details,/Всё включено/);assert.match(details,/Standard/);assert.match(details,/disabled=""[^>]*>Бронирование отключено/);
       assert.equal(availability,1);assert.equal(checkrate,0);
+    });
+    await t.test('3Q chips, reset and mobile panel keep Availability=1, CheckRate=0, Content=0',()=>{
+      let query=new URLSearchParams(base);
+      for(const [field,value] of [['food','AI'],['roomType','Superior'],['maxPrice','160'],['sort','priceDesc']]){
+        query=changePresentationFilter(query,field,value);
+        assert.equal(providerQuery(query,true),key);filterOffers(source,query);
+      }
+      assert.equal(filterOffers(source,query)[0].price,150);
+      for(const chip of activeFilterChips(query,'EUR')){
+        query=changePresentationFilter(query,chip.key,'');assert.equal(providerQuery(query,true),key);
+      }
+      assert.equal(providerQuery(resetOfferFilters(query),true),key);
+      let closed=0;
+      const panel=Panel({open:true,onClose:()=>closed++,shown:3});
+      panel.props.children[1].props.children[2].props.onClick();assert.equal(closed,1);
+      assert.equal(availability,1);assert.equal(checkrate,0);assert.equal(content,0);
     });
     await t.test('mixed currencies grouped deterministically without conversion',()=>{
       const rows=[{id:1,name:'USD',currency:'USD',price:1},{id:2,name:'EUR high',currency:'EUR',price:200},{id:3,name:'EUR low',currency:'EUR',price:100}];
