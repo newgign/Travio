@@ -27,10 +27,10 @@ export default function Navbar() {
 
         <nav className={`nav-menu ${menuOpen ? "open" : ""}`}>
           <Link to="/">Главная</Link>
-          <Link to="/results">Туры</Link>
+          <Link to="/results">Отели</Link>
           <Link to="/#countries">Страны</Link>
           <Link to="/#home-search">Поиск</Link>
-          <Link to="/#contacts">Контакты</Link>
+          <Link to="/contacts">Контакты</Link>
           <div className="mobile-nav-account">
             <Link to="/favorites">❤️ Избранное {favoriteCount > 0 ? `(${favoriteCount})` : ""}</Link>
             <Link to="/my-bookings">🧳 Мои бронирования</Link>

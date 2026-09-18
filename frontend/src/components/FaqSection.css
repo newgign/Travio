@@ -54,3 +54,7 @@
     }
 
 }
+
+.faq-section, .faq-section * { box-sizing:border-box; min-width:0; }
+.faq-question span, .faq-answer { overflow-wrap:anywhere; }
+.faq-section :focus-visible { outline:3px solid #5584ee; outline-offset:3px; }

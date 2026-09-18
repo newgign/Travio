@@ -1,31 +1,17 @@
-﻿import { Link, useParams } from "react-router-dom";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
-import { site } from "../config/site";
-const content = {
-  booking: { title: "Условия бронирования", paragraphs: [
-    "Выберите направление, даты и состав гостей. На странице предложения проверьте номер, питание, валюту и итоговую стоимость проживания.",
-    "Перед оформлением доступность и цена проверяются повторно. Если условия изменились, потребуется выбрать доступное предложение. Статус оформленной заявки можно посмотреть в разделе «Мои бронирования».",
-    "Перелёт, трансфер и страхование не считаются включёнными, если они явно не указаны в составе предложения. Условия конкретного тарифа показаны при оформлении.",
-    "В тестовом режиме заявки не являются реальными гостиничными бронированиями, а операции оплаты не списывают деньги. Сервис пока не принимает реальные оплаты."
-  ] },
-  cancellation: { title: "Отмена и возврат", paragraphs: [
-    "Возможность отмены, сроки и размер удержаний зависят от конкретного тарифа. Ознакомьтесь с правилами отмены до оформления.",
-    "Откройте нужную заявку в разделе «Мои бронирования», чтобы увидеть её статус и доступные действия. Запрос отмены не означает, что отмена уже подтверждена.",
-    "Результат отмены и возврата отображается в деталях бронирования. В тестовом режиме возвраты являются тестовыми операциями без движения реальных денежных средств."
-  ] },
-  privacy: { title: "Политика конфиденциальности", paragraphs: [
-    "Для работы аккаунта сервис обрабатывает предоставленные вами имя, email и данные профиля. При оформлении используются контактные данные и сведения о путешественниках.",
-    "Данные используются для авторизации, хранения избранного, оформления и отображения бронирований. Необходимые сведения о путешественниках передаются поставщику при оформлении заявки.",
-    "Для сохранения авторизации браузер хранит токен и данные пользователя в localStorage. Кнопка «Выйти» удаляет эти данные авторизации из браузера.",
-    "Данные профиля доступны в личном кабинете. Опубликованные контакты сервиса, когда они заполнены, находятся внизу страницы."
-  ] },
-};
-export default function Help() {
-  const { topic } = useParams();
-  const page = content[topic];
-  return <><Navbar /><main className="help-page"><h1>{page?.title || "Страница не найдена"}</h1>
-    {page?.paragraphs.map(text => <p key={text}>{text}</p>)}
-    <Link to="/">На главную {site.siteName}</Link>
-  </main><Footer /></>;
+import { Link, useParams } from 'react-router-dom';
+import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
+import FaqSection from '../components/FaqSection';
+import { helpArticles } from '../content/helpContent';
+import { NotFoundView } from './NotFound';
+import '../styles/Help.css';
+export function HelpView({ topic }) {
+  if (topic && !Object.hasOwn(helpArticles, topic)) return <NotFoundView />;
+  if (!topic) return <main className="support-page"><header><h1>Помощь</h1><p>Как пользоваться поиском отелей и аккаунтом Asedeliya.</p></header><nav className="support-grid" aria-label="Темы помощи">
+    {Object.entries(helpArticles).map(([key, page]) => <Link className="support-card" to={`/help/${key}`} key={key}><h2>{page.title}</h2><p>{page.summary}</p></Link>)}
+    <Link className="support-card" to="/contacts"><h2>Контакты</h2><p>Опубликованные контакты Asedeliya</p></Link>
+  </nav><FaqSection full /></main>;
+  const page = helpArticles[topic];
+  return <main className="support-page"><article className="support-article support-card"><nav aria-label="Навигация помощи"><Link to="/help">Помощь</Link><span aria-current="page">{page.title}</span></nav><header><h1>{page.title}</h1></header>{page.paragraphs.map(text => <p key={text}>{text}</p>)}<nav aria-label="Следующие разделы"><Link to="/contacts">Контакты</Link><Link to="/#home-search">Найти отели</Link></nav></article></main>;
 }
+export default function Help() { const { topic } = useParams(); return <><Navbar /><HelpView topic={topic} /><Footer /></>; }

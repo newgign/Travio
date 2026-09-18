@@ -3,6 +3,8 @@ import { Routes, Route } from "react-router-dom";
 import "./App.css";
 
 import Help from "./pages/Help";
+import Contacts from './pages/Contacts';
+import NotFound from './pages/NotFound';
 import ScrollToSection from "./components/ScrollToSection";
 import Home from "./pages/Home";
 import Results from "./pages/Results";
@@ -25,6 +27,8 @@ function App() {
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/help/:topic" element={<Help />} />
+      <Route path="/help" element={<Help />} />
+      <Route path="/contacts" element={<Contacts />} />
       <Route path="/results" element={<Results />} />
       <Route path="/favorites" element={<Favorites />} />
       <Route path="/tour/:provider/:id" element={<TourDetails />} />
@@ -105,6 +109,7 @@ function App() {
           </ProtectedRoute>
         }
       />
+      <Route path="*" element={<NotFound />} />
     </Routes>
     </>
   );
