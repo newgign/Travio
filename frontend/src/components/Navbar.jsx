@@ -4,6 +4,8 @@ import { useFavorites } from "../context/FavoritesContext";
 import "../styles/Navbar.css";
 import { site } from "../config/site";
 import useSession from "../hooks/useSession";
+import { logout } from "../services/session";
+import { accountName } from "../utils/profilePresentation";
 
 export default function Navbar() {
   const { favorites, favoritesKnown } = useFavorites();
@@ -17,12 +19,6 @@ export default function Navbar() {
 
 
 
-  function logout() {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    window.dispatchEvent(new Event("travio-auth-changed"));
-    window.location.href = "/";
-  }
 
   return (
     <header className={`navbar ${isHome ? "" : "navbar-solid"}`}>
@@ -51,7 +47,7 @@ export default function Navbar() {
           <Link to="/my-bookings" aria-label="Мои бронирования" className="icon-btn desktop-icon">🧳</Link>
           {user?.role === "admin" && <Link to="/admin" className="icon-btn desktop-icon" title="Админ-панель">⚙️</Link>}
           {user ? (
-            <div className="user-box desktop-user"><Link to="/profile" className="user-name user-name-link">👋 {user.full_name}</Link><button className="login-btn" onClick={logout}>Выйти</button></div>
+            <div className="user-box desktop-user"><Link to="/profile" aria-label={`Личный кабинет: ${accountName(user)}`} className="user-name user-name-link">👋 {accountName(user)}</Link><button type="button" className="login-btn" onClick={logout}>Выйти</button></div>
           ) : <Link to="/login" className="login-btn desktop-user">👤 Войти</Link>}
           <button type="button" className={`nav-toggle ${menuOpen ? "active" : ""}`} onClick={() => setMenuOpen(!menuOpen)} aria-label="Открыть меню" aria-expanded={menuOpen}><span /><span /><span /></button>
         </div>

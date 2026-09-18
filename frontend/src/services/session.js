@@ -29,3 +29,14 @@ export function clearSession(token) {
   localStorage.removeItem("user");
   window.dispatchEvent(new Event("travio-auth-changed"));
 }
+
+export function logout() {
+  clearSession(localStorage.getItem("token"));
+  window.location.href = "/";
+}
+
+export function updateSessionUser(token, user) {
+  if (!token || localStorage.getItem("token") !== token) return;
+  localStorage.setItem("user", JSON.stringify(user));
+  window.dispatchEvent(new Event("travio-auth-changed"));
+}
