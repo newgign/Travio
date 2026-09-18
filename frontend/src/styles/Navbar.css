@@ -62,3 +62,6 @@
   .app > .navbar .icon-btn { background:#e2e8f0; }
 }
 @media(max-width:1040px) { .navbar { padding:16px 24px; } }
+
+/* Keep all guest/account actions reachable on short mobile screens. */
+@media(max-width:1040px) { .nav-menu { overflow-y:auto; } }

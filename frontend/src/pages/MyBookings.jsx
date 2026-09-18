@@ -30,6 +30,6 @@ export default function MyBookings() {
   const store = useMemo(() => createAccountListStore({ ownerToken: token, readToken: () => localStorage.getItem('token'), loadData: readBookings }), [token]);
   const state = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
   useEffect(() => { const timer = setTimeout(() => store.load(), 0); return () => { clearTimeout(timer); store.invalidate(); }; }, [store]);
-  if (state.status === 'auth') return <Navigate to="/login" replace />;
+  if (state.status === 'auth') return <Navigate to="/login" replace state={{ returnTo: '/my-bookings' }} />;
   return <><Navbar /><MyBookingsView key={token} bookings={state.items} status={state.status} onRetry={store.load} /><Footer /></>;
 }

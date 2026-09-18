@@ -56,6 +56,6 @@ export default function Profile() {
     const timer = setTimeout(() => store.load(), 0);
     return () => { clearTimeout(timer); store.invalidate(); };
   }, [store]);
-  if (!token || !user || state.status === 'auth') return <Navigate to="/login" replace />;
+  if (!token || !user || state.status === 'auth') return <Navigate to="/login" replace state={{ returnTo: '/profile' }} />;
   return <><Navbar /><ProfileView key={token} state={state} actions={store} /><Footer /></>;
 }

@@ -38,7 +38,7 @@ export default function Navbar() {
             {user?.role === "admin" && <Link to="/admin">⚙️ Админ-панель</Link>}
             {user
               ? <button type="button" className="login-btn" onClick={logout}>Выйти</button>
-              : <Link to="/login">👤 Войти</Link>}
+              : <><Link to="/login">👤 Войти</Link><Link to="/register">Создать аккаунт</Link></>}
           </div>
         </nav>
 
@@ -48,7 +48,7 @@ export default function Navbar() {
           {user?.role === "admin" && <Link to="/admin" className="icon-btn desktop-icon" title="Админ-панель">⚙️</Link>}
           {user ? (
             <div className="user-box desktop-user"><Link to="/profile" aria-label={`Личный кабинет: ${accountName(user)}`} className="user-name user-name-link">👋 {accountName(user)}</Link><button type="button" className="login-btn" onClick={logout}>Выйти</button></div>
-          ) : <Link to="/login" className="login-btn desktop-user">👤 Войти</Link>}
+          ) : <div className="user-box desktop-user"><Link to="/login" className="login-btn">Войти</Link><Link to="/register" className="user-name user-name-link">Регистрация</Link></div>}
           <button type="button" className={`nav-toggle ${menuOpen ? "active" : ""}`} onClick={() => setMenuOpen(!menuOpen)} aria-label="Открыть меню" aria-expanded={menuOpen}><span /><span /><span /></button>
         </div>
       </div>

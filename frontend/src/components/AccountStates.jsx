@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import { authOrigin } from '../utils/authPresentation';
 export function AccountLoading({ label }) {
   return <div role="status" aria-label={label} className="account-skeleton-list"><span>{label}</span>{[1, 2, 3].map(i => <div key={i} className="account-skeleton" aria-hidden="true" />)}</div>;
 }
@@ -13,5 +14,6 @@ export function AccountEmpty({ favorites = false }) {
   </section>;
 }
 export function AccountAuth() {
-  return <section className="account-state"><h2>Войдите в аккаунт</h2><p>Для просмотра сохранённых данных нужен вход.</p><Link className="account-button" to="/login">Войти</Link></section>;
+  const location = useLocation();
+  return <section className="account-state"><h2>Войдите в аккаунт</h2><p>Для просмотра сохранённых данных нужен вход.</p><Link className="account-button" to="/login" state={{ returnTo: authOrigin(location.pathname) }}>Войти</Link></section>;
 }
