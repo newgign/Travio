@@ -1,0 +1,34 @@
+.account-page { width:min(1320px,calc(100% - 48px)); margin:0 auto; padding:var(--travio-page-top) 0 64px; color:#17243b; }
+.account-page *, .account-page *::before, .account-page *::after { box-sizing:border-box; }
+.account-page :focus-visible { outline:3px solid #5584ee; outline-offset:4px; }
+.account-header { margin-bottom:28px; }
+.account-header h1 { margin:0 0 12px; font-size:clamp(28px,3vw,40px); line-height:1.2; }
+.account-header p { margin:8px 0 0; color:#64748b; line-height:1.6; }
+.account-header .account-count { color:#334155; font-weight:600; }
+.account-page h2, .account-page p, .account-page dd, .account-page strong { overflow-wrap:anywhere; }
+.account-muted { color:#64748b; line-height:1.6; margin:8px 0; }
+.account-note { color:#64748b; font-size:13px; line-height:1.6; margin:14px 0 0; }
+.account-error { color:#9f1239; font-size:14px; }
+.account-category { color:#946d0b; letter-spacing:.12em; margin:10px 0; }
+.account-button { display:inline-flex; justify-content:center; align-items:center; min-height:44px; padding:12px 16px; border:1px solid #245de0; border-radius:12px; background:#245de0; color:#fff; font:inherit; font-size:14px; font-weight:600; text-decoration:none; text-align:center; cursor:pointer; overflow-wrap:anywhere; }
+.account-button.secondary { color:#334155; background:#fff; border-color:#cbd5e1; }
+.account-button:disabled { color:#64748b; background:#f1f5f9; cursor:wait; }
+.account-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:20px; }
+.account-state { padding:48px 24px; border:1px solid #e2e8f0; border-radius:22px; background:#fff; text-align:center; }
+.account-state h2 { margin:10px 0; font-size:24px; }
+.account-state p { color:#64748b; line-height:1.7; max-width:580px; margin:12px auto; }
+.account-state .account-button { margin-top:18px; }
+.account-empty-icon { font-size:44px; color:#be123c; }
+.account-skeleton-list { display:grid; gap:18px; }
+.account-skeleton { min-height:220px; background:#eef1f4; border-radius:22px; }
+.account-status, .account-test-badge { display:inline-block; padding:7px 10px; border-radius:8px; background:#f1f5f9; color:#475569; font-size:13px; }
+.account-status.confirmed { background:#ecfdf5; color:#166534; }
+.account-status.attention, .account-status.pending { background:#fff7ed; color:#9a3412; }
+.account-status.cancelled { background:#f1f5f9; color:#475569; }
+.account-test-badge { margin:12px 0 0; }
+@media(max-width:600px) {
+  .account-page { width:calc(100% - 28px); padding-bottom:40px; }
+  .account-actions { flex-direction:column; }
+  .account-actions .account-button { width:100%; }
+  .account-state { padding:32px 20px; }
+}

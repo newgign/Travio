@@ -6,7 +6,8 @@ import { site } from "../config/site";
 import useSession from "../hooks/useSession";
 
 export default function Navbar() {
-  const { favorites } = useFavorites();
+  const { favorites, favoritesKnown } = useFavorites();
+  const favoriteCount = favoritesKnown ? favorites.length : 0;
   const location = useLocation();
   const isHome = location.pathname === "/";
   const [menuLocation, setMenuLocation] = useState(null);
@@ -35,7 +36,7 @@ export default function Navbar() {
           <Link to="/#home-search">Поиск</Link>
           <Link to="/#contacts">Контакты</Link>
           <div className="mobile-nav-account">
-            <Link to="/favorites">❤️ Избранное {favorites.length > 0 ? `(${favorites.length})` : ""}</Link>
+            <Link to="/favorites">❤️ Избранное {favoriteCount > 0 ? `(${favoriteCount})` : ""}</Link>
             <Link to="/my-bookings">🧳 Мои бронирования</Link>
             {user && <Link to="/profile">👤 Личный кабинет</Link>}
             {user?.role === "admin" && <Link to="/admin">⚙️ Админ-панель</Link>}
@@ -46,8 +47,8 @@ export default function Navbar() {
         </nav>
 
         <div className="nav-right">
-          <Link to="/favorites" className="icon-btn desktop-icon">❤️{favorites.length > 0 && <span className="badge">{favorites.length}</span>}</Link>
-          <Link to="/my-bookings" className="icon-btn desktop-icon">🧳</Link>
+          <Link to="/favorites" aria-label="Избранное" className="icon-btn desktop-icon">❤️{favoriteCount > 0 && <span className="badge">{favoriteCount}</span>}</Link>
+          <Link to="/my-bookings" aria-label="Мои бронирования" className="icon-btn desktop-icon">🧳</Link>
           {user?.role === "admin" && <Link to="/admin" className="icon-btn desktop-icon" title="Админ-панель">⚙️</Link>}
           {user ? (
             <div className="user-box desktop-user"><Link to="/profile" className="user-name user-name-link">👋 {user.full_name}</Link><button className="login-btn" onClick={logout}>Выйти</button></div>
