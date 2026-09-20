@@ -64,6 +64,13 @@
   .consumer-shell .home-guest-row > span { flex-basis:100%; }
 }
 @media(max-width:520px) { .consumer-shell .navbar { padding:14px 16px; } }
+/* Narrow header: global icon styles must not restore duplicate desktop shortcuts. */
+@media(max-width:360px) {
+  .consumer-shell .navbar .nav-right > .desktop-icon,
+  .consumer-shell .navbar .nav-right > .desktop-user { display:none; }
+  .consumer-shell .navbar .nav-right { flex-shrink:0; }
+  .consumer-shell .navbar .nav-toggle { display:inline-flex; flex:0 0 44px; min-width:44px; min-height:44px; }
+}
 @media(prefers-reduced-motion:reduce) {
   .consumer-shell *, .consumer-shell *::before, .consumer-shell *::after { animation:none!important; transition:none!important; scroll-behavior:auto!important; }
   .consumer-shell :is(.tour-card,.destination-card,.adv-card,.hot-trip-card):hover,
