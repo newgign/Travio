@@ -25,10 +25,15 @@
 .profile-shortcuts a:hover { border-color:#245de0; }
 @media(max-width:1024px) { .profile-layout { grid-template-columns:minmax(0,1fr); } }
 @media(max-width:600px) {
+  .consumer-shell .profile-page .profile-summary h2 { word-break:normal; overflow-wrap:break-word; }
+  .consumer-shell .profile-page .profile-summary p { overflow-wrap:anywhere; }
   .profile-card { padding:20px; }
   .profile-summary { align-items:flex-start; gap:16px; }
   .profile-avatar { flex-basis:52px; width:52px; height:52px; font-size:20px; }
   .profile-shortcuts { grid-template-columns:minmax(0,1fr); }
   .profile-password-input { flex-wrap:wrap; }
   .profile-password-input input { flex-basis:100%; }
+}
+@media(max-width:360px) {
+  .consumer-shell .profile-page .profile-summary > div:last-child { flex-basis:100%; min-width:0; }
 }
