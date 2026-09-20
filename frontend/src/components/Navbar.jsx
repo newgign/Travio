@@ -6,6 +6,7 @@ import { site } from "../config/site";
 import useSession from "../hooks/useSession";
 import { logout } from "../services/session";
 import { accountName } from "../utils/profilePresentation";
+import { useId, useRef } from 'react';
 
 export default function Navbar() {
   const { favorites, favoritesKnown } = useFavorites();
@@ -16,16 +17,24 @@ export default function Navbar() {
   const menuOpen = menuLocation === location.key;
   const setMenuOpen = (open) => setMenuLocation(open ? location.key : null);
   const { user } = useSession();
+  const menuId = useId();
+  const toggleRef = useRef(null);
 
 
 
 
   return (
-    <header className={`navbar ${isHome ? "" : "navbar-solid"}`}>
+    <header className={`navbar ${isHome ? "" : "navbar-solid"}`} onKeyDown={(event) => {
+      if (event.key === 'Escape' && menuOpen) {
+        event.preventDefault();
+        setMenuOpen(false);
+        toggleRef.current?.focus();
+      }
+    }}>
       <div className="navbar-container">
         <Link to="/" className="logo">✈️ <span>{site.siteName}</span></Link>
 
-        <nav className={`nav-menu ${menuOpen ? "open" : ""}`}>
+        <nav id={menuId} aria-label="Основная навигация" className={`nav-menu ${menuOpen ? "open" : ""}`}>
           <Link to="/">Главная</Link>
           <Link to="/results">Отели</Link>
           <Link to="/#countries">Страны</Link>
@@ -49,7 +58,7 @@ export default function Navbar() {
           {user ? (
             <div className="user-box desktop-user"><Link to="/profile" aria-label={`Личный кабинет: ${accountName(user)}`} className="user-name user-name-link">👋 {accountName(user)}</Link><button type="button" className="login-btn" onClick={logout}>Выйти</button></div>
           ) : <div className="user-box desktop-user"><Link to="/login" className="login-btn">Войти</Link><Link to="/register" className="user-name user-name-link">Регистрация</Link></div>}
-          <button type="button" className={`nav-toggle ${menuOpen ? "active" : ""}`} onClick={() => setMenuOpen(!menuOpen)} aria-label="Открыть меню" aria-expanded={menuOpen}><span /><span /><span /></button>
+          <button ref={toggleRef} type="button" className={`nav-toggle ${menuOpen ? "active" : ""}`} onClick={() => setMenuOpen(!menuOpen)} aria-label={menuOpen ? 'Закрыть меню' : 'Открыть меню'} aria-expanded={menuOpen} aria-controls={menuId}><span aria-hidden="true" /><span aria-hidden="true" /><span aria-hidden="true" /></button>
         </div>
       </div>
       {menuOpen && <button type="button" className="nav-backdrop" onClick={() => setMenuOpen(false)} aria-label="Закрыть меню" />}

@@ -19,10 +19,12 @@ import Profile from "./pages/Profile";
 import Voucher from "./pages/Voucher";
 import AdminPanel from "./pages/AdminPanel";
 import ProtectedRoute from "./components/ProtectedRoute";
+import ConsumerShell from './components/ConsumerShell';
+import './styles/Consumer.css';
 
 function App() {
   return (
-    <>
+    <ConsumerShell>
     <ScrollToSection />
     <Routes>
       <Route path="/" element={<Home />} />
@@ -111,7 +113,7 @@ function App() {
       />
       <Route path="*" element={<NotFound />} />
     </Routes>
-    </>
+    </ConsumerShell>
   );
 }
 

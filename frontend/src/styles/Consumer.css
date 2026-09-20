@@ -1,0 +1,71 @@
+/* Consumer-only baseline. Legacy checkout/voucher and Admin do not inherit it. */
+.consumer-shell {
+  --consumer-width:1320px;
+  --consumer-article-width:840px;
+  --consumer-radius:22px;
+  --consumer-border:#e2e8f0;
+  --consumer-surface:#fff;
+  --consumer-muted:#64748b;
+  --consumer-primary:#245de0;
+  --consumer-background:#f5f7fb;
+  --consumer-shadow:0 6px 24px #0f172a08;
+  --consumer-focus:#5584ee;
+  min-height:100vh;
+  min-height:100dvh;
+  display:flex;
+  flex-direction:column;
+  min-width:0;
+  background:var(--consumer-background);
+}
+.consumer-shell *, .consumer-shell *::before, .consumer-shell *::after { box-sizing:border-box; }
+.consumer-shell > main { flex:1 0 auto; min-width:0; }
+.consumer-shell > .home-page { flex:1; display:flex; flex-direction:column; min-width:0; }
+.consumer-shell > .home-page > main { flex:1; min-width:0; }
+.consumer-shell .footer { flex-shrink:0; }
+.consumer-shell > .footer, .consumer-shell > .home-page > .footer { margin-top:auto; }
+.consumer-shell > .results-page, .consumer-shell > .auth-page { min-height:0; }
+.consumer-shell :is(.account-page,.details-page,.support-page,.results-shell,.footer-container) { max-width:var(--consumer-width); }
+.consumer-shell .support-article { max-width:var(--consumer-article-width); }
+.consumer-shell :is(.account-state,.saved-hotel-card,.persisted-booking-card,.profile-card,.support-card,.details-section,.auth-card) {
+  border-color:var(--consumer-border); border-radius:var(--consumer-radius); background:var(--consumer-surface);
+}
+.consumer-shell :is(.profile-card,.support-card,.saved-hotel-card,.persisted-booking-card) { box-shadow:var(--consumer-shadow); }
+.consumer-shell :is(h1,h2,h3,p,dd,dt,.account-status,.context-chip,.stay-price) { overflow-wrap:anywhere; }
+.consumer-shell :focus-visible { outline:3px solid var(--consumer-focus); outline-offset:3px; }
+.consumer-shell :is(.account-button,.auth-submit,.home-search-submit) { background:var(--consumer-primary); }
+.consumer-shell .account-button.secondary { background:var(--consumer-surface); }
+.consumer-shell :is(.account-button,.auth-submit,.details-btn,.details-booking,.home-search-submit):disabled {
+  background:#f1f5f9; color:var(--consumer-muted); border-color:var(--consumer-border); opacity:1; cursor:not-allowed; transform:none;
+}
+.consumer-shell :is(.profile-field input,.profile-field select,.auth-field input,.filter-input) { min-height:46px; border-radius:10px; }
+.consumer-shell :is(.results-reset-all,.filters-mobile-head button,.tour-card-favorite,.home-guest-done,.profile-check) { min-height:44px; }
+.consumer-shell :is(.filters-mobile-head button,.tour-card-favorite) { min-width:44px; }
+.consumer-shell .home-guest-row button { width:44px; height:44px; flex-shrink:0; }
+.consumer-shell .home-guest-row { flex-wrap:wrap; gap:12px; }
+.consumer-shell .home-child-age { min-width:0; }
+.consumer-shell .home-child-age select { width:100%; min-width:0; min-height:44px; }
+.consumer-shell .home-child-age label { overflow-wrap:anywhere; }
+.consumer-shell .results-page .filters-desktop-wrap { top:var(--travio-page-top); }
+.consumer-shell .footer-container { grid-template-columns:repeat(4,minmax(0,1fr)); }
+.consumer-shell .footer-column a { min-height:44px; display:flex; align-items:center; margin:4px 0; }
+.consumer-shell .navbar .login-btn { min-height:44px; display:inline-flex; align-items:center; justify-content:center; }
+@media(max-width:1040px) {
+  .consumer-shell .nav-menu { height:100vh; height:100dvh; transform:none; visibility:hidden; opacity:0; pointer-events:none; overflow-y:auto; transition:opacity .2s ease; }
+  .consumer-shell .nav-menu.open { visibility:visible; opacity:1; pointer-events:auto; }
+  .consumer-shell .nav-menu a { overflow-wrap:anywhere; }
+}
+@media(max-width:1000px) { .consumer-shell .footer-container { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:800px) { .consumer-shell .results-page .filters-desktop-wrap { top:0; } }
+@media(max-width:600px) {
+  .consumer-shell .footer-container { grid-template-columns:minmax(0,1fr); }
+  .consumer-shell .results-page .tour-card .tour-card-actions { min-width:0; }
+  .consumer-shell .profile-summary { flex-wrap:wrap; }
+  .consumer-shell .profile-summary > div:last-child { flex:1 1 180px; }
+  .consumer-shell .home-guest-row > span { flex-basis:100%; }
+}
+@media(max-width:520px) { .consumer-shell .navbar { padding:14px 16px; } }
+@media(prefers-reduced-motion:reduce) {
+  .consumer-shell *, .consumer-shell *::before, .consumer-shell *::after { animation:none!important; transition:none!important; scroll-behavior:auto!important; }
+  .consumer-shell :is(.tour-card,.destination-card,.adv-card,.hot-trip-card):hover,
+  .consumer-shell :is(.tour-card,.destination-card):hover img { transform:none; }
+}

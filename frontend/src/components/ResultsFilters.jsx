@@ -1,6 +1,6 @@
 import { BOARD_LABELS, normalizeBoardDisplay } from '../utils/hotelOfferDisplay';
 import { resetOfferFilters } from '../utils/localOfferFilters';
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import "./ResultsFilters.css";
 import LocalResultsFilters from './LocalResultsFilters';
@@ -15,6 +15,7 @@ export default function ResultsFilters({ currency = "EUR", boards, onApplied, in
 }
 
 function ResultsFiltersForm({ currency, boards, onApplied }) {
+  const fieldId = useId();
   const [searchParams, setSearchParams] = useSearchParams();
   const [form, setForm] = useState(() => Object.fromEntries(FILTER_KEYS.map((key) => [key, searchParams.get(key) || (key === "nights" ? "7" : "")])));
 
@@ -50,13 +51,13 @@ function ResultsFiltersForm({ currency, boards, onApplied }) {
     <aside className="results-filters-panel">
       <div className="filter-title-row"><div><h2>Фильтры</h2><p>Уточните подходящий вариант</p><small>Изменение числа ночей запускает новый поиск по датам.</small></div>{activeCount > 0 && <span>{activeCount}</span>}</div>
       <form onSubmit={applyFilters}>
-        <div className="filter-block"><h3>Цена за весь период — до</h3><input className="filter-input" type="number" name="maxPrice" min="0" step="1" placeholder={`Например 500 ${currency}`} value={form.maxPrice} onChange={handleChange} /><small>В валюте поставщика: {currency}</small>{boards && <small>Лимит только в {currency}. При заданном лимите тарифы в других валютах скрыты. Конвертации нет.</small>}</div>
-        <div className="filter-block"><h3>Категория отеля</h3><select className="filter-input" name="stars" value={form.stars} onChange={handleChange}><option value="">Любая</option><option value="3">3★ и выше</option><option value="4">4★ и выше</option><option value="5">5★</option></select></div>
-        <div className="filter-block"><h3>Рейтинг гостей</h3><select className="filter-input" name="rating" value={form.rating} onChange={handleChange}><option value="">Любой</option><option value="4">4.0 и выше</option><option value="4.5">4.5 и выше</option><option value="4.8">4.8 и выше</option></select></div>
-        <div className="filter-block"><h3>Питание</h3><select className="filter-input" name="food" value={form.food} onChange={handleChange}><option value="">Любое</option>{(boards || Object.keys(BOARD_LABELS).map(code => ({code}))).map(board => <option key={board.code} value={board.code}>{normalizeBoardDisplay(board.code,board.name)}</option>)}</select></div>
-        <div className="filter-block"><h3>Ночей</h3><select className="filter-input" name="nights" value={form.nights} onChange={handleChange}>{!['1','3','5','7','10','12','14','21'].includes(form.nights) && <option value={form.nights}>{form.nights} ночей</option>}<option value="1">1 ночь</option><option value="3">3 ночи</option><option value="5">5 ночей</option><option value="7">7 ночей</option><option value="10">10 ночей</option><option value="12">12 ночей</option><option value="14">14 ночей</option><option value="21">21 ночь</option></select></div>
-        <div className="filter-block"><h3>Береговая линия</h3><select className="filter-input" name="beachLine" value={form.beachLine} onChange={handleChange}><option value="">Любая</option><option value="1">1-я линия</option><option value="2">1–2 линия</option></select></div>
-        <div className="filter-block"><h3>Номер / тариф</h3><input className="filter-input" type="text" name="roomType" placeholder="Например Superior" value={form.roomType} onChange={handleChange} /></div>
+        <div className="filter-block"><label htmlFor={`${fieldId}-maxPrice`}>Цена за весь период — до</label><input className="filter-input" type="number" id={`${fieldId}-maxPrice`} name="maxPrice" min="0" step="1" placeholder={`Например 500 ${currency}`} value={form.maxPrice} onChange={handleChange} /><small>В валюте поставщика: {currency}</small>{boards && <small>Лимит только в {currency}. При заданном лимите тарифы в других валютах скрыты. Конвертации нет.</small>}</div>
+        <div className="filter-block"><label htmlFor={`${fieldId}-stars`}>Категория отеля</label><select className="filter-input" id={`${fieldId}-stars`} name="stars" value={form.stars} onChange={handleChange}><option value="">Любая</option><option value="3">3★ и выше</option><option value="4">4★ и выше</option><option value="5">5★</option></select></div>
+        <div className="filter-block"><label htmlFor={`${fieldId}-rating`}>Рейтинг гостей</label><select className="filter-input" id={`${fieldId}-rating`} name="rating" value={form.rating} onChange={handleChange}><option value="">Любой</option><option value="4">4.0 и выше</option><option value="4.5">4.5 и выше</option><option value="4.8">4.8 и выше</option></select></div>
+        <div className="filter-block"><label htmlFor={`${fieldId}-food`}>Питание</label><select className="filter-input" id={`${fieldId}-food`} name="food" value={form.food} onChange={handleChange}><option value="">Любое</option>{(boards || Object.keys(BOARD_LABELS).map(code => ({code}))).map(board => <option key={board.code} value={board.code}>{normalizeBoardDisplay(board.code,board.name)}</option>)}</select></div>
+        <div className="filter-block"><label htmlFor={`${fieldId}-nights`}>Ночей</label><select className="filter-input" id={`${fieldId}-nights`} name="nights" value={form.nights} onChange={handleChange}>{!['1','3','5','7','10','12','14','21'].includes(form.nights) && <option value={form.nights}>{form.nights} ночей</option>}<option value="1">1 ночь</option><option value="3">3 ночи</option><option value="5">5 ночей</option><option value="7">7 ночей</option><option value="10">10 ночей</option><option value="12">12 ночей</option><option value="14">14 ночей</option><option value="21">21 ночь</option></select></div>
+        <div className="filter-block"><label htmlFor={`${fieldId}-beachLine`}>Береговая линия</label><select className="filter-input" id={`${fieldId}-beachLine`} name="beachLine" value={form.beachLine} onChange={handleChange}><option value="">Любая</option><option value="1">1-я линия</option><option value="2">1–2 линия</option></select></div>
+        <div className="filter-block"><label htmlFor={`${fieldId}-roomType`}>Номер / тариф</label><input className="filter-input" type="text" id={`${fieldId}-roomType`} name="roomType" placeholder="Например Superior" value={form.roomType} onChange={handleChange} /></div>
         <button className="filter-apply" type="submit">Показать предложения</button>
         <button className="filter-reset" type="button" onClick={resetFilters}>Сбросить фильтры</button>
       </form>
