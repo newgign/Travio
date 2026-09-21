@@ -5,6 +5,7 @@ import { useSearchParams } from 'react-router-dom';
 import SearchBar from '../components/SearchBar';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import ConsumerMetadata from '../components/ConsumerMetadata';
 import TourCard from '../components/TourCard';
 import ResultsFilters from '../components/ResultsFilters';
 import ResultsHeader from '../components/ResultsHeader';
@@ -103,7 +104,7 @@ export default function Results() {
     window.scrollTo({top:0,behavior:'smooth'});
   }
   const hasSearch=provider!=='hotelbeds' || searchParams.get('departureDate') || searchParams.get('checkIn');
-  return <><Navbar /><main className="results-page">
+  return <><ConsumerMetadata pathname="/results" params={searchParams} destinations={destinations} /><Navbar /><main className="results-page">
     {!hasSearch && <section className="catalogue-search"><h1>Найдите подходящий отель</h1><p>Укажите направление, дату, ночи и гостей.</p><SearchBar /></section>}
     {hasSearch && <section className="results-shell">
       <ResultsHeader params={searchParams} destinations={destinations} />

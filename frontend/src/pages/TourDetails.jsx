@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import ConsumerMetadata from '../components/ConsumerMetadata';
 import StayPrice from '../components/StayPrice';
 import DetailsGallery from '../components/DetailsGallery';
 import { useFavorites } from '../context/FavoritesContext';
@@ -53,14 +54,14 @@ function DetailsPage({ provider, id, location }) {
   function back() {
     navigate(detailsBackTarget(location.state?.resultsOrigin, window.history.state?.idx, location.search));
   }
-  if (loading) return <><Navbar /><main className="details-page details-loading" role="status" aria-label="Загрузка отеля" aria-busy="true">
+  if (loading) return <><ConsumerMetadata pathname={location.pathname} /><Navbar /><main className="details-page details-loading" role="status" aria-label="Загрузка отеля" aria-busy="true">
     <h1>Загружаем выбранный отель</h1><p>Получаем данные отеля и тарифа.</p>
     <div className="details-layout" aria-hidden="true"><div className="details-skeleton details-skeleton-gallery" /><div className="details-skeleton details-skeleton-price" /></div>
   </main><Footer /></>;
   const unavailable = import.meta.env.PROD && tour && !visibleProviderOffer(tour);
   if (error || !tour || unavailable) {
     const state = error || detailsError({ code: 'OFFER_NOT_FOUND' });
-    return <><Navbar /><main className="details-page"><section className="details-state" role="alert" data-error-code={state.code}>
+    return <><ConsumerMetadata pathname={location.pathname} /><Navbar /><main className="details-page"><section className="details-state" role="alert" data-error-code={state.code}>
       <h1>{state.title}</h1><p>{state.message}</p><button type="button" className="details-back" onClick={() => navigate(searchLink)}>Вернуться к поиску</button>
     </section></main><Footer /></>;
   }
@@ -84,7 +85,7 @@ function DetailsPage({ provider, id, location }) {
     finally { setFavoritePending(false); }
   }
 
-  return <><Navbar /><main className="details-page">
+  return <><ConsumerMetadata pathname={location.pathname} hotelName={hotelName} /><Navbar /><main className="details-page">
     <button type="button" className="details-back" onClick={back}>← Вернуться к результатам</button>
     <header className="details-header">
       <div><h1>{hotelName}</h1>
