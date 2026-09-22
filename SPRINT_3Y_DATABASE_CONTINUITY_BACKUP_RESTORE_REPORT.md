@@ -1,10 +1,13 @@
 ﻿# Sprint 3Y — Database Continuity / Backup & Restore Readiness
 
 CODE / OFFLINE: PASS.
-REAL RENDER BACKUP: NOT RUN.
-LOCAL POSTGRES CURRENT-VERSION RESTORE DRILL: PASS — один успешный запуск 2026-09-22, подробности в разделе 21.
+REAL RENDER BACKUP: BACKUP_VERIFIED — PASS.
+LOCAL POSTGRES CURRENT-VERSION SYNTHETIC RESTORE DRILL: PASS — один успешный запуск 2026-09-22, подробности в разделе 21.
+REAL RENDER BACKUP RESTORE DRILL: PASS — LOCAL COPY ONLY, раздел 24.
 RENDER DATABASE MIGRATION: NOT RUN.
-OWNER ACTION: verified external backup до suspension 2026-10-11; реальные Render операции не выполнены.
+OWNER EVIDENCE: реальный Render external backup выполнен и проверен владельцем 2026-09-22, раздел 23. Этот dump восстановлен только в новую local DB, раздел 24. Render migration/restore не выполнялись. Прежние NOT RUN ниже относятся к соответствующим историческим этапам.
+
+Post-3Y compatibility hotfix описан в разделе 22. Local drill PASS относится к версии до hotfix; повторный drill не выполнялся, restore semantics сохранены. Новая owner evidence Render read-only проверок отдельно атрибутирована ниже.
 
 ## 1. Initial git state
 
@@ -366,4 +369,152 @@ Code changes после drill: **нет**, реальных implementation bugs 
 CODE / OFFLINE: PASS.
 LOCAL POSTGRES CURRENT-VERSION RESTORE DRILL: PASS.
 REAL RENDER BACKUP: NOT RUN.
+RENDER DATABASE MIGRATION: NOT RUN.
+
+## 22. Post-3Y Render External source backup TLS compatibility hotfix
+
+Initial git commands выполнены строго в порядке status --short, diff --stat, diff. После owner commit/push 3Y tracked tree чистый; только прежние untracked README.txt, docs/, SPRINT_3N_CATALOG_EXPANSION_PLANNER_REPORT.md. Это узкий hotfix, не новый sprint и не повторная реализация tooling.
+
+### Owner evidence — не новые проверки агента
+
+- REAL RENDER READ-ONLY INVENTORY: PASS — owner выполнил dbInventory и --exact-counts.
+- REAL RENDER PG_DUMP SCHEMA-ONLY WITH verify-full: FAIL — certificate verify failed; owner использовал client 18.4 и PGSSLROOTCERT=system.
+- REAL RENDER PG_DUMP SCHEMA-ONLY WITH require: PASS — exit 0, по сообщению owner, на том же External source.
+- REAL RENDER FULL BACKUP: NOT RUN.
+
+Agent не подключался к Render и не проверял remote host/docs по сети. Успешная schema-only проба владельца не является full backup или restore verification.
+
+### Minimal implementation and boundaries
+
+Только backup() распознаёт DB_SSL_MODE=require с точным DB_ALLOW_TLS_REQUIRE=I_ACKNOWLEDGE_ENCRYPTED_WITHOUT_CERTIFICATE_IDENTITY_VERIFICATION. Проверка выполняется до subprocess/filesystem output. Default остаётся verify-full. Remote disable/allow/prefer и require без exact ack блокируются. Existing loopback disable сохранён; require exception предназначен только remote source. TLS encryption обязательно, certificate identity verification слабее verify-full; trusted CA + verify-full предпочтительны.
+
+Shared connection(), runtime databaseConfig, inspect/inventory, restoreGuard(), restore(), fingerprint algorithm, pg_restore arguments, empty-target/production/LIVE guards не изменены. Inventory и restore не принимают source require override; после backup operator должен вернуть обычный DB_SSL_MODE перед ними. Remote restore target требует verify-full независимо от acknowledgement. Restore semantics unchanged: YES. Safe error envelope явно обозначает TLS policy refusal как BLOCKED, не раскрывая raw error/connection fields.
+
+В локальном repo contract не найдено надёжного общего правила Render External hostname; внешние вызовы запрещены этим заданием. Поэтому не добавлен выдуманный suffix matcher: exact ack технически применим к любому remote source, проверка назначения host остаётся у operator. Host/URL/user/password/CA contents не записываются в output/manifest.
+
+Новые manifests: version=2, toolVersion=3Y.2, sourceTlsMode — строгий enum require/verify-full/disable (последний только existing local policy). Legacy v1/3Y.1 по-прежнему читается с прежней строгой схемой и без придуманного sourceTlsMode. SHA-256, filename/time, sourceIdentitySha256, expected objects и остальные integrity checks сохранены. Расширена только совместимость reader с новым manifest schema; это не изменение restore authorization/SQL semantics. Новые v2 manifests требуют обновлённого reader; старый 3Y.1 reader их не понимает.
+
+### Offline tests and exact files
+
+Focused suite: PASS 20/20 (18 existing сохранены + 2 новых subtests). Новые случаи проверяют default/invalid modes/exact ack, source-only child PGSSLMODE, strict inventory и remote restore, manifest TLS metadata/privacy, v1 compatibility и отказ неверного enum/version. Все child calls mocked, HTTP/TLS/TCP/fetch=0; реальные PostgreSQL clients для hotfix не запускались. Existing backend regressions: PASS 101/101, 12 suites, прежний offlineNetwork preload и temporary local schemas. Повторный local restore drill не выполнялся по заданию, frontend/runtime не менялись.
+
+Команды: focused command из раздела 21; node backend/scripts/sprint3mRegression.cjs; node backend/scripts/sprint3mVerify.cjs; git -c core.safecrlf=false diff --check. Syntax/secret scan: 191 backend files / 391 scanned, findings=[]. Diff check PASS.
+
+Ровно 4 changed files: backend/scripts/lib/dbContinuity.cjs; backend/tests/databaseContinuity.test.cjs; DATABASE_CONTINUITY_RUNBOOK.md; SPRINT_3Y_DATABASE_CONTINUITY_BACKUP_RESTORE_REPORT.md. Package, app config, restore wrappers, .env, Render config, README.txt/docs/3N/старые reports не изменены. NO git add/commit/push/deploy, NO real Render/Hotelbeds/payment/remote DB calls. Backup не создан; owner example приведён в runbook.
+
+CODE / OFFLINE HOTFIX: PASS.
+RESTORE SEMANTICS UNCHANGED: YES.
+REAL RENDER FULL BACKUP: NOT RUN.
+RENDER DATABASE MIGRATION: NOT RUN.
+
+## 23. Real Render external backup — owner verification 2026-09-22
+
+Ниже зафиксировано фактическое evidence, переданное владельцем после самостоятельного выполнения backup. Агент не выполнял и не повторял подключение к Render, dump или restore при обновлении отчёта.
+
+| Проверка / artifact | Owner evidence |
+| --- | --- |
+| Source | Реальная asedeliya-staging-db через External Database URL; connection details не публикуются |
+| Read-only dbInventory | PASS |
+| Exact-count inventory | PASS |
+| pg_dump schema-only с verify-full | FAIL — certificate verify failed |
+| pg_dump schema-only с require | PASS — exit 0 |
+| Full custom backup | Выполнен после source-backup TLS compatibility hotfix |
+| Generated dump | asedeliya-20260922T121653387Z.dump |
+| sizeBytes | 806247 |
+| Manifest | Создан |
+| dbBackup.cjs | BACKUP_VERIFIED |
+| Повторный standalone dbBackupVerify.cjs | BACKUP_VERIFIED |
+| expectedTables | 23 |
+| expectedIndexes | 72 |
+| SHA-256 | Значения manifest/verifier совпали с PowerShell Get-FileHash; само значение владельцем не передано и здесь не выдумывается |
+| dataBlocksRestored | false |
+| Restore реального Render dump | NOT RUN |
+
+После операции владелец удалил DATABASE_URL, DB_SSL_MODE и DB_ALLOW_TLS_REQUIRE из process environment. По owner evidence, Render DB не изменялась; Hotelbeds/payment операции не выполнялись. URL, host, user, password и другие credentials в отчёт не добавлены.
+
+BACKUP_VERIFIED подтверждает выполненные проверки manifest, checksum и читаемости archive/expected objects. Он не означает успешное восстановление data blocks: для реального Render dump RESTORE_VERIFIED не заявляется. Прежний local synthetic restore PASS из раздела 21 остаётся отдельным evidence и не заменяет restore drill этого реального dump. Отдельная внешняя копия/её хранение этим сообщением владельца не подтверждены.
+
+В этом обновлении изменён только SPRINT_3Y_DATABASE_CONTINUITY_BACKUP_RESTORE_REPORT.md. Код, tests, runbook и package files не менялись; новые проверки БД и regression runs не выполнялись. Git add/commit/push/deploy не выполнялись.
+
+CODE / OFFLINE: PASS.
+LOCAL POSTGRES CURRENT-VERSION RESTORE DRILL: PASS.
+REAL RENDER BACKUP: BACKUP_VERIFIED — PASS.
+REAL RENDER BACKUP RESTORE DRILL: NOT RUN.
+RENDER DATABASE MIGRATION: NOT RUN.
+
+## 24. Real Render backup local restore verification — 2026-09-22
+
+Выполнено по явному разрешению владельца: восстановление существующего реального Render backup только в новую отдельную local PostgreSQL DB. Это не restore/migration Render и не production restore. Source Render connection не использовался.
+
+Первыми командами выполнены git status --short, git diff --stat, git diff. На входе уже modified: helper, focused tests, runbook и этот report после предыдущего hotfix/owner evidence; unrelated README.txt/docs/3N сохранены. В этом turn изменён только report, существующий hotfix не откатывался.
+
+### Pre-verification and local-only execution
+
+Existing dbBackupVerify.cjs первым проверил указанный владельцем artifact вне git: C:\Users\ПК\Asedeliya-Backups\asedeliya-20260922T121653387Z.dump. Результат BACKUP_VERIFIED: sizeBytes=806247, expectedTables=23, expectedIndexes=72, manifest/hash valid. SHA-256: 58e6c2dfa30945061e3a6c9a8a6b0df0bab49607e6e2e9e9d31c9764b9d856e3. Listing pre-check dataBlocksRestored=false означает состояние до restore; оригинальный manifest не изменялся.
+
+Одноразовый operator script использовал существующие connection/withClient/restoreGuard helpers и local DB_HOST/PORT/USER/PASSWORD pattern. DATABASE_URL из env/.env не использовался. Maintenance connection — local postgres; app DB не использовалась как target. Перед CREATE и перед restore явно проверен loopback=true. Child env не содержал DATABASE_URL или remote acknowledgement: только отдельный RESTORE_DATABASE_URL, точный RESTORE_CONFIRM_DATABASE, RESTORE_DB_SSL_MODE=disable, NODE_ENV=test, APP_ENV=staging и необходимое окружение tools. URL/password не выводились и .env не менялся.
+
+Вспомогательная первая preflight-попытка остановилась с ARCHIVE_NOT_FOUND до создания DB: кириллический literal path не сохранился при PowerShell stdin encoding. Путь затем сформирован через os.homedir() без кириллицы в stdin code; повторный archive check прошёл. Это не ошибка tooling или dump, CREATE/restore до исправления пути не выполнялись.
+
+Создана **ровно одна** новая пустая DB: **asedeliya_render_restore_08f8601cc991**. Существующий dbRestore.cjs <artifact> --apply выполнен один раз, exit 0. После него реальные dbSchemaCheck.cjs и dbInventory.cjs --target --exact-counts завершились exit 0. Shell interpolation credentials не использовалась; CLI запускались через spawnSync array args, shell:false, offlineNetwork preload. Не запускались synthetic-source drill, migrations/seed поверх restored DB или application server.
+
+| Verification | Result |
+| --- | --- |
+| Artifact | Real Render custom backup, 806247 bytes |
+| Destination | Newly created LOCAL PostgreSQL DB, retained |
+| PostgreSQL server / pg_restore client | 18.4 (180004) / 18.4 |
+| Manifest/hash/expected objects pre-check | PASS |
+| pg_restore apply | PASS, exit 0 |
+| current_schema | public |
+| Schema validation | PASS, valid=true, missing=[] |
+| Tables / migration ledger | 23 / 20 |
+| Pending / unknown migrations | 0 / 0 |
+| PK/FK/index/sequence checks | PASS; 16 expected FK, 72 explicit indexes, 19 sequences |
+| Exact row counts | PASS, получены для всех 23 known tables |
+| Real row values printed | NO |
+| Render source | Unchanged; no connection |
+| Hotelbeds / payment calls | 0 / 0 |
+
+### Aggregate data-block evidence
+
+| Known table | Exact rows |
+| --- | --- |
+| _migrations | 20 |
+| admin_actions | 0 |
+| booking_events | 0 |
+| bookings | 0 |
+| checkout_sessions | 0 |
+| favorites | 0 |
+| hotelbeds_tracked_searches | 0 |
+| hotels | 0 |
+| maintenance_runs | 0 |
+| notification_outbox | 0 |
+| operational_incidents | 0 |
+| payments | 0 |
+| price_history | 96 |
+| provider_content_dictionaries | 0 |
+| provider_destinations | 5 |
+| provider_hotels | 53 |
+| provider_job_state | 3 |
+| refund_requests | 0 |
+| reliability_snapshots | 0 |
+| system_events | 102 |
+| tours | 0 |
+| traveler_profiles | 0 |
+| users | 5 |
+
+Непустые restored tables, успешный pg_restore apply и schema/sequence/FK checks подтверждают фактическое чтение и восстановление data blocks в LOCAL COPY. Это не сравнение counts с текущим Render source: remote connection запрещён, исходные per-table counts владельцем не переданы. Existing full structural comparator требует live source и target; без Render source он здесь неприменим и не запускался. Использованы существующие read-only schema checks; definition-by-definition equality с remote source не заявляется.
+
+Реальные emails/usernames/phones/password hashes/traveler data/tokens/payment metadata/notification contents/JSON snapshots не выбирались для вывода. Только allowlisted aggregate counts и safe schema results. Restored rows не редактировались. Новая local DB оставлена владельцу, DROP DATABASE/TRUNCATE не выполнялись.
+
+### Final regressions and changed files
+
+Focused databaseContinuity.test.cjs: PASS 20/20. Existing sprint3mRegression.cjs: PASS 101/101, 12 suites; только прежние temporary local schemas/offline mocks, без external calls. sprint3mVerify.cjs: PASS, 191 backend syntax files, 391 secret-scan files, findings=[]. git -c core.safecrlf=false diff --check: PASS. Frontend повторно не запускался: code changes отсутствуют.
+
+Code changes: NO. Единственный edit этого verification turn: SPRINT_3Y_DATABASE_CONTINUITY_BACKUP_RESTORE_REPORT.md. Полный git diff также содержит прежние hotfix edits в DATABASE_CONTINUITY_RUNBOOK.md, backend/scripts/lib/dbContinuity.cjs, backend/tests/databaseContinuity.test.cjs; они не менялись в этом turn. Package files, README.txt/docs/3N не тронуты. NO git add/commit/push/deploy, NO Render/env/source changes. Existing regression runner очищал только свои temporary schemas; local restored DB сохранена.
+
+CODE / OFFLINE: PASS.
+LOCAL POSTGRES CURRENT-VERSION SYNTHETIC RESTORE DRILL: PASS.
+REAL RENDER BACKUP: BACKUP_VERIFIED — PASS.
+REAL RENDER BACKUP RESTORE DRILL: PASS — LOCAL COPY ONLY.
 RENDER DATABASE MIGRATION: NOT RUN.

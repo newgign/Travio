@@ -213,6 +213,52 @@ test('3Y focused offline guards/command construction/privacy (no network)',async
     const state=healthyState();state.exactRows=[{name:'users',rows:'1'},{name:'PRIVATE_TABLE',rows:'PRIVATE_ROW'}];
     assert.deepEqual(db.diagnostic(state).exactRows,{users:'1'});
   });
+  await t.test('source backup require is exact opt-in only; shared and restore policies stay strict',async()=>{
+    const remote={DATABASE_URL:'postgresql://fixture_owner:PRIVATE_PASSWORD@external.example.invalid/fixture_source',DB_DUMP_DIR:dir};
+    const ack='I_ACKNOWLEDGE_ENCRYPTED_WITHOUT_CERTIFICATE_IDENTITY_VERIFICATION';
+    assert.equal(db.connection(remote).sslMode,'verify-full');
+    for(const mode of ['disable','allow','prefer'])assert.throws(()=>db.backup({env:{...remote,DB_SSL_MODE:mode,DB_ALLOW_TLS_REQUIRE:ack},run:()=>assert.fail('must not spawn')}),code('VERIFIED_TLS_REQUIRED'));
+    for(const acknowledgement of [undefined,'true','1','yes',ack+' ']) {
+      const output=[];
+      assert.equal(await db.cli(async()=>db.backup({env:{...remote,DB_SSL_MODE:'require',DB_ALLOW_TLS_REQUIRE:acknowledgement},run:()=>assert.fail('must not spawn')}),v=>output.push(v)),1);
+      assert.equal(JSON.parse(output[0]).status,'BLOCKED');
+      assert.doesNotMatch(output.join(''),/PRIVATE|external\.example|fixture_owner|postgresql:/);
+    }
+    const allowed={...remote,DB_SSL_MODE:'require',DB_ALLOW_TLS_REQUIRE:ack};
+    assert.throws(()=>db.connection(allowed),code('VERIFIED_TLS_REQUIRED'));
+    await assert.rejects(()=>db.inspect({env:allowed,factory:()=>assert.fail('must not connect')}),code('VERIFIED_TLS_REQUIRED'));
+    const restoreEnv={...targetEnv,RESTORE_DATABASE_URL:'postgresql://u:p@target.example.invalid/fixture_target',RESTORE_DB_SSL_MODE:'require',DB_ALLOW_TLS_REQUIRE:ack,RESTORE_ALLOW_REMOTE:'I_ACKNOWLEDGE_NEW_EMPTY_TARGET'};
+    assert.throws(()=>db.restoreGuard(restoreEnv,true),code('VERIFIED_TLS_REQUIRED'));
+    assert.equal(db.restoreGuard({...restoreEnv,RESTORE_DB_SSL_MODE:'verify-full'},true).sslMode,'verify-full');
+    assert.equal(db.connection(sourceEnv).sslMode,'disable');
+    for(const [index,env,expectedMode] of [[0,remote,'verify-full'],[1,allowed,'require']]) {
+      const logs=[];let dumpCalls=0;
+      const result=db.backup({env,now:new Date(Date.UTC(2026,9,1+index)),log:v=>logs.push(v),run:(_binary,args,options)=>{
+        if(args.includes('-Fc')) {
+          dumpCalls++;assert.equal(options.env.PGSSLMODE,expectedMode);assert.equal(options.shell,false);
+          assert.doesNotMatch(args.join(' '),/PRIVATE|external\.example|fixture_owner|postgresql:/);
+          fs.writeSync(options.stdio[1],'PGDMP-stub');return {status:0};
+        }
+        assert.equal(options.env.PGSSLMODE,undefined);
+        return args.includes('--list')?listRun():{status:0,stdout:'pg_dump (PostgreSQL) 18.4'};
+      }});
+      assert.equal(dumpCalls,1);
+      assert.equal(db.readManifest(result.file).sourceTlsMode,expectedMode);
+      assert.doesNotMatch(JSON.stringify(logs)+fs.readFileSync(result.file+'.manifest.json','utf8'),/PRIVATE|external\.example|fixture_owner|postgresql:/);
+    }
+  });
+  await t.test('manifest v2 validates TLS enum while legacy v1 remains readable without inventing TLS metadata',()=>{
+    assert.equal(fixtureManifest.version,2);assert.equal(fixtureManifest.sourceTlsMode,'disable');
+    const legacy={...fixtureManifest,version:1,toolVersion:'3Y.1'};delete legacy.sourceTlsMode;
+    fs.writeFileSync(manifestPath,JSON.stringify(legacy));
+    assert.equal(db.verify(archive,{run:listRun}).status,'BACKUP_VERIFIED');
+    assert.equal(db.readManifest(archive).sourceTlsMode,undefined);
+    for(const patch of [{sourceTlsMode:'prefer'},{sourceTlsMode:'PRIVATE_URL'},{version:3},{toolVersion:'3Y.1'}]) {
+      fs.writeFileSync(manifestPath,JSON.stringify({...fixtureManifest,...patch}));
+      assert.throws(()=>db.readManifest(archive),code('INVALID_MANIFEST'));
+    }
+    fs.writeFileSync(manifestPath,JSON.stringify(fixtureManifest));
+  });
   assert.equal(network,0);
   t.diagnostic('3Y unit scope: no imports/calls to provider/payment clients; HTTP/TLS/TCP/fetch=0. Stub archive is NOT a real verified backup.');
   // Only files created inside this exact isolated temp directory are removed; no database deletion.

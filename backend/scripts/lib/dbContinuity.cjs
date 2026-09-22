@@ -8,6 +8,7 @@ const root = path.resolve(__dirname, '../../..');
 class ContinuityError extends Error { constructor(code) { super(code); this.code = code; } }
 const fail = code => { throw new ContinuityError(code); };
 const messages = {
+  SOURCE_TLS_REQUIRE_BLOCKED:'Source backup TLS require needs the exact DB_ALLOW_TLS_REQUIRE acknowledgement; it is not available to inventory or restore.',
   PG_DUMP_MISSING:'pg_dump not found. Install PostgreSQL client tools manually and set PG_BIN_DIR or PATH; nothing was installed.',
   PG_RESTORE_MISSING:'pg_restore not found. Install PostgreSQL client tools manually and set PG_BIN_DIR or PATH; nothing was installed.',
   RESTORE_URL_REQUIRED:'RESTORE_DATABASE_URL is required; DATABASE_URL is never a restore default.',
@@ -20,7 +21,7 @@ const messages = {
 };
 function safeError(error) {
   const code = error instanceof ContinuityError ? error.code : 'DATABASE_CONTINUITY_FAILED';
-  return { status:/RESTORE|SOURCE_EQUALS_TARGET|REMOTE_ACK|TARGET_NOT_EMPTY/.test(code) ? 'BLOCKED' : 'failed', code, ...(messages[code] ? { message:messages[code] } : {}) };
+  return { status:/RESTORE|SOURCE_EQUALS_TARGET|REMOTE_ACK|TARGET_NOT_EMPTY|SOURCE_TLS_REQUIRE_BLOCKED|VERIFIED_TLS_REQUIRED/.test(code) ? 'BLOCKED' : 'failed', code, ...(messages[code] ? { message:messages[code] } : {}) };
 }
 function connection(env, target = false) {
   const raw = target ? env.RESTORE_DATABASE_URL : env.DATABASE_URL;
@@ -112,7 +113,7 @@ function sourceIdentity(conn) {
   return crypto.createHash('sha256').update(JSON.stringify([conn.local ? 'loopback' : conn.host,conn.port,conn.database])).digest('hex');
 }
 function makeManifest(file, conn, now, clientVersion, env) {
-  return {format:'asedeliya-postgresql-custom',version:1,toolVersion:'3Y.1',createdAt:now.toISOString(),
+  return {format:'asedeliya-postgresql-custom',version:2,toolVersion:'3Y.2',sourceTlsMode:conn.sslMode,createdAt:now.toISOString(),
     sourceIdentitySha256:sourceIdentity(conn),appEnvironment:['staging','test','development','production'].includes(env.APP_ENV) ? env.APP_ENV : 'unspecified',
     dumpFilename:path.basename(file),sizeBytes:fs.statSync(file).size,sha256:checksum(file),clientVersion,
     expectedRepositoryMigrations:migrationInventory().migrations,sourceMigrationLedger:'not-read',
@@ -127,8 +128,11 @@ function readManifest(file) {
     value = JSON.parse(fs.readFileSync(manifestPath,'utf8'));
   } catch { fail('INVALID_MANIFEST'); }
   const keys = ['format','version','toolVersion','createdAt','sourceIdentitySha256','appEnvironment','dumpFilename','sizeBytes','sha256','clientVersion','expectedRepositoryMigrations','sourceMigrationLedger','status','verification','dataBlocksRestored'];
+  const current = value?.version === 2;
+  if (current) keys.push('sourceTlsMode');
   if (!value || Object.keys(value).length !== keys.length || keys.some(key=>!Object.hasOwn(value,key)) ||
-    value.format !== 'asedeliya-postgresql-custom' || value.version !== 1 || value.toolVersion !== '3Y.1' ||
+    value.format !== 'asedeliya-postgresql-custom' ||
+    (current ? value.toolVersion !== '3Y.2' || !['disable','verify-full','require'].includes(value.sourceTlsMode) : value.version !== 1 || value.toolVersion !== '3Y.1') ||
     !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/.test(value.createdAt) || !Number.isFinite(Date.parse(value.createdAt)) ||
     value.dumpFilename !== path.basename(file) || !/^asedeliya-\d{8}T\d{9}Z\.dump$/.test(value.dumpFilename) ||
     !Number.isSafeInteger(value.sizeBytes) || value.sizeBytes <= 0 || !/^[a-f0-9]{64}$/.test(value.sha256) ||
@@ -142,7 +146,14 @@ function readManifest(file) {
   return value;
 }
 function backup({ env = process.env, now = new Date(), run = spawnSync, log = () => {} } = {}) {
-  const conn = connection(env);
+  // Exception belongs only to pg_dump source backup. Shared connection/restore policy stays strict.
+  let conn;
+  if (env.DB_SSL_MODE === 'require') {
+    if (env.DB_ALLOW_TLS_REQUIRE !== 'I_ACKNOWLEDGE_ENCRYPTED_WITHOUT_CERTIFICATE_IDENTITY_VERIFICATION') fail('SOURCE_TLS_REQUIRE_BLOCKED');
+    conn = connection({...env,DB_SSL_MODE:'verify-full'});
+    if (conn.local) fail('SOURCE_TLS_REQUIRE_BLOCKED');
+    conn = {...conn,sslMode:'require'};
+  } else conn = connection(env);
   // Detect missing clients before reserving any output.
   const versionOutput = runTool('pg_dump',['--version'],{env,run});
   const clientVersion = /^pg_dump \(PostgreSQL\) (\d+(?:\.\d+){0,2})(?:\s|$)/.exec(versionOutput)?.[1] || 'unknown';

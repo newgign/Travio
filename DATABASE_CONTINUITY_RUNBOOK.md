@@ -70,7 +70,24 @@ $env:APP_ENV = 'staging'
 
 Для source scripts нужен существующий `DATABASE_URL`. Для restore — отдельный `RESTORE_DATABASE_URL`; fallback на source запрещён. Принимаются postgres/postgresql URL с явно заданными user/database, без query/hash/libpq overrides. Database name допускает буквы, цифры, `_` и `-`, начинается с буквы/`_`, длина <=63. При несовместимом имени/URL scripts откажут, а не изменят его молча.
 
-Source TLS использует `DB_SSL_MODE` (`verify-full` по умолчанию) и при необходимости `DB_SSL_CA_PATH`. Target независимо использует `RESTORE_DB_SSL_MODE` и `RESTORE_DB_SSL_CA_PATH`. Для любого non-loopback host разрешён только verify-full. Для явно локальных fixtures допускается disable. Настройте доверенный CA для libpq: его trust-store может отличаться от Node. Ошибку сертификата нельзя обходить отключением проверки remote TLS.
+Source TLS использует `DB_SSL_MODE` (`verify-full` по умолчанию) и при необходимости `DB_SSL_CA_PATH`. Target независимо использует `RESTORE_DB_SSL_MODE` и `RESTORE_DB_SSL_CA_PATH`. Для non-loopback host действует verify-full, кроме явно подтверждённого source-backup exception ниже. Для явно локальных fixtures допускается disable. Настройте доверенный CA для libpq: его trust-store может отличаться от Node. Отключение remote TLS запрещено.
+
+**Post-3Y: explicit Render External source backup exception.** Только `dbBackup.cjs` допускает remote source `require` с точным acknowledgement ниже. TLS encryption остаётся обязательным, но certificate identity verification слабее verify-full. Это не отключение TLS: remote disable/allow/prefer запрещены. Если доступен trusted Render CA bundle, предпочтителен verify-full с DB_SSL_CA_PATH.
+
+После read-only inventory с обычными TLS settings, в отдельной operator shell с уже безопасно загруженным DATABASE_URL:
+
+```powershell
+$env:DB_SSL_MODE = 'require'
+$env:DB_ALLOW_TLS_REQUIRE = 'I_ACKNOWLEDGE_ENCRYPTED_WITHOUT_CERTIFICATE_IDENTITY_VERIFICATION'
+node backend/scripts/dbBackup.cjs
+if ($LASTEXITCODE -ne 0) { throw 'Backup failed; stop' }
+# После backup вернуть default перед inventory/restore:
+Remove-Item Env:DB_SSL_MODE, Env:DB_ALLOW_TLS_REQUIRE
+```
+
+DATABASE_URL остаётся без query/hash; не добавлять `?sslmode=require`. PGSSLMODE/PGSSLROOTCERT из родительской shell не наследуются: wrapper задаёт child TLS mode сам, явный DB_SSL_CA_PATH сохраняет прежнюю передачу в PGSSLROOTCERT. Исключение не отменяет ошибок CA при дополнительных CA settings. Ни inventory, ни remote restore target этим исключением пользоваться не могут; remote target по-прежнему требует verify-full. Если source DATABASE_URL оставлен при restore, source env также должен соответствовать прежнему strict parser.
+
+Host suffix restriction не добавлено: в локальном contract нет проверенного общего правила Render External host, внешняя проверка в hotfix запрещена. Explicit acknowledgement технически допускает любой remote source host; его назначение проверяет оператор. Host/URL/credentials не логируются. Новые manifests v2/3Y.2 содержат только enum `sourceTlsMode` (require/verify-full/disable для существующего local режима), без CA contents и connection identity в открытом виде. Старые manifests v1/3Y.1 принимаются без выдуманного TLS mode; прочие integrity checks сохранены.
 
 Connection components передаются pg tools в отдельном child environment, password — PGPASSWORD, не argv. Не наследуются PGOPTIONS/PGSERVICE/PGHOSTADDR или Hotelbeds secrets. Это защищает командную строку и output, но не является защитой от локального администратора, читающего process environment. Используйте доверенную машину/учётную запись. Официальные правила переменных: [PostgreSQL libpq environment](https://www.postgresql.org/docs/18/libpq-envars.html).
 
