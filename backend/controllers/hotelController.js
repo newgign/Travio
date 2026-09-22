@@ -10,7 +10,7 @@ exports.getHotels = async (req, res) => {
 
     } catch (error) {
 
-        console.error(error);
+        require("../utils/logger").error("hotelController failed", { error: error });
 
         res.status(500).json({
             message: "Server Error"

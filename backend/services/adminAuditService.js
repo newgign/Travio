@@ -42,7 +42,7 @@ async function safeRecordAction(payload) {
   try {
     return await recordAction(payload);
   } catch (error) {
-    logger.warn(`ADMIN AUDIT WRITE FAILED | ${error.message}`);
+    logger.warn(`ADMIN AUDIT WRITE FAILED | `, { error });
     return null;
   }
 }

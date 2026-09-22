@@ -98,7 +98,7 @@ const register = async (req, res) => {
       user: buildPublicUser(newUser.rows[0]),
     });
   } catch (err) {
-    console.error("REGISTER ERROR:", err);
+    require("../utils/logger").error("REGISTER ERROR:", { error: err });
     return res.status(500).json({ message: "Ошибка регистрации" });
   }
 };
@@ -142,7 +142,7 @@ const login = async (req, res) => {
       user: publicUser,
     });
   } catch (err) {
-    console.error("LOGIN ERROR:", err);
+    require("../utils/logger").error("LOGIN ERROR:", { error: err });
     return res.status(500).json({ message: "Ошибка входа" });
   }
 };
@@ -170,7 +170,7 @@ const profile = async (req, res) => {
       stats: await bookingStats(req.user.id),
     });
   } catch (err) {
-    console.error("PROFILE ERROR:", err);
+    require("../utils/logger").error("PROFILE ERROR:", { error: err });
     return res.status(500).json({ message: "Ошибка загрузки профиля" });
   }
 };
@@ -224,7 +224,7 @@ const updateProfile = async (req, res) => {
       stats: await bookingStats(req.user.id),
     });
   } catch (err) {
-    console.error("UPDATE PROFILE ERROR:", err);
+    require("../utils/logger").error("UPDATE PROFILE ERROR:", { error: err });
     return res.status(500).json({ message: "Ошибка сохранения профиля" });
   }
 };
@@ -265,7 +265,7 @@ const changePassword = async (req, res) => {
 
     return res.json({ message: "Пароль изменён" });
   } catch (err) {
-    console.error("CHANGE PASSWORD ERROR:", err);
+    require("../utils/logger").error("CHANGE PASSWORD ERROR:", { error: err });
     return res.status(500).json({ message: "Ошибка изменения пароля" });
   }
 };

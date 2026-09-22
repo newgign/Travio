@@ -174,7 +174,7 @@ async function safeOpenOrUpdate(payload) {
   try {
     return await openOrUpdate(payload);
   } catch (error) {
-    logger.warn("INCIDENT WRITE FAILED", { error: error.message, incidentKey: payload?.key || null });
+    logger.warn("INCIDENT WRITE FAILED", { error: error, incidentKey: payload?.key || null });
     return null;
   }
 }
@@ -183,7 +183,7 @@ async function safeResolveByKey(key, resolution) {
   try {
     return await resolveByKey(key, resolution);
   } catch (error) {
-    logger.warn("INCIDENT RESOLVE FAILED", { error: error.message, incidentKey: key });
+    logger.warn("INCIDENT RESOLVE FAILED", { error: error, incidentKey: key });
     return [];
   }
 }

@@ -51,7 +51,7 @@ const getTours = async (req, res) => {
 
   } catch (err) {
 
-    console.error(err);
+    require("../utils/logger").error("tourController failed", { error: err });
 
     res.status(500).json({
       message: "Ошибка сервера",
@@ -83,7 +83,7 @@ const getTourById = async (req, res) => {
 
   } catch (err) {
 
-    console.error(err);
+    require("../utils/logger").error("tourController failed", { error: err });
 
     res.status(500).json({
       message: "Ошибка сервера",
@@ -152,7 +152,7 @@ const createTour = async (req, res) => {
 
   } catch (err) {
 
-    console.error(err);
+    require("../utils/logger").error("tourController failed", { error: err });
 
     res.status(500).json({
       message: "Ошибка создания тура",
@@ -228,7 +228,7 @@ const updateTour = async (req, res) => {
 
   } catch (err) {
 
-    console.error(err);
+    require("../utils/logger").error("tourController failed", { error: err });
 
     res.status(500).json({
       message: "Ошибка обновления тура",
@@ -271,7 +271,7 @@ const deleteTour = async (req, res) => {
 
   } catch (err) {
 
-    console.error(err);
+    require("../utils/logger").error("tourController failed", { error: err });
 
     res.status(500).json({
       message: "Ошибка удаления тура",
@@ -293,7 +293,7 @@ const searchTours = async (req, res) => {
 
   } catch (err) {
 
-    console.error(err);
+    require("../utils/logger").error("tourController failed", { error: err });
 
     res.status(500).json({
       message: "Ошибка поиска туров",

@@ -98,7 +98,7 @@ const server = app.listen(PORT, "0.0.0.0", () => {
   reliabilityMonitorService.start();
   require("./services/hotelbedsMonitorService").start();
 });
-server.on("error", (error) => logger.error(error.stack || error.message));
+server.on("error", (error) => logger.error("Server lifecycle error", { error: error }));
 
 let shutdownPromise = null;
 function shutdownGraceMs() {
@@ -123,7 +123,7 @@ function shutdown(signal) {
     forceTimer.unref?.();
 
     server.close(async (closeError) => {
-      if (closeError) logger.error(closeError.stack || closeError.message);
+      if (closeError) logger.error("Server lifecycle error", { error: closeError });
       try {
         await pool.end();
         clearTimeout(forceTimer);
@@ -131,7 +131,7 @@ function shutdown(signal) {
         resolve();
         process.exit(closeError ? 1 : 0);
       } catch (error) {
-        logger.error(error.stack || error.message);
+        logger.error("Server lifecycle error", { error: error });
         clearTimeout(forceTimer);
         resolve();
         process.exit(1);
@@ -147,11 +147,11 @@ function shutdown(signal) {
 process.on("SIGINT", () => shutdown("SIGINT"));
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 process.on("unhandledRejection", (reason) => {
-  logger.error(`UNHANDLED REJECTION | ${reason?.stack || reason}`);
+  logger.error("UNHANDLED REJECTION", { error: reason instanceof Error ? reason : new Error("Rejected") });
   shutdown("unhandledRejection");
 });
 process.on("uncaughtException", (error) => {
-  logger.error(`UNCAUGHT EXCEPTION | ${error?.stack || error}`);
+  logger.error("UNCAUGHT EXCEPTION", { error });
   shutdown("uncaughtException");
 });
 

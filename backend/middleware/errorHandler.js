@@ -17,12 +17,13 @@ function errorHandler(err, req, res, next) {
   if (res.headersSent) return next(err);
 
   const info = classify(err);
-  logger.error(`${info.code} | ${req.method} ${req.originalUrl || req.url} | ${req.requestId || "no-request-id"} | ${err.stack || err.message || err}`);
+  logger.error('HTTP request failed', { method: req.method, requestId: req.requestId || null,
+    statusCode: info.status, error: err });
 
   const payload = ApiResponse.error(
     info.status >= 500 && process.env.NODE_ENV === "production" ? "Внутренняя ошибка сервера" : info.message,
     process.env.NODE_ENV === "development" && info.status >= 500 ? [err.stack] : [],
-    info.code
+    info.status >= 500 && process.env.NODE_ENV === 'production' ? 'INTERNAL_ERROR' : info.code
   );
   payload.requestId = req.requestId || null;
 

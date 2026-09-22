@@ -55,7 +55,7 @@ async function safeRecordEvent(payload) {
   try {
     return await recordEvent(payload);
   } catch (error) {
-    logger.error(`BOOKING EVENT ERROR | ${error.message}`);
+    logger.error(`BOOKING EVENT ERROR | `, { error });
     return null;
   }
 }

@@ -54,7 +54,7 @@ async function safeRecordEvent(payload) {
   try {
     return await recordEvent(payload);
   } catch (error) {
-    logger.warn(`SYSTEM EVENT WRITE FAILED | ${error.message}`);
+    logger.warn(`SYSTEM EVENT WRITE FAILED | `, { error });
     return null;
   }
 }

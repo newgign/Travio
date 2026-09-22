@@ -70,9 +70,9 @@ async function getVoucher(req, res) {
     await markGenerated(booking);
     return res.json({ success: true, voucher });
   } catch (error) {
-    console.error("GET VOUCHER ERROR:", error);
+    require("../utils/logger").error("GET VOUCHER ERROR:", { error: error });
     return res.status(error.status || 500).json({
-      message: error.status ? error.message : "Ошибка формирования ваучера",
+      message: require("../utils/apiResponse").publicMessage(error, "Ошибка формирования ваучера"),
     });
   }
 }
@@ -91,9 +91,9 @@ async function downloadVoucherPdf(req, res) {
     res.setHeader("Cache-Control", "private, no-store");
     return res.end(pdf);
   } catch (error) {
-    console.error("DOWNLOAD VOUCHER PDF ERROR:", error);
+    require("../utils/logger").error("DOWNLOAD VOUCHER PDF ERROR:", { error: error });
     return res.status(error.status || 500).json({
-      message: error.status ? error.message : "Ошибка создания PDF-ваучера",
+      message: require("../utils/apiResponse").publicMessage(error, "Ошибка создания PDF-ваучера"),
     });
   }
 }

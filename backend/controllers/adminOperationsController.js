@@ -189,7 +189,7 @@ async function getOverview(req, res) {
       recentAdminActions: actions.rows,
     });
   } catch (error) {
-    console.error("ADMIN OVERVIEW ERROR:", error);
+    require("../utils/logger").error("ADMIN OVERVIEW ERROR:", { error: error });
     return res.status(500).json({ message: "Ошибка загрузки операционной панели" });
   }
 }
@@ -223,7 +223,7 @@ async function getBookings(req, res) {
       },
     });
   } catch (error) {
-    console.error("ADMIN BOOKINGS ERROR:", error);
+    require("../utils/logger").error("ADMIN BOOKINGS ERROR:", { error: error });
     return res.status(500).json({ message: "Ошибка загрузки бронирований CRM" });
   }
 }
@@ -273,7 +273,7 @@ async function getRefunds(req, res) {
     const total = count.rows[0]?.total || 0;
     return res.json({ items: result.rows, pagination: { page, limit, total, pages: Math.max(1, Math.ceil(total / limit)) } });
   } catch (error) {
-    console.error("ADMIN REFUNDS ERROR:", error);
+    require("../utils/logger").error("ADMIN REFUNDS ERROR:", { error: error });
     return res.status(500).json({ message: "Ошибка загрузки возвратов" });
   }
 }
@@ -318,7 +318,7 @@ async function getNotifications(req, res) {
     const total = count.rows[0]?.total || 0;
     return res.json({ items: result.rows, pagination: { page, limit, total, pages: Math.max(1, Math.ceil(total / limit)) } });
   } catch (error) {
-    console.error("ADMIN NOTIFICATIONS ERROR:", error);
+    require("../utils/logger").error("ADMIN NOTIFICATIONS ERROR:", { error: error });
     return res.status(500).json({ message: "Ошибка загрузки email-outbox" });
   }
 }
@@ -340,8 +340,8 @@ async function retryNotification(req, res) {
     if (!ok) return res.status(409).json({ message: "Уведомление нельзя повторить", result });
     return res.json({ success: true, result });
   } catch (error) {
-    console.error("ADMIN NOTIFICATION RETRY ERROR:", error);
-    return res.status(500).json({ message: error.message || "Ошибка повторной доставки" });
+    require("../utils/logger").error("ADMIN NOTIFICATION RETRY ERROR:", { error: error });
+    return res.status(500).json({ message: require("../utils/apiResponse").publicMessage(error, "Ошибка повторной доставки") });
   }
 }
 
@@ -360,7 +360,7 @@ async function getActions(req, res) {
     );
     return res.json({ items: result.rows });
   } catch (error) {
-    console.error("ADMIN ACTIONS ERROR:", error);
+    require("../utils/logger").error("ADMIN ACTIONS ERROR:", { error: error });
     return res.status(500).json({ message: "Ошибка загрузки журнала администратора" });
   }
 }
@@ -406,7 +406,7 @@ async function getReadiness(req, res) {
       message: "Sprint 3A — product/customer experience with the Sprint 2N reliability baseline retained. LIVE sales and real money operations remain disabled.",
     });
   } catch (error) {
-    console.error("ADMIN READINESS ERROR:", error);
+    require("../utils/logger").error("ADMIN READINESS ERROR:", { error: error });
     return res.status(500).json({ message: "Ошибка проверки production-readiness" });
   }
 }
@@ -416,7 +416,7 @@ async function getSystemStatus(req, res) {
     const status = await systemReadinessService.collect();
     return res.json(status);
   } catch (error) {
-    console.error("ADMIN SYSTEM STATUS ERROR:", error);
+    require("../utils/logger").error("ADMIN SYSTEM STATUS ERROR:", { error: error });
     return res.status(500).json({ message: "Ошибка проверки системного состояния" });
   }
 }
@@ -426,7 +426,7 @@ async function getSystemMetrics(req, res) {
   try {
     return res.json(operationsMonitorService.collect());
   } catch (error) {
-    console.error("ADMIN SYSTEM METRICS ERROR:", error);
+    require("../utils/logger").error("ADMIN SYSTEM METRICS ERROR:", { error: error });
     return res.status(500).json({ message: "Ошибка загрузки operational metrics" });
   }
 }
@@ -436,7 +436,7 @@ async function getReliabilityDashboard(req, res) {
     const dashboard = await reliabilityMonitorService.dashboard();
     return res.json(dashboard);
   } catch (error) {
-    console.error("ADMIN RELIABILITY DASHBOARD ERROR:", error);
+    require("../utils/logger").error("ADMIN RELIABILITY DASHBOARD ERROR:", { error: error });
     return res.status(500).json({ message: "Ошибка загрузки reliability dashboard" });
   }
 }
@@ -454,7 +454,7 @@ async function runReliabilityCheck(req, res) {
     });
     return res.json({ success: true, result, dashboard: await reliabilityMonitorService.dashboard() });
   } catch (error) {
-    console.error("ADMIN RELIABILITY CHECK ERROR:", error);
+    require("../utils/logger").error("ADMIN RELIABILITY CHECK ERROR:", { error: error });
     return res.status(500).json({ message: "Ошибка проверки reliability" });
   }
 }
@@ -475,7 +475,7 @@ async function acknowledgeIncident(req, res) {
     });
     return res.json({ success: true, incident });
   } catch (error) {
-    console.error("ADMIN INCIDENT ACK ERROR:", error);
+    require("../utils/logger").error("ADMIN INCIDENT ACK ERROR:", { error: error });
     return res.status(500).json({ message: "Ошибка подтверждения инцидента" });
   }
 }
@@ -490,7 +490,7 @@ async function getSystemEvents(req, res) {
     });
     return res.json({ items });
   } catch (error) {
-    console.error("ADMIN SYSTEM EVENTS ERROR:", error);
+    require("../utils/logger").error("ADMIN SYSTEM EVENTS ERROR:", { error: error });
     return res.status(500).json({ message: "Ошибка загрузки системного журнала" });
   }
 }
@@ -537,7 +537,7 @@ async function runSystemSelfTest(req, res) {
 
     return res.json({ success: true, status, eventId: event?.id || null });
   } catch (error) {
-    console.error("ADMIN SYSTEM SELF TEST ERROR:", error);
+    require("../utils/logger").error("ADMIN SYSTEM SELF TEST ERROR:", { error: error });
     return res.status(500).json({ message: "Ошибка системного self-test" });
   }
 }

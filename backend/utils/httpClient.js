@@ -1,4 +1,5 @@
 const axios = require("axios");
+const logger = require('./logger');
 
 const client = axios.create({
 
@@ -16,9 +17,7 @@ client.interceptors.request.use(
 
     (config) => {
 
-        console.log(
-            `➡ ${config.method.toUpperCase()} ${config.url}`
-        );
+        logger.info('Outbound request', { method: config.method });
 
         return config;
 
@@ -33,9 +32,7 @@ client.interceptors.response.use(
 
     (response) => {
 
-        console.log(
-            `✅ ${response.status} ${response.config.url}`
-        );
+        logger.info('Outbound response', { statusCode: response.status });
 
         return response;
 
@@ -45,15 +42,11 @@ client.interceptors.response.use(
 
         if (error.response) {
 
-            console.error(
-                `❌ ${error.response.status} ${error.config?.url}`
-            );
+            logger.warn('Outbound request failed', { statusCode: error.response.status });
 
         } else {
 
-            console.error(
-                `❌ ${error.message}`
-            );
+            logger.warn('Outbound request failed', { error });
 
         }
 

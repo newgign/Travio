@@ -43,7 +43,7 @@ const getStats = async (req, res) => {
 
   } catch (err) {
 
-    console.error(err);
+    require("../utils/logger").error("dashboardController failed", { error: err });
 
     res.status(500).json({
       message: "Ошибка получения статистики",

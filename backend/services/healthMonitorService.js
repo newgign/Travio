@@ -61,9 +61,9 @@ function start() {
   started = true;
   if (!boolEnv("HEALTH_MONITOR_ENABLED", true)) return status();
 
-  sample().catch((error) => logger.warn("HEALTH MONITOR SAMPLE FAILED", { error: error.message }));
+  sample().catch((error) => logger.warn("HEALTH MONITOR SAMPLE FAILED", { error: error }));
   timer = setInterval(() => {
-    sample().catch((error) => logger.warn("HEALTH MONITOR SAMPLE FAILED", { error: error.message }));
+    sample().catch((error) => logger.warn("HEALTH MONITOR SAMPLE FAILED", { error: error }));
   }, intervalMs());
   timer.unref?.();
   return status();

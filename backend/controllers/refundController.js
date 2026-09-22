@@ -167,10 +167,10 @@ const requestSandboxRefund = async (req, res) => {
     return res.status(201).json({ success: true, idempotent: false, refund, realRefund: false });
   } catch (error) {
     if (client) {
-      try { await client.query("ROLLBACK"); } catch (rollbackError) { logger.error(rollbackError.stack || rollbackError.message); }
+      try { await client.query("ROLLBACK"); } catch (rollbackError) { logger.error("Operation failed", { error: rollbackError }); }
     }
-    logger.error(error.stack || error.message);
-    return res.status(error.status || 500).json({ message: error.message || "Ошибка создания sandbox-возврата", code: error.code || undefined });
+    logger.error("Operation failed", { error: error });
+    return res.status(error.status || 500).json({ message: require("../utils/apiResponse").publicMessage(error, "Ошибка создания sandbox-возврата"), code: require("../utils/apiResponse").publicCode(error) });
   } finally {
     client?.release();
   }
@@ -298,10 +298,10 @@ const completeSandboxRefund = async (req, res) => {
     return res.json({ success: true, idempotent: false, refund, payment, booking, realRefund: false });
   } catch (error) {
     if (client) {
-      try { await client.query("ROLLBACK"); } catch (rollbackError) { logger.error(rollbackError.stack || rollbackError.message); }
+      try { await client.query("ROLLBACK"); } catch (rollbackError) { logger.error("Operation failed", { error: rollbackError }); }
     }
-    logger.error(error.stack || error.message);
-    return res.status(error.status || 500).json({ message: error.message || "Ошибка завершения sandbox-возврата", code: error.code || undefined });
+    logger.error("Operation failed", { error: error });
+    return res.status(error.status || 500).json({ message: require("../utils/apiResponse").publicMessage(error, "Ошибка завершения sandbox-возврата"), code: require("../utils/apiResponse").publicCode(error) });
   } finally {
     client?.release();
   }

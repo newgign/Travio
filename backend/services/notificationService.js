@@ -134,7 +134,7 @@ async function dispatchOutboxItem(id, { force = false } = {}) {
       countAttempt: true,
       nextAttemptAt,
     });
-    logger.warn(`EMAIL NOTIFICATION FAILED | outboxId=${id} | ${error.message}`);
+    logger.warn(`EMAIL NOTIFICATION FAILED | outboxId=${id} | `, { error });
     return { status: "failed", message: error.message };
   }
 }
@@ -173,7 +173,7 @@ async function notifyBookingEvent(bookingId, eventType) {
     }
     return dispatchOutboxItem(outboxId);
   } catch (error) {
-    logger.warn(`NOTIFICATION OUTBOX ERROR | bookingId=${bookingId} | ${error.message}`);
+    logger.warn(`NOTIFICATION OUTBOX ERROR | bookingId=${bookingId} | `, { error });
     return { status: "failed" };
   }
 }

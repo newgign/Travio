@@ -10,7 +10,7 @@ async function safeRecord({ operation, status, artifactName = null, checksum = n
     `, [operation, status, artifactName, checksum, JSON.stringify(metadata || {})]);
     return result.rows[0] || null;
   } catch (error) {
-    logger.warn(`MAINTENANCE RUN WRITE FAILED | ${error.message}`);
+    logger.warn(`MAINTENANCE RUN WRITE FAILED | `, { error });
     return null;
   }
 }

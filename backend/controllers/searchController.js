@@ -18,13 +18,13 @@ class SearchController {
 
         } catch (err) {
 
-            console.error(err);
+            require("../utils/logger").error("searchController failed", { error: err });
 
             return res.status(err.status || 500).json(
                 ApiResponse.error(
-                    err.message || "Ошибка поиска",
+                    require("../utils/apiResponse").publicMessage(err, "Ошибка поиска"),
                     [],
-                    err.code || null
+                    require("../utils/apiResponse").publicCode(err)
                 )
             );
 

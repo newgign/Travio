@@ -32,7 +32,7 @@ async function getFavorites(req, res) {
       data,
     });
   } catch (error) {
-    console.error("GET FAVORITES ERROR:", error);
+    require("../utils/logger").error("GET FAVORITES ERROR:", { error: error });
 
     return res.status(500).json({
       message: "Ошибка загрузки избранного",
@@ -111,7 +111,7 @@ async function addFavorite(req, res) {
       },
     });
   } catch (error) {
-    console.error("ADD FAVORITE ERROR:", error);
+    require("../utils/logger").error("ADD FAVORITE ERROR:", { error: error });
 
     if (error.message?.includes('Provider "')) {
       return res.status(400).json({
@@ -151,7 +151,7 @@ async function deleteFavorite(req, res) {
       success: true,
     });
   } catch (error) {
-    console.error("DELETE FAVORITE ERROR:", error);
+    require("../utils/logger").error("DELETE FAVORITE ERROR:", { error: error });
 
     return res.status(500).json({
       message: "Ошибка удаления из избранного",

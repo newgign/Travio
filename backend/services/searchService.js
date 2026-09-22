@@ -170,7 +170,7 @@ class SearchService {
 
         } catch (error) {
 
-            logger.error(error.stack || error.message);
+            logger.error("Operation failed", { error: error });
 
             throw error;
 

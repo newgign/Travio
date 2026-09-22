@@ -249,19 +249,19 @@ async function evaluate(trigger = "interval") {
     } catch (error) {
       snapshot.persistence.incidents = false;
       lastError = error.message;
-      logger.warn("RELIABILITY INCIDENT SYNC FAILED", { error: error.message });
+      logger.warn("RELIABILITY INCIDENT SYNC FAILED", { error: error });
     }
     try {
       await persistSnapshot(snapshot, trigger);
     } catch (error) {
       snapshot.persistence.history = false;
       lastError = error.message;
-      logger.warn("RELIABILITY HISTORY WRITE FAILED", { error: error.message });
+      logger.warn("RELIABILITY HISTORY WRITE FAILED", { error: error });
     }
     return snapshot;
   } catch (error) {
     lastError = error.message;
-    logger.error("RELIABILITY MONITOR FAILED", { error: error.message });
+    logger.error("RELIABILITY MONITOR FAILED", { error: error });
     throw error;
   } finally {
     running = false;

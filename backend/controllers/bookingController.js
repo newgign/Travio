@@ -377,14 +377,14 @@ const createBooking = async (req, res) => {
     try {
       await client.query("ROLLBACK");
     } catch (rollbackError) {
-      console.error("BOOKING ROLLBACK ERROR:", rollbackError);
+      require("../utils/logger").error("BOOKING ROLLBACK ERROR:", { error: rollbackError });
     }
 
-    console.error("CREATE BOOKING ERROR:", error);
+    require("../utils/logger").error("CREATE BOOKING ERROR:", { error: error });
 
     return res.status(error.status || 500).json({
-      message: error.message || "Ошибка создания бронирования",
-      code: error.code || undefined,
+      message: require("../utils/apiResponse").publicMessage(error, "Ошибка создания бронирования"),
+      code: require("../utils/apiResponse").publicCode(error),
     });
   } finally {
     client.release();
@@ -401,7 +401,7 @@ const getMyBookings = async (req, res) => {
 
     return res.json(result.rows);
   } catch (error) {
-    console.error("GET MY BOOKINGS ERROR:", error);
+    require("../utils/logger").error("GET MY BOOKINGS ERROR:", { error: error });
     return res.status(500).json({ message: "Ошибка загрузки бронирований" });
   }
 };
@@ -483,7 +483,7 @@ const getMyBookingDetails = async (req, res) => {
       notifications: notificationResult.rows,
     });
   } catch (error) {
-    console.error("GET BOOKING DETAILS ERROR:", error);
+    require("../utils/logger").error("GET BOOKING DETAILS ERROR:", { error: error });
     return res.status(500).json({ message: "Ошибка загрузки деталей бронирования" });
   }
 };
@@ -497,7 +497,7 @@ const getBookings = async (req, res) => {
 
     return res.json(result.rows);
   } catch (error) {
-    console.error("GET BOOKINGS ERROR:", error);
+    require("../utils/logger").error("GET BOOKINGS ERROR:", { error: error });
     return res.status(500).json({ message: "Ошибка загрузки бронирований" });
   }
 };
@@ -567,7 +567,7 @@ const updateBookingStatus = async (req, res) => {
 
     return res.json(updated);
   } catch (error) {
-    console.error("UPDATE BOOKING ERROR:", error);
+    require("../utils/logger").error("UPDATE BOOKING ERROR:", { error: error });
     return res.status(500).json({ message: "Ошибка обновления бронирования" });
   }
 };
@@ -632,10 +632,10 @@ const deleteBooking = async (req, res) => {
     try {
       await client.query("ROLLBACK");
     } catch (rollbackError) {
-      console.error("DELETE BOOKING ROLLBACK ERROR:", rollbackError);
+      require("../utils/logger").error("DELETE BOOKING ROLLBACK ERROR:", { error: rollbackError });
     }
 
-    console.error("DELETE BOOKING ERROR:", error);
+    require("../utils/logger").error("DELETE BOOKING ERROR:", { error: error });
     return res.status(500).json({ message: "Ошибка удаления бронирования" });
   } finally {
     client.release();

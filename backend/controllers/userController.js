@@ -25,7 +25,7 @@ const getUsers = async (req, res) => {
 
   } catch (err) {
 
-    console.error(err);
+    require("../utils/logger").error("userController failed", { error: err });
 
     res.status(500).json({
       message:"Ошибка сервера",
@@ -76,7 +76,7 @@ const deleteUser = async (req,res)=>{
 
   }catch(err){
 
-    console.error(err);
+    require("../utils/logger").error("userController failed", { error: err });
 
     res.status(500).json({
       message:"Ошибка удаления",

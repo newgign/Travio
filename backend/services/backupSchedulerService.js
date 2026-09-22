@@ -60,12 +60,12 @@ function start() {
 
   nextRunAt = new Date(Date.now() + intervalMs()).toISOString();
   timer = setInterval(() => {
-    runNow("interval").catch((error) => logger.error("AUTO BACKUP FAILED", { error: error.message }));
+    runNow("interval").catch((error) => logger.error("AUTO BACKUP FAILED", { error: error }));
   }, intervalMs());
   timer.unref?.();
 
   if (boolEnv("DB_BACKUP_AUTO_RUN_ON_START", false)) {
-    setTimeout(() => runNow("startup").catch((error) => logger.error("STARTUP BACKUP FAILED", { error: error.message })), 1500).unref?.();
+    setTimeout(() => runNow("startup").catch((error) => logger.error("STARTUP BACKUP FAILED", { error: error })), 1500).unref?.();
   }
   return status();
 }

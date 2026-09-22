@@ -34,6 +34,8 @@ services:
         value: test
       - key: HOTELBEDS_ENABLED
         value: "false"
+      - key: HOTELBEDS_READ_ONLY
+        value: "true"
       - key: HOTELBEDS_BOOKING_ENABLED
         value: "false"
       - key: HOTELBEDS_LIVE_BOOKING_ENABLED

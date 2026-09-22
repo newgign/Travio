@@ -166,14 +166,14 @@ const payBooking = async (req, res) => {
       try {
         await client.query("ROLLBACK");
       } catch (rollbackError) {
-        logger.error(rollbackError.stack || rollbackError.message);
+        logger.error("Operation failed", { error: rollbackError });
       }
     }
 
-    logger.error(error.stack || error.message);
+    logger.error("Operation failed", { error: error });
     return res.status(error.status || 500).json({
-      message: error.message || "Ошибка оплаты",
-      code: error.code || undefined,
+      message: require("../utils/apiResponse").publicMessage(error, "Ошибка оплаты"),
+      code: require("../utils/apiResponse").publicCode(error),
     });
   } finally {
     client?.release();
@@ -224,7 +224,7 @@ const getPayment = async (req, res) => {
 
     return res.json(result.rows[0]);
   } catch (error) {
-    logger.error(error.stack || error.message);
+    logger.error("Operation failed", { error: error });
     return res.status(500).json({ message: "Ошибка загрузки платежа" });
   }
 };
@@ -244,8 +244,8 @@ const createPaymentIntent = async (req, res) => {
     return res.status(201).json({ success: true, ...result });
   } catch (error) {
     return res.status(error.status || 500).json({
-      message: error.message || "Ошибка создания платёжного намерения",
-      code: error.code || undefined,
+      message: require("../utils/apiResponse").publicMessage(error, "Ошибка создания платёжного намерения"),
+      code: require("../utils/apiResponse").publicCode(error),
     });
   }
 };

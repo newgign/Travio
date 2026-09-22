@@ -36,7 +36,7 @@ async function listTravelers(req, res) {
 
     return res.json(result.rows);
   } catch (error) {
-    console.error("LIST TRAVELERS ERROR:", error);
+    require("../utils/logger").error("LIST TRAVELERS ERROR:", { error: error });
     return res.status(500).json({ message: "Ошибка загрузки сохранённых туристов" });
   }
 }
@@ -76,9 +76,9 @@ async function createTraveler(req, res) {
 
     return res.status(201).json(result.rows[0]);
   } catch (error) {
-    console.error("CREATE TRAVELER ERROR:", error);
+    require("../utils/logger").error("CREATE TRAVELER ERROR:", { error: error });
     return res.status(error.status || 500).json({
-      message: error.message || "Ошибка сохранения туриста",
+      message: require("../utils/apiResponse").publicMessage(error, "Ошибка сохранения туриста"),
     });
   }
 }
@@ -117,9 +117,9 @@ async function updateTraveler(req, res) {
 
     return res.json(result.rows[0]);
   } catch (error) {
-    console.error("UPDATE TRAVELER ERROR:", error);
+    require("../utils/logger").error("UPDATE TRAVELER ERROR:", { error: error });
     return res.status(error.status || 500).json({
-      message: error.message || "Ошибка обновления туриста",
+      message: require("../utils/apiResponse").publicMessage(error, "Ошибка обновления туриста"),
     });
   }
 }
@@ -141,7 +141,7 @@ async function deleteTraveler(req, res) {
 
     return res.json({ success: true });
   } catch (error) {
-    console.error("DELETE TRAVELER ERROR:", error);
+    require("../utils/logger").error("DELETE TRAVELER ERROR:", { error: error });
     return res.status(500).json({ message: "Ошибка удаления туриста" });
   }
 }
