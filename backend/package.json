@@ -52,7 +52,13 @@
     "test:sprint3o2": "node --require ./tests/offlineNetwork.cjs --test tests/hotelbedsSearchQuality.test.js",
     "test:sprint3o1": "node --require ./tests/offlineNetwork.cjs --test tests/hotelbedsSearchQuality.test.js",
     "test:sprint3o": "node --require ./tests/offlineNetwork.cjs --test tests/hotelbedsSearchQuality.test.js",
-    "test:sprint3n": "node --test tests/hotelbedsCatalogPlan.test.js"
+    "test:sprint3n": "node --test tests/hotelbedsCatalogPlan.test.js",
+    "db:dump": "node scripts/dbBackup.cjs",
+    "db:dump:verify": "node scripts/dbBackupVerify.cjs",
+    "db:restore:empty": "node scripts/dbRestore.cjs",
+    "db:inventory": "node scripts/dbInventory.cjs",
+    "db:schema:check": "node scripts/dbSchemaCheck.cjs",
+    "test:sprint3y": "node --require ./tests/offlineNetwork.cjs --test --test-concurrency=1 --test-force-exit tests/databaseContinuity.test.cjs"
   },
   "keywords": [],
   "author": "",
