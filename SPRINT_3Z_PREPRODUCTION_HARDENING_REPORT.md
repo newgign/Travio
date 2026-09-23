@@ -1,8 +1,13 @@
 # Sprint 3Z — Pre-production hardening / staging launch readiness
 
+Latest 3Z.1 implementation and owner evidence are recorded in section 30. Earlier missing-snapshot and blocked statuses below describe historical stages.
+
 CODE / OFFLINE: PASS.
-PRE-PRODUCTION PREFLIGHT: BLOCKED — OWNER RUNTIME/BUILD CONFIG NOT YET PROVIDED.
+SPRINT 3Z.1 HOTFIX: PASS.
+PRE-PRODUCTION PREFLIGHT: PASS.
+BUILD PREFLIGHT: PASS WITH WARNING.
 REAL RENDER ACCEPTANCE: NOT RUN.
+DATABASE STATE: NOT_QUERIED.
 REAL HOTELBEDS CALLS: 0.
 REAL PAYMENT CALLS: 0.
 REAL DB MUTATIONS: 0.
@@ -271,3 +276,120 @@ REAL PAYMENT CALLS: 0.
 REAL DB MUTATIONS: 0.
 LOCAL TEMPORARY TEST SCHEMA MUTATIONS: EXPECTED / PASS.
 LOCAL TEST DB MUTATIONS: TEMPORARY SCHEMAS ONLY — PASS / CLEANED BY EXISTING REGRESSION CONTRACT.
+
+## 30. Sprint 3Z.1 — Render Internal PostgreSQL preflight compatibility
+
+### Owner evidence and initial audit
+
+REAL OWNER PREFLIGHT BEFORE FIX: PASS 43 / WARN 0 / BLOCKED 1. The only blocker was DATABASE_URL / INVALID_DATABASE_CONFIGURATION. Owner reports a syntactically valid Render INTERNAL URL without an sslmode query parameter, with DB_SSL_MODE=disable. All other release safety checks passed. This is supplied owner evidence, not a new agent execution or connection. No URL, hostname, username or password is recorded here.
+
+The first commands were git status --short, git diff --stat, git diff, in that order. Tracked tree was clean; unrelated untracked README.txt, docs/ and SPRINT_3N_CATALOG_EXPANSION_PLANNER_REPORT.md were preserved.
+
+### Confirmed root cause
+
+preProductionCheck.cjs calls databaseConfig(env), then independently requires db.ssl?.rejectUnauthorized to be truthy. databaseConfig accepts disable and returns ssl=false, so the additional release-gate condition rejects this otherwise parser-supported configuration. This mismatch is not evidence of a failed deployed DB connection. Runtime supports only disable and verify-full; require is currently rejected and cannot be advertised as supported by a preflight-only fix.
+
+### Mandatory stop: reliable identification unavailable
+
+The requested source/config audit found no established trusted Render-internal hostname rule or binding of DATABASE_URL to a Render database resource. render.yaml declares DATABASE_URL with sync:false, without fromDatabase provenance. The internal-looking hostname in a 3Y synthetic test is a fixture for remote restore acknowledgement, not a trusted classification contract. Neither an unqualified hostname, a dpg prefix, a private IP nor the diagnostic label LIKELY_RENDER_INTERNAL proves the required classification.
+
+Per the owner's explicit instruction to STOP if reliable automatic identification cannot be established from existing source/config, no permissive heuristic or TLS exception was added. A reviewed identification/provenance contract is needed before implementation can proceed; raw credentials are not needed. External/unknown database protections remain unchanged. No external documentation request or network call was made.
+
+### Changes, verification and status
+
+Only SPRINT_3Z_PREPRODUCTION_HARDENING_REPORT.md changed. Runtime DB behavior changed: NO. render.yaml changed: NO. Preflight, env schema, tests and 3Y tooling changed: NO. No regression suites were rerun because implementation stopped at the explicitly required identification boundary; previous 3Z evidence remains 33/33 focused, 20/20 3Y, 101/101 backend (12 suites), verifier 194 syntax files / 395 secret-scan files / findings=[]. Those are historical results, not new 3Z.1 executions. Final git diff checks passed.
+
+CODE / OFFLINE (completed 3Z baseline): PASS — prior verified evidence.
+SPRINT 3Z.1 HOTFIX: BLOCKED — RELIABLE INTERNAL IDENTIFICATION CONTRACT NOT ESTABLISHED; NOT IMPLEMENTED.
+PRE-PRODUCTION PREFLIGHT: BLOCKED — OWNER EVIDENCE 43 PASS / 0 WARN / 1 BLOCKED; OWNER RE-RUN REQUIRED AFTER A FUTURE FIX.
+REAL RENDER ACCEPTANCE: NOT RUN.
+REAL HOTELBEDS CALLS: 0.
+REAL PAYMENT CALLS: 0.
+REAL DB MUTATIONS: 0.
+LOCAL TEST SCHEMA MUTATIONS IN THIS CONTINUATION: 0.
+
+No Render/env/deploy changes, external PostgreSQL calls, email, backup, restore, migrations, git add/commit/push, reset/restore/clean or edits to unrelated paths were performed.
+
+### Owner provenance established; hotfix completed — 2026-09-23
+
+The preceding STOP was correct under the then-authorized automatic-identification requirement. The owner subsequently supplied explicit identity evidence from a private comparison of the backend URL with the selected Render Internal Database URL:
+
+HOST_MATCH=True; PORT_MATCH=True; DATABASE_MATCH=True; USER_MATCH=True; SAME_DATABASE_IDENTITY=True.
+
+These are owner-reported comparison results, not agent network verification. No raw identity values or second URL are stored. The owner explicitly authorized an operator assertion instead of automatic classification. No hostname, dpg-prefix or private-IP heuristic was added.
+
+#### Recovered work before continuation
+
+The ordered git status/diff audit found exactly four modified files: this report, preProductionCheck.cjs, preProductionEnvSchema.cjs and preProductionReadiness.test.cjs. The three source/test changes were already complete and were preserved. They add exact preflight-only attestation, a separate OPTIONAL_OPERATOR_ATTESTATION category and six focused tests, retaining all previous 33 tests. Focused 39/39 and 3Y 20/20 had already passed in this same hotfix execution. The backend regression and verifier processes had been started after a safe local-only configuration check.
+
+#### Work completed after continuation
+
+Reviewed the recovered implementation and collected the final completion results of those existing processes: backend 101/101 across 12 suites, exit 0; verifier 194 syntax files / 395 secret-scan files / findings=[], exit 0. No duplicate regression run or implementation rewrite was needed. Only this report was edited after continuation; final diff checks passed.
+
+#### Preflight-only contract and owner procedure
+
+PREPROD_RENDER_INTERNAL_DB_ATTESTATION accepts exactly I_VERIFIED_DATABASE_URL_MATCHES_RENDER_INTERNAL_URL. With DB_SSL_MODE=disable and a valid URL/configuration, that assertion permits DATABASE_URL PASS with fixed code OWNER_ATTESTED_RENDER_INTERNAL_DATABASE. Missing/wrong assertion fails closed for disable. A supplied invalid assertion also blocks verify-full; the existing verified-TLS path with no assertion remains unchanged. Malformed/missing URLs, SSL query overrides and unsupported require still fail through existing validations. Provider/payment/JWT and all other release gates remain active.
+
+This is an operator assertion, not proof produced by the CLI. The operator must privately compare host, port, database and user with the intended Render Internal URL before each relevant snapshot check. Never set the assertion automatically based on a hostname or to suppress an unexplained blocker. Do not persist it in .env, Render runtime settings, frontend build env or application configuration. Use it only in the controlled local operator process after loading the reviewed snapshot; do not change DATABASE_URL or DB_SSL_MODE. The CLI neither logs the supplied assertion value nor emits identity values; --contract exposes only its name and purpose.
+
+Example for an owner who has already completed that identity comparison (not executed against an owner snapshot here):
+
+```powershell
+$env:PREPROD_RENDER_INTERNAL_DB_ATTESTATION='I_VERIFIED_DATABASE_URL_MATCHES_RENDER_INTERNAL_URL'
+try {
+  node backend/scripts/preProductionCheck.cjs
+  # Review exit code and safe check results; do not infer deployed acceptance.
+} finally {
+  Remove-Item Env:PREPROD_RENDER_INTERNAL_DB_ATTESTATION -ErrorAction SilentlyContinue
+}
+```
+
+The runtime does not read this variable. Runtime DB behavior changed: NO. backend/config/database.js changed: NO. render.yaml changed: NO. Render env changed: NO. DATABASE_URL/DB_SSL_MODE, server startup, productionGate and 3Y backup/restore behavior unchanged. No second URL or hostname allowlist was introduced.
+
+#### Exact changed files and validation
+
+1. backend/scripts/preProductionCheck.cjs — narrowly scoped operator assertion validation and safe PASS reason.
+2. backend/scripts/preProductionEnvSchema.cjs — separate optional operator metadata, no assertion value in --contract.
+3. backend/tests/preProductionReadiness.test.cjs — six added tests for assertion, URL/mode failures, other safety gates, output privacy and runtime/3Y isolation.
+4. SPRINT_3Z_PREPRODUCTION_HARDENING_REPORT.md — preserved blocked-stage history and recorded completion.
+
+Required commands completed for this implementation: focused preProductionReadiness 39/39 PASS; databaseContinuity 20/20 PASS; sprint3mRegression 101/101 PASS, 12 suites; sprint3mVerify PASS, 194 backend syntax files, 395 secret-scan files, findings=[]; git -c core.safecrlf=false diff --check PASS. Existing focused tests were not weakened. Frontend source unchanged; frontend suites/build not repeated.
+
+Before regression: localOnly=true, DATABASE_URL absent; no PGSERVICE/PGHOSTADDR/PGOPTIONS/PGSERVICEFILE/NODE_OPTIONS overrides. Only the unchanged runner's isolated local temporary schemas were created, populated and cleaned by its existing finally contract. No persistent database or owner/application schema was created or modified. LOCAL TEMPORARY TEST SCHEMA MUTATIONS: EXPECTED / PASS / CLEANED BY EXISTING REGRESSION CONTRACT.
+
+REAL Hotelbeds/payment/email/Render API/Render DB/remote PostgreSQL calls=0. Backup/restore/production migrations=0. No env-file changes, Render changes, deploy, git add/commit/push or unrelated edits. README.txt, docs/, SPRINT_3N_CATALOG_EXPANSION_PLANNER_REPORT.md and older reports remain untouched.
+
+CODE / OFFLINE: PASS.
+SPRINT 3Z.1 HOTFIX: PASS.
+PRE-PRODUCTION PREFLIGHT: OWNER RE-RUN REQUIRED.
+REAL RENDER ACCEPTANCE: NOT RUN.
+REAL HOTELBEDS CALLS: 0.
+REAL PAYMENT CALLS: 0.
+REAL DB MUTATIONS: 0.
+
+At the code-completion stage above, the owner's real snapshot had not yet been rerun with the assertion. The new owner evidence below supersedes that pending status; earlier results remain historical.
+
+### Final owner preflight evidence — 2026-09-23
+
+The owner reports a successful ordinary preflight after temporarily supplying the operator attestation, then a frontend build using the actual staging build values from the Render snapshot and a successful `node backend/scripts/preProductionCheck.cjs --build`. These are owner executions, not new agent runs.
+
+| Owner verification | PASS | WARN | BLOCKED |
+| --- | --- | --- | --- |
+| OWNER PREFLIGHT AFTER 3Z.1 | 44 | 0 | 0 |
+| OWNER BUILD PREFLIGHT | 48 | 1 | 0 |
+
+The only build warning is BUILD_CHUNK_SIZE / MAIN_CHUNK_OVER_500_KB, the known non-blocking bundle-size warning. Reported output retains acceptance=NOT_RUN and databaseState=NOT_QUERIED. Configuration/source/build validation does not establish deployed Render/browser acceptance or database reachability/schema state.
+
+Per owner evidence, PREPROD_RENDER_INTERNAL_DB_ATTESTATION was used only temporarily in controlled owner PowerShell and was NOT added to Render Environment. DATABASE_URL unchanged; DB_SSL_MODE unchanged; runtime DB behavior unchanged. Owner-verified identity evidence remains HOST_MATCH=True, PORT_MATCH=True, DATABASE_MATCH=True, USER_MATCH=True, SAME_DATABASE_IDENTITY=True. No raw URL, hostname, user or password is recorded.
+
+The owner reports no Hotelbeds, payment or Render DB calls during these checks. This report-only update performs no network/DB calls, builds, preflight runs or regression runs. Only SPRINT_3Z_PREPRODUCTION_HARDENING_REPORT.md was edited in this update. Existing hotfix source/test changes were preserved without modification; render.yaml and backend/config/database.js remain unchanged. Unrelated README.txt/docs/3N and older reports remain untouched. Ordered initial/final git audits and final diff check completed; no git add/commit/push/deploy.
+
+CODE / OFFLINE: PASS.
+SPRINT 3Z.1 HOTFIX: PASS.
+PRE-PRODUCTION PREFLIGHT: PASS.
+BUILD PREFLIGHT: PASS WITH WARNING.
+REAL RENDER ACCEPTANCE: NOT RUN.
+DATABASE STATE: NOT_QUERIED.
+REAL HOTELBEDS CALLS: 0.
+REAL PAYMENT CALLS: 0.
+REAL DB MUTATIONS: 0.

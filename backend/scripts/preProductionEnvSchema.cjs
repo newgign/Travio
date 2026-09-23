@@ -2,6 +2,9 @@
 module.exports = {
   REQUIRED_SECRET: ['DATABASE_URL', 'JWT_SECRET'],
   REQUIRED_NON_SECRET: ['CORS_ORIGINS', 'VITE_API_URL'],
+  OPTIONAL_OPERATOR_ATTESTATION: {
+    PREPROD_RENDER_INTERNAL_DB_ATTESTATION: 'Preflight only: explicit owner assertion after privately matching host, port, database and user against the Render Internal URL. Never infer or set automatically; not an application runtime setting. See report section 30 for controlled execution.',
+  },
   MUST_EQUAL: {
     NODE_ENV: 'production', ACTIVE_PROVIDER: 'hotelbeds', HOTELBEDS_ENV: 'test',
     HOTELBEDS_READ_ONLY: 'true', PAYMENTS_MODE: 'disabled', PAYMENTS_PROVIDER: 'none',

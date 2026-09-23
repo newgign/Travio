@@ -66,6 +66,67 @@ test('provider configuration, TEST disclosure, credentials and retry contract', 
   await blocked({ HOTELBEDS_STAGING_TEST_ENABLED: 'true' }, 'TEST_BUILD_DISCLOSURE');
   assert.equal((await check({ ...baseline(), HOTELBEDS_STAGING_TEST_ENABLED: 'true', VITE_HOTELBEDS_STAGING_TEST_ENABLED: 'true' })).status, 'PASS');
 });
+
+const attestationKey = 'PREPROD_RENDER_INTERNAL_DB_ATTESTATION';
+const attestationValue = 'I_VERIFIED_DATABASE_URL_MATCHES_RENDER_INTERNAL_URL';
+const attested = { DB_SSL_MODE: 'disable', [attestationKey]: attestationValue };
+test('operator attestation permits disable with fixed provenance code and preserves verified TLS', async () => {
+  for (const patch of [{}, { DB_SSL_MODE: 'verify-full' }, attested]) {
+    const result = await check({ ...baseline(), ...patch });
+    assert.equal(result.status, 'PASS');
+    assert.equal(result.checks.find(c => c.id === 'DATABASE_URL').code,
+      patch === attested ? 'OWNER_ATTESTED_RENDER_INTERNAL_DATABASE' : 'VALID');
+  }
+});
+test('disable needs exact attestation; invalid assertions also block verified TLS', async () => {
+  for (const mode of ['disable', 'verify-full']) {
+    for (const value of ['', 'true', attestationValue.toLowerCase(), ` ${attestationValue}`, `${attestationValue} `]) {
+      await blocked({ DB_SSL_MODE: mode, [attestationKey]: value }, 'DATABASE_URL');
+    }
+  }
+  for (const host of ['localhost', 'unknown.example', 'dpg-fixture-a', 'dpg-fixture.render.com']) {
+    await blocked({ DATABASE_URL: `postgresql://fixture:fixture@${host}/staging`, DB_SSL_MODE: 'disable' }, 'DATABASE_URL');
+  }
+});
+test('attestation never bypasses URL validation or unsupported require', async () => {
+  for (const url of [undefined, '', 'invalid', 'https://u:p@host/db', 'postgresql://u:p@host/', 'postgresql://host/db', 'postgresql://u:p@host/db#fragment', 'postgresql://u:p@host/db?sslmode=disable']) {
+    await blocked({ ...attested, DATABASE_URL: url }, 'DATABASE_URL');
+  }
+  await blocked({ ...attested, DB_SSL_MODE: 'require' }, 'DATABASE_URL');
+});
+test('attestation does not bypass provider/payment safety', async () => {
+  for (const key of contract.MUST_BE_FALSE) await blocked({ ...attested, [key]: 'true' }, key);
+  await blocked({ ...attested, PAYMENTS_MODE: 'sandbox' }, 'PAYMENTS_MODE');
+  await blocked({ ...attested, HOTELBEDS_ENV: 'live' }, 'HOTELBEDS_ENV');
+});
+test('attestation and database identity never appear in results or contract values', async () => {
+  const url = 'postgresql://unique_operator:unique_password@unique-private.example/unique_database';
+  for (const value of [attestationValue, 'invalid-private-assertion']) {
+    const output = JSON.stringify(await check({ ...baseline(), ...attested, DATABASE_URL: url, [attestationKey]: value }));
+    for (const secret of [value, url, 'unique_operator', 'unique_password', 'unique-private.example', 'unique_database']) assert.ok(!output.includes(secret));
+  }
+  assert.ok(contract.OPTIONAL_OPERATOR_ATTESTATION[attestationKey]);
+  assert.ok(!JSON.stringify(contract).includes(attestationValue));
+  for (const category of ['REQUIRED_SECRET', 'REQUIRED_NON_SECRET']) assert.ok(!contract[category].includes(attestationKey));
+  assert.ok(!Object.hasOwn(contract.MUST_EQUAL, attestationKey));
+});
+test('operator assertion is ignored by runtime and absent from 3Y/server/frontend sources', () => {
+  const { databaseConfig } = require('../config/database');
+  for (const mode of ['disable', 'verify-full']) {
+    const env = { ...baseline(), DB_SSL_MODE: mode };
+    assert.deepEqual(databaseConfig({ ...env, [attestationKey]: attestationValue }), databaseConfig(env));
+  }
+  assert.throws(() => databaseConfig({ ...baseline(), ...attested, DB_SSL_MODE: 'require' }));
+  for (const file of ['backend/config/database.js', 'backend/server.js', 'backend/scripts/lib/dbContinuity.cjs', 'backend/scripts/dbBackup.cjs', 'backend/scripts/dbRestore.cjs', 'render.yaml']) {
+    assert.ok(!fs.readFileSync(path.join(__dirname, '../..', file), 'utf8').includes(attestationKey));
+  }
+  const visit = dir => fs.readdirSync(dir, { withFileTypes: true }).forEach(entry => {
+    const file = path.join(dir, entry.name);
+    if (entry.isDirectory()) visit(file);
+    else if (/\.(js|jsx|mjs)$/.test(file)) assert.ok(!fs.readFileSync(file, 'utf8').includes(attestationKey));
+  });
+  visit(path.join(__dirname, '../../frontend/src'));
+});
 test('secrets, URL, user/host, provider credentials never enter output even on failure', async () => {
   const env = { ...baseline(), HOTELBEDS_API_KEY: crypto.randomBytes(20).toString('hex'), HOTELBEDS_API_SECRET: crypto.randomBytes(20).toString('hex'), OFFER_TOKEN_SECRET: crypto.randomBytes(32).toString('hex') };
   for (const patch of [{}, { CORS_ORIGINS: env.DATABASE_URL, VITE_API_URL: env.HOTELBEDS_API_SECRET }]) {

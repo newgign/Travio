@@ -36,11 +36,19 @@ async function configuration(env) {
   add('OFFER_TOKEN_SECRET', strongSecret(env.OFFER_TOKEN_SECRET || env.JWT_SECRET), 'WEAK_OR_MISSING_EFFECTIVE_SECRET');
   if (env.OFFER_SECRET) checks.push({ id: 'OFFER_SECRET', status: 'WARN', code: 'UNUSED_ENV_NAME' });
   let dbValid = false;
+  const attestation = env.PREPROD_RENDER_INTERNAL_DB_ATTESTATION;
+  const ownerAttested = attestation === 'I_VERIFIED_DATABASE_URL_MATCHES_RENDER_INTERNAL_URL';
+  const attestationValid = attestation === undefined || ownerAttested;
+  let internalException = false;
   try {
     const db = databaseConfig(env), url = new URL(env.DATABASE_URL);
-    dbValid = Boolean(url.hostname && url.username && url.pathname.length > 1 && !url.hash && db.ssl?.rejectUnauthorized);
+    // Operator provenance only; never infer private networking from a hostname.
+    internalException = env.DB_SSL_MODE === 'disable' && db.ssl === false && ownerAttested;
+    dbValid = Boolean(attestationValid && url.hostname && url.username && url.pathname.length > 1 && !url.hash &&
+      (db.ssl?.rejectUnauthorized || internalException));
   } catch { /* Never emit configuration exceptions or URLs. */ }
   add('DATABASE_URL', dbValid, env.DATABASE_URL ? 'INVALID_DATABASE_CONFIGURATION' : 'CONFIG_NOT_PROVIDED');
+  if (dbValid && internalException) checks[checks.length - 1].code = 'OWNER_ATTESTED_RENDER_INTERNAL_DATABASE';
   let corsValid = false;
   try { const origins = allowedOrigins(env); corsValid = origins.length > 0 && origins.every(publicHttps); } catch { /* fixed output */ }
   add('CORS_ORIGINS', Boolean(env.CORS_ORIGINS) && corsValid, env.CORS_ORIGINS ? 'INVALID_PUBLIC_ORIGIN' : 'CONFIG_NOT_PROVIDED');
