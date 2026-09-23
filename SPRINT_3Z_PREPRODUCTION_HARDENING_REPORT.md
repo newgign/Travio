@@ -1,19 +1,21 @@
 # Sprint 3Z — Pre-production hardening / staging launch readiness
 
-Latest 3Z.1 implementation and owner evidence are recorded in section 30. Earlier missing-snapshot and blocked statuses below describe historical stages.
+Latest owner Render staging acceptance is recorded in section 31; 3Z.1 implementation and preflight evidence remain in section 30. Earlier NOT RUN, NOT_QUERIED, zero-call and blocked statuses describe their respective historical scopes.
 
 CODE / OFFLINE: PASS.
 SPRINT 3Z.1 HOTFIX: PASS.
 PRE-PRODUCTION PREFLIGHT: PASS.
-BUILD PREFLIGHT: PASS WITH WARNING.
-REAL RENDER ACCEPTANCE: NOT RUN.
-DATABASE STATE: NOT_QUERIED.
-REAL HOTELBEDS CALLS: 0.
-REAL PAYMENT CALLS: 0.
-REAL DB MUTATIONS: 0.
+BUILD PREFLIGHT: PASS WITH 1 KNOWN WARNING.
+REAL RENDER HEALTH / READINESS: PASS.
+REAL RENDER CONSUMER ACCEPTANCE: PASS.
+REAL HOTELBEDS TEST SEARCH: PASS.
+REAL BOOKING: DISABLED.
+REAL PAYMENTS: DISABLED.
+REAL DB MUTATIONS DURING ACCEPTANCE: 0.
+RENDER DATABASE MIGRATION: NOT RUN.
 LOCAL TEST DB MUTATIONS: TEMPORARY SCHEMAS ONLY — PASS / CLEANED BY EXISTING REGRESSION CONTRACT.
 
-Это подготовка безопасного staging release candidate, не production launch. Дата проверки: 2026-09-22. Ни remote acceptance, ни доступность реального runtime из offline evidence не выводятся.
+Это staging release candidate acceptance, не production launch. Первоначальные offline проверки: 2026-09-22; финальное owner evidence записано 2026-09-23 в разделе 31. Remote acceptance атрибутирована владельцу отдельно от offline evidence.
 
 ## 1. Initial git state
 
@@ -393,3 +395,60 @@ DATABASE STATE: NOT_QUERIED.
 REAL HOTELBEDS CALLS: 0.
 REAL PAYMENT CALLS: 0.
 REAL DB MUTATIONS: 0.
+
+
+## 31. Final owner Render staging release candidate acceptance — 2026-09-23
+
+The following evidence was supplied by the owner after checks on deployed Render staging. The agent did not repeat browser, provider, health or database calls during this report update. This is acceptance of the checked staging release candidate scope, not a production launch or authorization to enable sales, booking or payments.
+
+### Owner preflight and deployed backend evidence
+
+| Check | Owner result |
+| --- | --- |
+| PRE-PRODUCTION PREFLIGHT | PASS 44 / WARN 0 / BLOCKED 0 |
+| BUILD PREFLIGHT | PASS 48 / WARN 1 / BLOCKED 0 |
+| Only build warning | BUILD_CHUNK_SIZE / MAIN_CHUNK_OVER_500_KB; known, non-blocking |
+| GET /health | status=ok, database ok=true |
+| GET /api/health/ready | status=ready, database ok=true, shuttingDown=false |
+| Render startup logs | Service successfully deployed and available |
+| Startup migration/reset/seed | No evidence observed in the owner-reviewed logs |
+| Secret leakage | No evidence observed on owner screenshots |
+
+These health results establish the reported reachability/readiness scope. As documented in section 16, the existing endpoints do not establish full schema or migration-ledger validation. The offline preflight's acceptance=NOT_RUN and databaseState=NOT_QUERIED remain accurate for that CLI execution; deployed owner checks are separate evidence. Absence of a shown log issue is not a claim of exhaustive log/security verification.
+
+### Owner consumer browser acceptance
+
+PASS on deployed Render for Home, Help, Contacts, Favorites, My Bookings, Profile, 404, Results, Hotel Details and mobile navigation. Checked widths: 1440, 768, 390 and 320.
+
+Results at 320: the Hotelbeds TEST card fits; price and CTA are not clipped; disabled booking is displayed; no visible horizontal overflow.
+
+Grand Kaptan Details at 320: gallery/thumbnails PASS. The selected candidate was preserved:
+
+| Selected offer field | Owner-observed value |
+| --- | --- |
+| Room | Side Sea View |
+| Board | Всё включено |
+| Dates | 5–12 октября 2026 |
+| Duration | 7 ночей |
+| Guests | 2 взрослых |
+| TOTAL | 1 014,42 EUR |
+
+Hotelbeds TEST disclosure is present; booking is disabled and payments are unavailable. Lower blocks/footer fit; no visible horizontal overflow. Console screenshots show no application errors. The shown browser Intervention warning about lazy-loaded images is not classified as an application defect or release blocker.
+
+REAL HOTELBEDS TEST SEARCH: PASS is owner acceptance evidence. Earlier zero-provider-call statements apply to agent/offline/preflight stages and are not a total count for this real owner TEST search. An exact provider-call count was not supplied. No provider calls were made by the agent in this update. REAL DB MUTATIONS DURING ACCEPTANCE: 0 is recorded as owner-reported evidence; no database mutation audit was independently performed here.
+
+### Report-only update and final status
+
+Initial git status --short, git diff --stat and git diff ran in that order: tracked tree clean; only the existing unrelated README.txt, docs/ and SPRINT_3N_CATALOG_EXPANSION_PLANNER_REPORT.md were untracked. Exactly one file was edited: SPRINT_3Z_PREPRODUCTION_HARDENING_REPORT.md. Source code, tests, render.yaml, env and runtime configuration were not changed. No tests/builds, provider calls, DB mutation/migration/backup/restore, git add/commit/push or deploy were executed. Unrelated files and older reports were preserved. Final git diff --check passed, followed by status/diff-stat/diff review.
+
+CODE / OFFLINE: PASS.
+SPRINT 3Z.1 HOTFIX: PASS.
+PRE-PRODUCTION PREFLIGHT: PASS.
+BUILD PREFLIGHT: PASS WITH 1 KNOWN WARNING.
+REAL RENDER HEALTH / READINESS: PASS.
+REAL RENDER CONSUMER ACCEPTANCE: PASS.
+REAL HOTELBEDS TEST SEARCH: PASS.
+REAL BOOKING: DISABLED.
+REAL PAYMENTS: DISABLED.
+REAL DB MUTATIONS DURING ACCEPTANCE: 0.
+RENDER DATABASE MIGRATION: NOT RUN.
