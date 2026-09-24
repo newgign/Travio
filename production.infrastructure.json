@@ -1,0 +1,214 @@
+{
+  "schemaVersion": 1,
+  "environment": "production",
+  "mode": "DRY_RUN",
+  "resources": {
+    "backend": {
+      "logicalName": "asedeliya-production-api",
+      "type": "web",
+      "branch": "main",
+      "runtime": "node",
+      "healthPath": "/health",
+      "readinessPath": "/api/health/ready",
+      "requiredEnvNames": [
+        "APP_ENV",
+        "NODE_ENV",
+        "ACTIVE_PROVIDER",
+        "HOTELBEDS_ENV",
+        "HOTELBEDS_READ_ONLY",
+        "PAYMENTS_MODE",
+        "PAYMENTS_PROVIDER",
+        "HOTELBEDS_BOOKING_ENABLED",
+        "HOTELBEDS_LIVE_BOOKING_ENABLED",
+        "PRODUCTION_SALES_ENABLED",
+        "REAL_CHARGES_ENABLED",
+        "REAL_REFUNDS_ENABLED",
+        "HOT_DEALS_MONITOR_ENABLED",
+        "HOTELBEDS_CONTENT_SYNC_ENABLED",
+        "CORS_ORIGINS",
+        "DB_SSL_MODE",
+        "RELEASE_SHA",
+        "HOTELBEDS_ENABLED",
+        "HOTELBEDS_STAGING_TEST_ENABLED",
+        "HOTELBEDS_READ_RETRIES",
+        "EMAIL_ENABLED",
+        "DB_BACKUP_AUTO_ENABLED",
+        "HEALTH_MONITOR_ENABLED",
+        "RELIABILITY_MONITOR_ENABLED",
+        "NODE_VERSION",
+        "TRUST_PROXY",
+        "LOG_FORMAT"
+      ],
+      "requiredSecretNames": [
+        "DATABASE_URL",
+        "JWT_SECRET",
+        "OFFER_TOKEN_SECRET"
+      ],
+      "conditionalSecretNames": [
+        "HOTELBEDS_API_KEY",
+        "HOTELBEDS_API_SECRET",
+        "HOTELBEDS_SECRET"
+      ]
+    },
+    "frontend": {
+      "logicalName": "asedeliya-production-web",
+      "type": "static",
+      "branch": "main",
+      "runtime": "static",
+      "publishDirectory": "frontend/dist",
+      "spaFallbackRequired": true,
+      "apiTargetRequired": true,
+      "requiredEnvNames": [
+        "APP_ENV",
+        "NODE_VERSION",
+        "RELEASE_SHA",
+        "VITE_API_URL",
+        "VITE_HOTELBEDS_STAGING_TEST_ENABLED"
+      ],
+      "requiredSecretNames": [],
+      "sourceMapsAllowed": false,
+      "testDisclosureRequired": true,
+      "salesDisabledRequired": true
+    },
+    "database": {
+      "logicalName": "asedeliya-production-db",
+      "type": "database",
+      "engine": "postgresql",
+      "ownerProvisioningRequired": true,
+      "targetAttestationRequired": true,
+      "migrationRequired": true,
+      "backupRequiredBeforeMigration": true
+    }
+  },
+  "connections": {
+    "backendDatabase": "DATABASE_URL",
+    "backendCors": "CORS_ORIGINS",
+    "frontendBackend": "VITE_API_URL"
+  },
+  "stagingMetadata": {
+    "backend": "asedeliya-staging-api",
+    "frontend": "asedeliya-staging-web",
+    "databaseIdentityEnvName": "STAGING_DATABASE_LOGICAL_NAME"
+  },
+  "requiredAttestationNames": [
+    "PRODUCTION_DATABASE_TARGET_ATTESTED",
+    "STAGING_DATABASE_IDENTITY_ATTESTED",
+    "PRODUCTION_DATABASE_IDENTITY_ATTESTED",
+    "DATABASES_CONFIRMED_DISTINCT",
+    "PRODUCTION_BACKUP_VERIFIED",
+    "PRODUCTION_SCHEMA_LEDGER_REVIEWED",
+    "PRODUCTION_MIGRATION_AUTHORIZATION"
+  ],
+  "release": {
+    "receipt": "frontend/dist/release.json",
+    "schemaVersion": 1,
+    "environment": "production",
+    "backendRevisionEnvName": "RELEASE_SHA",
+    "expectedRevisionEnvName": "EXPECTED_RELEASE_SHA",
+    "mismatchPolicy": "BLOCKED"
+  },
+  "runbook": "PRODUCTION_FOUNDATION_RUNBOOK.md",
+  "ownerTemplate": "PRODUCTION_OWNER_CONFIGURATION_TEMPLATE.md",
+  "provisioningOrder": [
+    {
+      "step": 1,
+      "action": "REVIEW_MANIFEST",
+      "requiredGate": "RESOURCE_MANIFEST_VALID"
+    },
+    {
+      "step": 2,
+      "action": "OWNER_PROVISION_DATABASE",
+      "requiredGate": "OWNER_RESOURCE_CREATION_AUTHORIZED"
+    },
+    {
+      "step": 3,
+      "action": "VERIFY_DATABASE_IDENTITY",
+      "requiredGate": "PRODUCTION_DATABASE_IDENTITY_ATTESTED"
+    },
+    {
+      "step": 4,
+      "action": "CONFIRM_DATABASE_DISTINCTNESS",
+      "requiredGate": "DATABASES_CONFIRMED_DISTINCT"
+    },
+    {
+      "step": 5,
+      "action": "RECORD_TARGET_ATTESTATIONS",
+      "requiredGate": "DATABASE_ATTESTATIONS_RECORDED"
+    },
+    {
+      "step": 6,
+      "action": "CONFIGURE_BACKEND_PRIVATELY",
+      "requiredGate": "BACKEND_CONFIGURATION_REVIEWED"
+    },
+    {
+      "step": 7,
+      "action": "RUN_FOUNDATION_CHECK",
+      "requiredGate": "FOUNDATION_PASS"
+    },
+    {
+      "step": 8,
+      "action": "RUN_INFRASTRUCTURE_CHECK",
+      "requiredGate": "INFRASTRUCTURE_SNAPSHOT_PASS"
+    },
+    {
+      "step": 9,
+      "action": "OBTAIN_VERIFIED_BACKUP",
+      "requiredGate": "BACKUP_PREREQUISITE_ATTESTED"
+    },
+    {
+      "step": 10,
+      "action": "INSPECT_SCHEMA_LEDGER",
+      "requiredGate": "SCHEMA_LEDGER_REVIEWED"
+    },
+    {
+      "step": 11,
+      "action": "SEPARATELY_AUTHORIZE_MIGRATION",
+      "requiredGate": "MIGRATION_READINESS_PASS_AND_SEPARATE_OWNER_EXECUTION_AUTHORIZATION"
+    },
+    {
+      "step": 12,
+      "action": "OWNER_DEPLOY_BACKEND",
+      "requiredGate": "SCHEMA_VERIFIED_AND_BACKEND_DEPLOY_AUTHORIZED"
+    },
+    {
+      "step": 13,
+      "action": "CHECK_HEALTH",
+      "requiredGate": "HEALTH_PASS"
+    },
+    {
+      "step": 14,
+      "action": "CHECK_READINESS",
+      "requiredGate": "READINESS_PASS"
+    },
+    {
+      "step": 15,
+      "action": "CONFIGURE_FRONTEND_API",
+      "requiredGate": "PRODUCTION_API_TARGET_REVIEWED"
+    },
+    {
+      "step": 16,
+      "action": "BUILD_FRONTEND",
+      "requiredGate": "BUILD_COMPLETED"
+    },
+    {
+      "step": 17,
+      "action": "RUN_BUILD_PREFLIGHT",
+      "requiredGate": "FOUNDATION_AND_INFRASTRUCTURE_RECHECK_PASS"
+    },
+    {
+      "step": 18,
+      "action": "OWNER_DEPLOY_FRONTEND",
+      "requiredGate": "FRONTEND_DEPLOY_AUTHORIZED"
+    },
+    {
+      "step": 19,
+      "action": "BROWSER_ACCEPTANCE",
+      "requiredGate": "OWNER_BROWSER_ACCEPTANCE_PASS"
+    },
+    {
+      "step": 20,
+      "action": "KEEP_SALES_DISABLED",
+      "requiredGate": "SALES_GATES_SAFE"
+    }
+  ]
+}
