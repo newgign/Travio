@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "environment": "production",
+  "logicalDatabase": "asedeliya-production-db",
+  "logicalStagingDatabase": "asedeliya-staging-db",
+  "productionDatabaseCreated": false,
+  "comparison": null,
+  "attestations": {
+    "STAGING_DATABASE_IDENTITY_ATTESTED": null,
+    "PRODUCTION_DATABASE_IDENTITY_ATTESTED": null,
+    "DATABASES_CONFIRMED_DISTINCT": null,
+    "PRODUCTION_DATABASE_TARGET_ATTESTED": null
+  },
+  "migrationAuthorized": false,
+  "migrationRun": false
+}
