@@ -19,7 +19,8 @@ export function stayLabel(value) {
   return `за ${nights} ${word}`;
 }
 const textCompare = (a,b) => String(a ?? '').localeCompare(String(b ?? ''), 'ru');
-export function stableSortHotels(offers, sort='priceAsc') {
+export function stableSortHotels(offers, sort='default') {
+  if(!['priceAsc','priceDesc','pricePerNight','stars','rating','name'].includes(sort))return [...offers];
   const night = offer => calculatePricePerNight(offer.price, offer.nights, offer.currency);
   const numeric = (a,b,descending=false) => {
     if (a == null || !Number.isFinite(Number(a))) return b == null ? 0 : 1;

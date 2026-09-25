@@ -98,7 +98,7 @@ test('3W consumer baseline: SSR/source/CSS evidence, not browser geometry', asyn
         const html=render(Filters,{instant});
         const ids=[...html.matchAll(/\bid="([^"]+)"/g)].map(x=>x[1]);
         const labels=[...html.matchAll(/\bfor="([^"]+)"/g)].map(x=>x[1]);
-        assert.equal(ids.length,instant?6:7);assert.equal(new Set(ids).size,ids.length);
+        assert.equal(ids.length,7);assert.equal(new Set(ids).size,ids.length);
         for(const id of ids)assert.ok(labels.includes(id),'Unlabelled filter '+id);
       }
       for(const [file,breakpoints] of [['styles/Profile.css',[1024,600]],['styles/AccountPages.css',[600]],['styles/Auth.css',[600,360]],['styles/Help.css',[1000,600]]]) {

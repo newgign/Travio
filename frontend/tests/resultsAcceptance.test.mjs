@@ -128,8 +128,8 @@ test('3Q Results presentation, instant controls and mobile accessibility', async
     });
     await t.test('responsive and error-state wiring retains offline boundaries',async()=>{
       const source=await readFile(new URL('../src/pages/Results.jsx',import.meta.url),'utf8');
-      for(const marker of ['TEST_CATALOG_EMPTY','HOTELBEDS_AUTH_BLOCKED','HOTELBEDS_UNKNOWN_BLOCKED','catalogEmptyMessage','filterEmptyMessage','noRatesMessage'])assert.ok(source.includes(marker));
-      assert.match(source,/\[provider, requestQuery\]/);assert.match(source,/\[destinationCode,diagnostic\]/);assert.match(source,/document.body.style.overflow='hidden'/);assert.match(source,/filterTrigger.current\?\.focus\(\)/);
+      for(const marker of ['TEST_CATALOG_EMPTY','searchFailureMessage','ResultsNotice','FILTER_EMPTY','PROVIDER_EMPTY'])assert.ok(source.includes(marker));
+      assert.match(source,/\[requestQuery,valid\]/);assert.doesNotMatch(source,/setError\(err\.message|console\.error/);assert.match(source,/onRetry=\{\(\)=>loadTours\(true\)\}/);assert.match(source,/\[destinationCode,diagnostic\]/);assert.match(source,/document.body.style.overflow='hidden'/);assert.match(source,/filterTrigger.current\?\.focus\(\)/);
       const css=await readFile(new URL('../src/styles/Results.css',import.meta.url),'utf8');
       assert.match(css,/visibility:hidden; overflow:hidden/);assert.match(css,/:focus-visible/);assert.match(css,/max-width:100%/);
       const cards=await readFile(new URL('../src/components/TourCard.css',import.meta.url),'utf8');

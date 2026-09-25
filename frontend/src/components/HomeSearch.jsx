@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { countryLabel, destinationLabel } from '../utils/testDestinationLabels';
 import { buildHomeSearch, destinationKey, guestLabel, initialHomeSearch, nightLabel } from '../utils/homeSearch';
 import GuestPanel from './GuestPanel';
+import { beginResultsSearch } from '../services/resultsSearch';
 import './HomeSearch.css';
 
 export default function HomeSearch({destinations=[],catalogState='loading'}) {
@@ -25,7 +26,7 @@ function HomeSearchForm({params,destinations,catalogState}) {
     event.preventDefault();
     const result=buildHomeSearch(form,destinations,diagnostic);
     setErrors(result.errors);
-    if(result.url) navigate(result.url);
+    if(result.url) {beginResultsSearch(result.url);navigate(result.url);}
     else {if(result.errors.guests)setOpen(true);event.currentTarget.querySelector(`[name="${Object.keys(result.errors)[0]}"]`)?.focus();}
   }
   return <div className="home-search-wrap">
@@ -45,7 +46,7 @@ function HomeSearchForm({params,destinations,catalogState}) {
         <label htmlFor="home-guests">Гости</label><button ref={trigger} id="home-guests" name="guests" type="button" aria-expanded={open} aria-controls="home-guest-panel" aria-invalid={!!errors.guests} aria-describedby={errors.guests?'home-error-guests':undefined} onClick={()=>setOpen(!open)}>{guestLabel(form.adults,form.children)}<span aria-hidden="true">⌄</span></button>
         {open && <GuestPanel form={form} onChange={value=>{setForm(value);setErrors({});}} onClose={close} />}{error('guests')}
       </div>
-      <button type="submit" className="home-search-submit">Найти отели</button>
+      <button type="submit" className="home-search-submit" disabled={!diagnostic && (catalogState!=='ready' || !destinations.some(row=>row.hotelCount>0))}>Найти отели</button>
     </form>
     <div className="home-search-note">{test?'Тестовый поиск · реальное бронирование и оплата отключены':'Выбирайте из направлений загруженного каталога.'}</div>
   </div>;

@@ -4,6 +4,7 @@ import StayPrice from '../components/StayPrice';
 import { normalizeBoardDisplay, normalizeRoomDisplay, stayLabel } from '../utils/hotelOfferDisplay';
 import { countryLabel } from '../utils/testDestinationLabels';
 import { visibleProviderOffer } from "../utils/providerEnvironment";
+import { offerFreshUntil } from '../utils/selectedOfferSnapshot';
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useFavorites } from "../context/FavoritesContext";
@@ -22,8 +23,10 @@ export default function TourCard({ tour }) {
   const { toggleFavorite, isFavorite } = useFavorites();
 
   const [now, setNow] = useState(() => Date.now());
+  const [favoriteError,setFavoriteError]=useState('');
+  const [favoritePending,setFavoritePending]=useState(false);
   useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(timer); }, []);
-  const publicPrice = !import.meta.env.PROD || (visibleProviderOffer(tour) && now - Date.parse(tour.observedAt) < 900000);
+  const publicPrice = !import.meta.env.PROD || (visibleProviderOffer(tour) && now < offerFreshUntil(tour,now));
   const id = tour.id;
   const hotelName = tour.name || tour.title || tour.hotel || "Отель";
   const displayImage = tour.image || tour.images?.[0] || null;
@@ -45,12 +48,16 @@ export default function TourCard({ tour }) {
 
   async function handleFavorite(event) {
     event.stopPropagation();
+    if(favoritePending)return;
+    setFavoriteError('');
     if (!localStorage.getItem("token")) { navigate("/login"); return; }
+    setFavoritePending(true);
     try { await toggleFavorite(tour); }
     catch (error) {
       if (error.message === "AUTH_REQUIRED") { navigate("/login"); return; }
-      alert(error.message || "Не удалось обновить избранное");
+      setFavoriteError('Не удалось обновить избранное. Попробуйте ещё раз.');
     }
+    finally { setFavoritePending(false); }
   }
 
 
@@ -60,10 +67,11 @@ export default function TourCard({ tour }) {
   return <article className="tour-card">
     <div className="tour-card-image">
       <HotelImage key={`${tour.provider}:${tour.providerHotelId || tour.id}`} src={displayImage} alt={hotelName} loading="lazy" />
-      <button type="button" className={`tour-card-favorite ${favoriteActive?'active':''}`} onClick={handleFavorite} aria-label={favoriteActive?'Удалить из избранного':'Добавить в избранное'}>{favoriteActive?'♥':'♡'}</button>
+      <button type="button" className={`tour-card-favorite ${favoriteActive?'active':''}`} onClick={handleFavorite} disabled={favoritePending} aria-pressed={favoriteActive} aria-label={favoriteActive?'Удалить из избранного':'Добавить в избранное'}>{favoriteActive?'♥':'♡'}</button>
       {tour.priceEnvironment==='test' && <div className="tour-card-overlay-top"><span className="tour-card-test-badge">Hotelbeds TEST</span></div>}
     </div>
     <div className="tour-card-content">
+      {favoriteError && <p role="alert">{favoriteError}</p>}
       <div className="tour-card-header"><div><h3>{hotelName}</h3>
         {category?<span className="tour-card-category" aria-label={`Категория отеля: ${stars} звёзд`}>{'★'.repeat(stars)}</span>:<small>Категория не указана</small>}
         <p className="tour-card-location">{[tour.city,countryLabel(tour.country)].filter(Boolean).join(', ')}</p>

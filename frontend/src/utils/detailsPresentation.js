@@ -59,7 +59,7 @@ export function hotelAmenities(offer) {
   return [...new Set([...Object.entries(flags).filter(([key]) => offer[key] === true).map(([, label]) => label), ...names])].slice(0, 20);
 }
 
-const returnKeys = ['provider', 'countryCode', 'country', 'destinationCode', 'city', 'stagingTestHotel', 'checkIn', 'checkOut', 'departureDate', 'nights', 'adults', 'people', 'children', 'childrenAges', 'rooms', 'food', 'roomType', 'maxPrice', 'stars', 'rating', 'beachLine', 'beachType', 'sort', 'page'];
+const returnKeys = ['provider', 'countryCode', 'country', 'destinationCode', 'city', 'stagingTestHotel', 'checkIn', 'checkOut', 'departureDate', 'nights', 'adults', 'people', 'children', 'childrenAges', 'rooms', 'food', 'roomType', 'maxPrice', 'stars', 'rating', 'beachLine', 'beachType', 'hotelName', 'sort', 'page'];
 export function resultsOrigin(location) {
   if (location.pathname !== '/results') return null;
   const source = new URLSearchParams(location.search), query = new URLSearchParams();

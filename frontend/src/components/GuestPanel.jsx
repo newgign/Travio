@@ -30,6 +30,9 @@ export default function GuestPanel({form,onChange,onClose}) {
         <output aria-live="polite">{form[field]}</output>
         <button type="button" aria-label={field==='adults' ? 'Увеличить число взрослых' : 'Увеличить число детей'} disabled={form[field]>=(field==='adults'?6:3)} onClick={()=>onChange(changeGuestCount(form,field,1))}>+</button></div>
     </div>)}
+    <div className="home-guest-row"><span>Номера<small>Сейчас доступен поиск одного номера</small></span><div>
+      <output aria-label="Количество номеров">1</output>
+    </div></div>
     {form.childrenAges.map((age,index)=><div className="home-child-age" key={index}><label htmlFor={`home-child-${index}`}>Возраст ребёнка {index+1}</label>
       <select id={`home-child-${index}`} name={`childAge${index}`} value={age} required onChange={event=>onChange({...form,childrenAges:form.childrenAges.map((value,i)=>i===index?event.target.value:value)})}>
         <option value="">Укажите возраст</option>{Array.from({length:18},(_,n)=><option value={n} key={n}>{n}</option>)}

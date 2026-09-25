@@ -8,6 +8,7 @@ export default function LocalResultsFilters({currency,boards}) {
   const field=(name,label,control)=><div className="filter-block"><label htmlFor={`filter-${name}`}>{label}</label>{control}</div>;
   const props=name=>({id:`filter-${name}`,name,className:'filter-input',value:params.get(name)||'',onChange:change});
   return <aside className="results-filters-panel"><div className="filter-title-row"><h2>Фильтры</h2></div>
+    {field('hotelName','Название отеля',<input {...props('hotelName')} type="search" maxLength={100} placeholder="Поиск среди найденных" />)}
     {field('maxPrice','Цена за весь период — до',<><input {...props('maxPrice')} type="number" min="0" step="1" placeholder={`Сумма в ${currency}`} /><small>Лимит только в {currency}. При заданном лимите тарифы в других валютах скрыты. Конвертации нет.</small></>)}
     {field('stars','Категория отеля',<select {...props('stars')}><option value="">Любая</option><option value="3">3★ и выше</option><option value="4">4★ и выше</option><option value="5">5★</option></select>)}
     {field('food','Питание',<select {...props('food')}><option value="">Любое</option>{(boards || Object.keys(BOARD_LABELS).map(code=>({code}))).map(board=><option key={board.code} value={board.code}>{normalizeBoardDisplay(board.code,board.name)}</option>)}</select>)}

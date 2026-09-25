@@ -12,7 +12,7 @@ export function searchSummary(params) {
   const date=params.get('checkIn') || params.get('departureDate');
   const parsed=date && new Date(`${date}T12:00:00Z`);
   const label=parsed && Number.isFinite(parsed.getTime()) ? parsed.toLocaleDateString('ru-RU',{day:'numeric',month:'long',timeZone:'UTC'}) : '';
-  return [label,stayLabel(params.get('nights') || 7).replace(/^за /,''),stayGuests(params.get('adults') || params.get('people') || 2,params.get('children') || 0)].filter(Boolean).join(' · ');
+  return [label,stayLabel(params.get('nights') || 7).replace(/^за /,''),stayGuests(params.get('adults') || params.get('people') || 2,params.get('children') || 0),pluralCount(params.get('rooms') || 1,['номер','номера','номеров'])].filter(Boolean).join(' · ');
 }
 export function editSearchLink(params) {
   const query=new URLSearchParams();
@@ -27,7 +27,7 @@ export function changePresentationFilter(params,key,value) {
   return next;
 }
 export function activeFilterChips(params,currency,boards=[]) {
-  const labels={stars:value=>`${value}★${value==='5'?'':' и выше'}`,food:value=>normalizeBoardDisplay(value,boards.find(b=>b.code===value)?.name),
+  const labels={hotelName:value=>`Название: ${value}`,stars:value=>`${value}★${value==='5'?'':' и выше'}`,food:value=>normalizeBoardDisplay(value,boards.find(b=>b.code===value)?.name),
     roomType:value=>value,maxPrice:value=>`до ${value} ${currency}`,rating:value=>`Рейтинг ${value}+`,beachLine:value=>`${value}-я линия`,beachType:value=>`Пляж: ${value}`};
   return localFilterKeys.filter(key=>params.get(key)).map(key=>({key,label:labels[key](params.get(key))}));
 }

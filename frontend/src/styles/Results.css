@@ -154,6 +154,10 @@
 }
 
 .results-content { min-width: 0; }
+.results-page .no-results { box-sizing:border-box; overflow-wrap:anywhere; }
+.results-page .no-results .results-edit { display:inline-block; margin:8px; white-space:normal; }
+.results-page .context-chip { max-width:100%; overflow-wrap:anywhere; white-space:normal; text-align:left; }
+.results-page .catalogue-search .home-search-note { color:#475569; }
 .results-content-head {
   display: flex;
   justify-content: space-between;

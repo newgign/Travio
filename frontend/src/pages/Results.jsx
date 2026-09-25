@@ -1,8 +1,12 @@
-import { providerQuery, filterOffers, resetOfferFilters, filterEmptyMessage, localPriceCurrency } from '../utils/localOfferFilters';
+import { providerQuery, filterOffers, resetOfferFilters, localPriceCurrency } from '../utils/localOfferFilters';
 import { activeFilterChips, changePresentationFilter } from '../utils/resultsPresentation';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import SearchBar from '../components/SearchBar';
+import HomeSearch from '../components/HomeSearch';
+import { loadHomeCatalog } from '../services/homeCatalog';
+import { loadResultsSearch, resultsFreshUntil, resultsSearchGeneration } from '../services/resultsSearch';
+import { validateResultsSearch, resultsState, searchFailureMessage, staleResultsMessage } from '../utils/searchExperience';
+import ResultsNotice from '../components/ResultsNotice';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import ConsumerMetadata from '../components/ConsumerMetadata';
@@ -12,15 +16,17 @@ import ResultsHeader from '../components/ResultsHeader';
 import ResultsToolbar from '../components/ResultsToolbar';
 import ResultsFilterChips from '../components/ResultsFilterChips';
 import ResultsFilterPanel from '../components/ResultsFilterPanel';
-import API_URL from '../services/api';
-import { catalogEmptyMessage, noRatesMessage } from '../utils/catalogUx';
-import { searchTours } from '../services/tourService';
 import '../styles/Results.css';
 
 export default function Results() {
+  const [params]=useSearchParams();
+  // Search identity changes remount the state; local presentation edits do not.
+  return <ResultsPage key={`${providerQuery(params,true)}:${validateResultsSearch(params).state}:${resultsSearchGeneration()}`} />;
+}
+function ResultsPage() {
   const [searchParams,setSearchParams]=useSearchParams();
   const [tours,setTours]=useState([]);
-  const [meta,setMeta]=useState({page:1,limit:20,total:0,pages:1,provider:null});
+  const [freshUntil,setFreshUntil]=useState(0);
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState('');
   const [catalogEmpty,setCatalogEmpty]=useState(false);
@@ -29,16 +35,16 @@ export default function Results() {
   const filterTrigger=useRef(null);
   const filterPanel=useRef(null);
   const [destinations,setDestinations]=useState([]);
+  const [catalogState,setCatalogState]=useState('loading');
+  const validation=validateResultsSearch(searchParams);
+  const valid=validation.state==='VALID';
   const destinationCode=searchParams.get('destinationCode');
   const diagnostic=searchParams.get('stagingTestHotel');
   useEffect(()=>{
-    if(!destinationCode || diagnostic)return;
     const controller=new AbortController();
-    fetch(`${API_URL}/catalog/test-options`,{signal:controller.signal}).then(async response=>{
-      if(!response.ok)return;
-      const data=await response.json();
-      if(!controller.signal.aborted)setDestinations(data.destinations || []);
-    }).catch(()=>{});
+    loadHomeCatalog(controller.signal).then(rows=>{
+      if(!controller.signal.aborted){setDestinations(rows);setCatalogState('ready');}
+    }).catch(()=>{if(!controller.signal.aborted)setCatalogState('error');});
     return ()=>controller.abort();
   },[destinationCode,diagnostic]);
   useEffect(()=>{
@@ -52,75 +58,66 @@ export default function Results() {
     return ()=>{document.body.style.overflow=previous;desktop.removeEventListener('change',resized);};
   },[filtersOpen]);
   const closeFilters=()=>{setFiltersOpen(false);filterTrigger.current?.focus();};
-  const sortBy=searchParams.get('sort') || 'priceAsc';
+  const sortBy=['default','priceAsc','priceDesc','pricePerNight','stars','name','rating'].includes(searchParams.get('sort'))?searchParams.get('sort'):'default';
   const provider=searchParams.get('provider') || 'hotelbeds';
-  const localFilters=import.meta.env.VITE_HOTELBEDS_STAGING_TEST_ENABLED==='true' && provider==='hotelbeds';
+  const localFilters=true;
   const requestQuery=providerQuery(searchParams,localFilters);
-  const visibleTours=localFilters ? filterOffers(tours,searchParams) : tours;
+  const filterQuery=searchParams.toString();
+  const visibleTours=useMemo(()=>{const params=new URLSearchParams(filterQuery);params.set('sort',sortBy);return filterOffers(tours,params);},[tours,filterQuery,sortBy]);
   const filterEmpty=localFilters && tours.length>0 && visibleTours.length===0;
   const currency=localFilters ? localPriceCurrency(tours) : tours[0]?.currency || (provider==='hotelbeds'?'EUR':'KZT');
   const boards=localFilters ? [...new Map(tours.flatMap(tour=>tour.candidateOffers || [tour]).filter(tour=>tour.boardCode).map(tour=>[tour.boardCode,{code:tour.boardCode,name:tour.boardName}])).values()] : undefined;
   const chips=activeFilterChips(searchParams,currency,boards);
   const reset=()=>setSearchParams(resetOfferFilters(searchParams));
 
-  const loadTours = useCallback(async () => {
+  const loadTours = useCallback(async (retry=false) => {
     const version=++requestVersion.current.version;
-    const filters = JSON.parse(requestQuery);
-    if (provider === "hotelbeds" && !filters.departureDate && !filters.checkIn) { setTours([]); setLoading(false); return; }
+    if (!valid) { setTours([]); setLoading(false); setError(''); return; }
     try {
       setLoading(true);
+      setTours([]);
       setError("");
       setCatalogEmpty(false);
-      const result = await searchTours(filters);
+      const result = await loadResultsSearch(requestQuery,{retry});
       if (version !== requestVersion.current.version) return;
       setTours(Array.isArray(result?.data) ? result.data : []);
-      setMeta({
-        page: Number(result?.meta?.page) || 1,
-        limit: Number(result?.meta?.limit) || 20,
-        total: Number(result?.meta?.total) || 0,
-        pages: Number(result?.meta?.pages) || 1,
-        provider: result?.meta?.provider || provider,
-      });
+      setFreshUntil(resultsFreshUntil(result));
     } catch (err) {
       if (version !== requestVersion.current.version) return;
-      console.error("Ошибка загрузки результатов:", err);
       setTours([]);
-      if (err.code === 'TEST_CATALOG_EMPTY') { setCatalogEmpty(true); setError(''); setMeta({page:1,limit:20,total:0,pages:1,provider}); }
-      else if (err.code === 'HOTELBEDS_AUTH_BLOCKED') setError('Hotelbeds TEST временно недоступен. Последняя проверка доступа завершилась ошибкой авторизации.');
-      else if (err.code === 'HOTELBEDS_ACCESS_UNAVAILABLE') setError('Hotelbeds TEST временно недоступен. Повторите поиск позже.');
-      else if (err.code === 'HOTELBEDS_UNKNOWN_BLOCKED') setError('Hotelbeds TEST временно недоступен. Доступ к Availability ещё не подтверждён контрольной проверкой.');
-      else setError(err.message || "Не удалось загрузить предложения.");
+      if (err?.code === 'TEST_CATALOG_EMPTY') { setCatalogEmpty(true); setError('');  }
+      else setError(err?.code==='RESULTS_STALE'?staleResultsMessage:searchFailureMessage);
     } finally {
       if (version === requestVersion.current.version) setLoading(false);
     }
-  }, [provider, requestQuery]);
+  }, [requestQuery,valid]);
 
   useEffect(() => { const state = requestVersion.current; const timer = setTimeout(loadTours, 0); return () => { clearTimeout(timer); state.version++; }; }, [loadTours]);
 
 
-  function changePage(page) {
-    if(page<1 || page>meta.pages || page===meta.page)return;
-    const params=new URLSearchParams(searchParams);params.set('page',String(page));setSearchParams(params);
-    window.scrollTo({top:0,behavior:'smooth'});
-  }
-  const hasSearch=provider!=='hotelbeds' || searchParams.get('departureDate') || searchParams.get('checkIn');
-  return <><ConsumerMetadata pathname="/results" params={searchParams} destinations={destinations} /><Navbar /><main className="results-page">
-    {!hasSearch && <section className="catalogue-search"><h1>Найдите подходящий отель</h1><p>Укажите направление, дату, ночи и гостей.</p><SearchBar /></section>}
+  useEffect(()=>{
+    if(!freshUntil || !tours.length)return;
+    const timer=setTimeout(()=>{setTours([]);setError(staleResultsMessage);},Math.max(0,freshUntil-Date.now()));
+    return ()=>clearTimeout(timer);
+  },[freshUntil,tours]);
+  const hasSearch=valid;
+  const state=resultsState({valid,loading,error,count:visibleTours.length,rawCount:tours.length});
+  return <><ConsumerMetadata pathname="/results" params={searchParams} destinations={destinations} /><Navbar /><main className="results-page" data-search-state={state}>
+    {!hasSearch && <section className="catalogue-search"><h1>Найдите подходящий отель</h1><p>Укажите направление, дату, ночи и гостей.</p>{validation.message && <p role="alert">{validation.message}</p>}<HomeSearch destinations={destinations} catalogState={catalogState} /></section>}
     {hasSearch && <section className="results-shell">
       <ResultsHeader params={searchParams} destinations={destinations} />
-      {localFilters && <p className="results-test-note">Тестовые цены · бронирование отключено</p>}
-      {!loading && !error && <ResultsToolbar total={meta.total} shown={visibleTours.length} activeCount={chips.length} sort={sortBy} local={localFilters} open={filtersOpen} triggerRef={filterTrigger} onOpen={()=>setFiltersOpen(true)} onSort={event=>setSearchParams(changePresentationFilter(searchParams,'sort',event.target.value))} />}
+      {provider==='hotelbeds' && import.meta.env.VITE_HOTELBEDS_STAGING_TEST_ENABLED==='true' && <p className="results-test-note">Тестовые цены · бронирование отключено</p>}
+      {!loading && !error && <ResultsToolbar total={tours.length} shown={visibleTours.length} activeCount={chips.length} sort={sortBy} local={localFilters} open={filtersOpen} triggerRef={filterTrigger} onOpen={()=>setFiltersOpen(true)} onSort={event=>setSearchParams(changePresentationFilter(searchParams,'sort',event.target.value))} />}
       <ResultsFilterChips items={chips} onRemove={key=>setSearchParams(changePresentationFilter(searchParams,key,''))} onReset={reset} />
       {loading && <div className="results-layout loading-layout" role="status" aria-label="Загрузка отелей"><div className="filter-skeleton" /><div className="results-skeleton-list">{[1,2,3].map(item=><div className="result-skeleton" key={item}><div /><section><i /><i /><i /><i /></section></div>)}</div></div>}
-      {!loading && error && <div className="no-results" role="alert"><h2>Не удалось выполнить поиск</h2><p>{error}</p><button type="button" onClick={loadTours}>Попробовать ещё раз</button></div>}
+      {!loading && error && <ResultsNotice state="ERROR" stale={error===staleResultsMessage} params={searchParams} onRetry={()=>loadTours(true)} />}
       {!loading && !error && <div className="results-layout">
         <ResultsFilterPanel open={filtersOpen} onClose={closeFilters} shown={visibleTours.length} panelRef={filterPanel}>
           <ResultsFilters instant={localFilters} currency={currency} boards={boards} onApplied={closeFilters} />
         </ResultsFilterPanel>
         <div className="results-content">
-          {visibleTours.length===0 ? <div className="no-results"><h2>{catalogEmpty?catalogEmptyMessage:filterEmpty?filterEmptyMessage:noRatesMessage}</h2><p>{catalogEmpty?'Выберите другое готовое направление.':filterEmpty?'Попробуйте изменить или сбросить фильтры.':'Попробуйте другие даты или направление.'}</p>{filterEmpty && <button type="button" onClick={reset}>Сбросить фильтры</button>}</div> : <>
+          {visibleTours.length===0 ? <ResultsNotice state={filterEmpty?"FILTER_EMPTY":"PROVIDER_EMPTY"} catalogEmpty={catalogEmpty} params={searchParams} onReset={reset} /> : <>
             <div className="tour-grid">{visibleTours.map(tour=><TourCard key={`${tour.provider || 'hotel'}-${tour.providerHotelId || tour.id}`} tour={tour} />)}</div>
-            {meta.pages>1 && <div className="results-pagination"><button type="button" disabled={meta.page<=1} onClick={()=>changePage(meta.page-1)}>← Назад</button><span>Страница <strong>{meta.page}</strong> из <strong>{meta.pages}</strong></span><button type="button" disabled={meta.page>=meta.pages} onClick={()=>changePage(meta.page+1)}>Далее →</button></div>}
           </>}
         </div>
       </div>}

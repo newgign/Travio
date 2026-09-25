@@ -87,7 +87,7 @@ test('3O.1 rate-aware filtering over one actual search response',async t=>{
       assert.equal(first('stars=4').price,100);
     });
     await t.test('sort uses current rate; reset restores default; sequence stays at one Availability',()=>{
-      const query=new URLSearchParams(base);query.set('food','AI');
+      const query=new URLSearchParams(base);query.set('food','AI');query.set('sort','priceAsc');
       const sorted=filterOffers(source,query);assert.deepEqual(sorted.map(h=>h.price),[120,150,170]);assert.deepEqual(sorted.map(h=>h.providerHotelId),['101','103','102']);
       for(const [field,value] of [['sort','priceDesc'],['stars','4'],['roomType','Superior'],['maxPrice','160']]){
         query.set(field,value);filterOffers(source,query);assert.equal(providerQuery(query,true),key);assert.equal(availability,1);assert.equal(checkrate,0);

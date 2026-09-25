@@ -7,6 +7,7 @@
 .home-guests>button { display:flex; align-items:center; justify-content:space-between; gap:8px; text-align:left; cursor:pointer; }
 .home-search-submit { margin-top:26px; min-height:52px; padding:0 22px; border:0; border-radius:10px; background:#245de0; color:white; font-size:16px; font-weight:700; cursor:pointer; }
 .home-search-submit:hover { background:#194abf; }
+.home-search-submit:disabled { opacity:.55; cursor:not-allowed; }
 .home-search-wrap :focus-visible { outline:3px solid #5584ee; outline-offset:3px; }
 .home-search-field [aria-invalid="true"] { border-color:#b91c1c; }
 .home-field-error { color:#b91c1c; font-size:12px; }
