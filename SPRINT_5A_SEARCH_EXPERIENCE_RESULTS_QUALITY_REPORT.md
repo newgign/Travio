@@ -1,7 +1,9 @@
 # Sprint 5A — Search Experience & Results Quality
 
-CODE / OFFLINE: PASS. Owner browser acceptance: NOT RUN.
+CODE / OFFLINE: PASS. DEPLOYED FRONTEND: PASS. OWNER BROWSER ACCEPTANCE: PASS.
 Scope: frontend search UX; production infrastructure remains paused.
+
+Final owner evidence is recorded in `Owner Render Browser Acceptance` below. Earlier NOT RUN, pending, no-deploy and zero-external-call statements describe the code/offline stage and agent actions; they do not describe the later owner TEST search or deployment. Acceptance is limited to the observed scope below, not every item of the earlier checklist.
 
 ## 1. Initial state
 
@@ -148,3 +150,75 @@ New (5):
 21. frontend/src/utils/searchExperience.js
 22. frontend/tests/searchExperience.test.mjs
 23. SPRINT_5A_SEARCH_EXPERIENCE_RESULTS_QUALITY_REPORT.md
+
+## Owner Render Browser Acceptance
+
+The owner supplied the following evidence from deployed Render. Codex did not repeat browser checks, provider requests or deployment. These are owner observations, distinct from the preceding offline verification.
+
+### Deployment and initial search
+
+Frontend commit: `e42846f` — `feat: improve search and results experience`.
+Render Static Site status: Live.
+
+Owner performed one Hotelbeds TEST search flow with these parameters:
+
+| Parameter | Owner-confirmed value |
+| --- | --- |
+| Destination | Antalya |
+| Check-in | 05.10.2026 |
+| Nights | 7 |
+| Adults | 2 |
+| Children | 0 |
+| Rooms | 1 |
+
+INITIAL SEARCH REQUEST COUNT: NOT VERIFIED. Network monitoring started after the initial Results load. One owner search flow does not establish the number of initial Availability calls; no exact initial Hotelbeds provider request count is claimed.
+
+### Results and mobile layout
+
+REAL TEST RESULTS RENDER: PASS. Desktop Results displayed three loaded hotels: Dosi Hotel, Grand Kaptan and Selectum Noa Belek. Hotelbeds TEST disclosure was visible; booking was unavailable.
+
+Mobile 320: Results layout PASS by visible owner evidence; no visible horizontal overflow. This observation does not attest unreported widths or every item in the earlier accessibility/responsive checklist.
+
+### Local hotel-name filtering
+
+Owner entered `Grand Kaptan` in the hotel-name filter. Visible count was 1 of 3, with only Grand Kaptan displayed and the chip/state preserved. The displayed offer was Side Sea View, All Inclusive, TOTAL 1 014,42 EUR.
+
+No new Availability/search request was observed in Fetch/XHR during this interaction.
+
+HOTEL NAME FILTER: PASS.
+LOCAL FILTERING: PASS.
+
+### Local sorting
+
+Price descending was preserved in the URL as `sort=priceDesc`. Selectum Noa Belek was observed first at 1 288,40 EUR. No new Availability/search request was observed during sorting.
+
+LOCAL SORTING: PASS.
+
+### Results -> Details -> Back
+
+Results -> Details preserved Grand Kaptan, Side Sea View, All Inclusive, 05–12 October 2026, 7 nights and 2 adults. No new Availability/search request was observed during this transition.
+
+RESULTS -> DETAILS EXACT OFFER CONTEXT: PASS.
+
+Details -> Back returned to Results with `sort=priceDesc`. Grand Kaptan retained Side Sea View, All Inclusive, TOTAL 1 014,42 EUR, 7 nights and 2 guests. No new Availability/search request was observed during the return.
+
+DETAILS -> BACK CONTEXT PRESERVATION: PASS.
+MEMORY CACHE RETURN: PASS — observed owner navigation scope.
+
+Visible Fetch/XHR during the monitored local interactions contained only existing application requests such as `special-offers` and `test-options`. This is browser observation, not an independent server-to-provider traffic audit. It does not establish the unmonitored initial Availability count.
+
+### Report-only update and final owner status
+
+Initial tracked tree was clean. This update changes only SPRINT_5A_SEARCH_EXPERIENCE_RESULTS_QUALITY_REPORT.md. No source code, tests or env changes; no tests/builds rerun, deploy, external calls from Codex or DB mutations. Unrelated untracked paths remain untouched. No git add/commit/push. Required diff-check/status/diff-stat/report-diff audit follows this update.
+
+OWNER BROWSER ACCEPTANCE: PASS.
+
+SPRINT 5A:
+CODE / OFFLINE: PASS.
+DEPLOYED FRONTEND: PASS.
+OWNER BROWSER ACCEPTANCE: PASS.
+
+HOTELBEDS LIVE: NOT ENABLED.
+BOOKING: DISABLED.
+PAYMENTS: DISABLED.
+PRODUCTION INFRASTRUCTURE: PAUSED.
