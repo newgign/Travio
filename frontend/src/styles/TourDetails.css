@@ -12,6 +12,14 @@
 .details-favorite-wrap>p { font-size:13px; color:#9f1239; max-width:240px; }
 .details-layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(300px,360px); align-items:start; gap:28px; }
 .details-main { min-width:0; display:grid; gap:24px; }
+.details-content { grid-column:1; min-width:0; display:grid; gap:24px; }
+.details-description { white-space:pre-line; }
+.details-more { margin-top:12px; }
+.details-more summary { padding:12px 0; cursor:pointer; color:#245de0; }
+.details-address { margin-top:12px !important; }
+.details-policies { padding-left:20px; line-height:1.65; overflow-wrap:anywhere; }
+.details-policies li { margin:8px 0; }
+.details-favorite:disabled { opacity:.65; cursor:wait; }
 .details-gallery { min-width:0; }
 .details-gallery-main { position:relative; width:100%; aspect-ratio:16/10; overflow:hidden; border-radius:22px; background:#eef1f4; }
 .details-gallery-main>img { display:block; width:100%; height:100%; object-fit:cover; }

@@ -4,9 +4,14 @@ const fields = ['provider','providerHotelId','id','name','title','country','city
   'price','basePrice','currency','priceIsFinal','nights','adults','children','childrenAges','food','roomType',
   'departureCity','departureDate','checkIn','checkOut','offerId','providerOfferId','rateKey','rateType','recheckRequired',
   'roomCode','roomName','boardCode','boardName','paymentType','packaging','rateClass',
+  'description','address','amenities','rateComments','cancellationPolicies',
   'images','beachLine','beachType','wifi','pool','spa','gym','kidsClub','aquapark','transfer','parking','privateBeach','animation','restaurant','bar'];
 module.exports = offer => Object.fromEntries(fields.flatMap(key => {
   const value=offer[key];
+  if (['description','address','rateComments'].includes(key)) return typeof value === 'string' ? [[key,value]] : [];
+  if (key === 'amenities') return Array.isArray(value) ? [[key,value.filter(name => typeof name === 'string')]] : [];
+  if (key === 'cancellationPolicies') return Array.isArray(value) ? [[key,value.filter(policy => policy && typeof policy === 'object').map(policy =>
+    Object.fromEntries(['from','amount','currency'].flatMap(field => typeof policy[field] === 'string' || (typeof policy[field] === 'number' && Number.isFinite(policy[field])) ? [[field,policy[field]]] : [])))]] : [];
   if (key === 'childrenAges' && Array.isArray(value)) return [[key,value.filter(age => Number.isInteger(age) && age >= 0 && age <= 17)]];
   if (key === 'occupancy' && value) return [[key,Object.fromEntries(['rooms','adults','children'].filter(field => Number.isFinite(value[field])).map(field => [field,value[field]]))]];
   if (key === 'images' && Array.isArray(value)) return [[key,value.filter(image => typeof image === 'string')]];

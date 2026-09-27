@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -10,8 +10,8 @@ import { selectedOfferSnapshot } from '../utils/selectedOfferSnapshot';
 import { visibleProviderOffer } from '../utils/providerEnvironment';
 import { normalizeBoardDisplay, normalizeRoomDisplay } from '../utils/hotelOfferDisplay';
 import { editSearchLink } from '../utils/resultsPresentation';
-import { detailsBackTarget, detailsError, detailsSummary, displayDate, galleryImages, hotelAmenities, hotelCategory, hotelLocation, stayDates } from '../utils/detailsPresentation';
-import { loadDetailsOffer } from '../services/detailsOffer';
+import { contentText, hotelAddress, hotelDescription, rateConditions, detailsBackTarget, detailsError, detailsSummary, displayDate, galleryImages, hotelAmenities, hotelCategory, hotelLocation, stayDates } from '../utils/detailsPresentation';
+import { loadDetailsOffer, watchDetailsExpiry, validDetailsOffer } from '../services/detailsOffer';
 import { toggleDetailsFavorite } from '../utils/detailsFavorite';
 import '../styles/TourDetails.css';
 
@@ -26,13 +26,14 @@ function DetailsPage({ provider, id, location }) {
   const navigate = useNavigate();
   const { toggleFavorite, isFavorite } = useFavorites();
   const selectedOffer = location.state?.selectedOffer || null;
-  const [initialSnapshot] = useState(() => selectedOfferSnapshot(selectedOffer, provider, id, location.search));
+  const [initialSnapshot] = useState(() => validDetailsOffer(selectedOffer) ? selectedOfferSnapshot(selectedOffer, provider, id, location.search) : null);
   const [tour, setTour] = useState(initialSnapshot);
   const [loading, setLoading] = useState(!initialSnapshot && !selectedOffer);
   const [error, setError] = useState(() => selectedOffer && !initialSnapshot ? detailsError({ code: 'SELECTED_OFFER_STALE' }) : null);
   const [activeImage, setActiveImage] = useState(0);
   const [favoriteError, setFavoriteError] = useState('');
   const [favoritePending, setFavoritePending] = useState(false);
+  const pendingFavorite=useRef(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -50,6 +51,11 @@ function DetailsPage({ provider, id, location }) {
     return () => { clearTimeout(timer); controller.abort(); };
   }, [provider, id, location.search, selectedOffer]);
 
+  useEffect(()=>{
+    if(!tour)return;
+    return watchDetailsExpiry(tour,()=>{setTour(null);setError(detailsError({code:'SELECTED_OFFER_STALE'}));});
+  },[tour]);
+
   const searchLink = editSearchLink(new URLSearchParams(location.state?.resultsOrigin?.search || location.search));
   function back() {
     navigate(detailsBackTarget(location.state?.resultsOrigin, window.history.state?.idx, location.search));
@@ -63,24 +69,28 @@ function DetailsPage({ provider, id, location }) {
     const state = error || detailsError({ code: 'OFFER_NOT_FOUND' });
     return <><ConsumerMetadata pathname={location.pathname} /><Navbar /><main className="details-page"><section className="details-state" role="alert" data-error-code={state.code}>
       <h1>{state.title}</h1><p>{state.message}</p><button type="button" className="details-back" onClick={() => navigate(searchLink)}>Вернуться к поиску</button>
+      {location.state?.resultsOrigin && <button type="button" className="details-back" onClick={back}>Вернуться к результатам</button>}
     </section></main><Footer /></>;
   }
 
-  const hotelName = tour.name || tour.title || tour.hotel || 'Отель';
+  const hotelName = contentText(tour.name) || contentText(tour.title) || contentText(tour.hotel) || 'Отель';
   const stars = hotelCategory(tour.stars);
   const place = hotelLocation(tour);
   const images = galleryImages(tour);
   const amenities = hotelAmenities(tour);
+  const address=hotelAddress(tour);
+  const conditions=rateConditions(tour);
   const { checkIn, checkOut } = stayDates(tour);
   const isTest = tour.provider === 'hotelbeds' && tour.priceEnvironment === 'test';
   const favoriteActive = isFavorite(tour.providerHotelId ?? tour.id, tour.provider || provider);
-  const room = normalizeRoomDisplay(tour.roomName || tour.roomType || tour.roomCode) || 'Номер по выбранному тарифу';
-  const board = normalizeBoardDisplay(tour.boardCode || tour.food, tour.boardName);
+  const room = normalizeRoomDisplay(contentText(tour.roomName) || contentText(tour.roomType) || contentText(tour.roomCode)) || 'Номер по выбранному тарифу';
+  const board = normalizeBoardDisplay(contentText(tour.boardCode) || contentText(tour.food), contentText(tour.boardName));
 
   async function handleFavorite() {
+    if(pendingFavorite.current)return;
     setFavoritePending(true);
     setFavoriteError('');
-    try { await toggleDetailsFavorite(tour, { hasSession: Boolean(localStorage.getItem('token')), toggleFavorite, navigate }); }
+    try { await toggleDetailsFavorite(tour, { hasSession: Boolean(localStorage.getItem('token')), toggleFavorite, navigate, pending:pendingFavorite }); }
     catch { setFavoriteError('Не удалось обновить избранное. Попробуйте ещё раз.'); }
     finally { setFavoritePending(false); }
   }
@@ -91,6 +101,7 @@ function DetailsPage({ provider, id, location }) {
       <div><h1>{hotelName}</h1>
         {stars ? <p className="details-stars" aria-label={`Категория отеля: ${stars} звёзд`}>{'★'.repeat(stars)}</p> : <p className="details-category">Категория не указана</p>}
         {place && <p className="details-location">{place}</p>}
+        {isTest && <span className="details-test-badge">Hotelbeds TEST</span>}
       </div>
       <div className="details-favorite-wrap"><button type="button" className="details-favorite" aria-pressed={favoriteActive} aria-label={favoriteActive ? 'Удалить из избранного' : 'Добавить в избранное'} disabled={favoritePending} onClick={handleFavorite}>{favoriteActive ? '♥ В избранном' : '♡ В избранное'}</button>
         {favoriteError && <p role="alert">{favoriteError}</p>}
@@ -108,26 +119,36 @@ function DetailsPage({ provider, id, location }) {
             <div><dt>Заезд</dt><dd>{displayDate(checkIn)}</dd></div><div><dt>Выезд</dt><dd>{displayDate(checkOut)}</dd></div>
           </dl>
         </section>
-        <section className="details-section" aria-labelledby="hotel-info-title"><h2 id="hotel-info-title">Об отеле</h2>
-          {typeof tour.description === 'string' && tour.description.trim() ? <p>{tour.description}</p> : <p>{[hotelName, place].filter(Boolean).join(' · ')}</p>}
-          {amenities.length > 0 && <><h3>Удобства</h3><ul className="details-amenities">{amenities.map(amenity => <li key={amenity}>{amenity}</li>)}</ul></>}
-          {Number(tour.beachLine) > 0 && Number(tour.beachLine) <= 3 && <p>Береговая линия: {tour.beachLine}</p>}
-        </section>
-        <section className="details-section"><h2>Условия тарифа</h2><p>Подробные условия тарифа будут доступны после повторной проверки перед оформлением.</p></section>
-        <details className="details-technical"><summary>Техническая информация</summary><dl>
-          <div><dt>Источник цены</dt><dd>{typeof tour.priceSource === 'string' ? tour.priceSource : '—'}</dd></div>
-          <div><dt>Время наблюдения</dt><dd>{typeof tour.observedAt === 'string' ? tour.observedAt : '—'}</dd></div>
-          <div><dt>Тип тарифа поставщика</dt><dd>{typeof tour.rateType === 'string' ? tour.rateType : '—'}</dd></div>
-        </dl></details>
       </div>
 
       <aside className="details-price-card" aria-label="Стоимость выбранного проживания">
-        {isTest && <span className="details-test-badge">Hotelbeds TEST</span>}
         <h2>Стоимость проживания</h2><StayPrice offer={tour} />
         {isTest && <div className="details-test-explanation"><h3>Тестовая цена Hotelbeds</h3><p>Цена получена из тестовой среды. Перед реальным оформлением тариф потребуется проверить повторно.</p></div>}
         <button type="button" className="details-booking" disabled>Бронирование отключено</button>
         <p className="details-booking-note">Бронирование сейчас отключено. Оплата недоступна.</p>
       </aside>
+      <div className="details-content">
+        <section className="details-section" aria-labelledby="hotel-info-title"><h2 id="hotel-info-title">Об отеле</h2>
+          <p className="details-description">{hotelDescription(tour)}</p>
+          {amenities.length > 0 && <><h3>Удобства</h3><ul className="details-amenities">{amenities.slice(0,8).map(amenity => <li key={amenity}>{amenity}</li>)}</ul>
+            {amenities.length>8 && <details className="details-more"><summary>Показать все удобства ({amenities.length})</summary><ul className="details-amenities">{amenities.slice(8).map(amenity=><li key={amenity}>{amenity}</li>)}</ul></details>}
+          </>}
+          {Number(tour.beachLine) > 0 && Number(tour.beachLine) <= 3 && <p>Береговая линия: {tour.beachLine}</p>}
+        </section>
+        {(place || address) && <section className="details-section" aria-labelledby="hotel-location-title"><h2 id="hotel-location-title">Расположение</h2>
+          {place && <p>{place}</p>}{address && <p className="details-address"><strong>Адрес: </strong>{address}</p>}
+        </section>}
+        <section className="details-section" aria-labelledby="rate-conditions-title"><h2 id="rate-conditions-title">Условия тарифа</h2>
+          {conditions.comments && <p className="details-description">{conditions.comments}</p>}
+          {conditions.policies.length>0 && <><h3>Штрафы при отмене по выбранному тарифу</h3><ul className="details-policies">{conditions.policies.map((policy,index)=><li key={index}>С <time dateTime={policy.from}>{policy.from}</time> — {policy.amount}</li>)}</ul><p>Даты и время указаны как получены от поставщика, без изменения часового пояса.</p></>}
+          <p>Подробные условия тарифа будут доступны после повторной проверки перед оформлением.</p>
+        </section>
+        <details className="details-technical"><summary>Техническая информация</summary><dl>
+          <div><dt>Источник цены</dt><dd>{contentText(tour.priceSource) || '—'}</dd></div>
+          <div><dt>Время наблюдения</dt><dd>{contentText(tour.observedAt) || '—'}</dd></div>
+          <div><dt>Тип тарифа поставщика</dt><dd>{contentText(tour.rateType) || '—'}</dd></div>
+        </dl></details>
+      </div>
     </div>
   </main><Footer /></>;
 }
