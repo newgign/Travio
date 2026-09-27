@@ -1,6 +1,6 @@
 # Sprint 5B — Hotel Details & Content Quality
 
-Status: Sprint 5B.3 source-boundary audit: focused PASS 69/69; full frontend PASS 241/241; lint/build/verifier/diff-check PASS. Product/backend unchanged; prior 5B.1 backend PASS 388/388 retained, not rerun. Grand Kaptan concatenation remains unresolved: reliable boundaries unavailable in supplied evidence; actual upstream raw_data not available for inspection. SOURCE BOUNDARY UNAVAILABLE — CANNOT SAFELY REPAIR CONCATENATION. Owner acceptance is not declared. DEPLOY BY THIS CONTINUATION: NOT RUN. See Sprint 5B.3 follow-up; earlier results remain historical.
+Status: SPRINT 5B / 5B.1 / 5B.2 / 5B.3 CLOSED. CODE / OFFLINE: PASS. FULL BACKEND: PASS 388/388. FULL FRONTEND: PASS 241/241. DEPLOYED STAGING: PASS. OWNER BROWSER ACCEPTANCE: PASS. Grand Kaptan description concatenation remains an owner-accepted content limitation and does not block closure. HOTELBEDS LIVE: NOT ENABLED. BOOKING: DISABLED. PAYMENTS: DISABLED. PRODUCTION INFRASTRUCTURE: PAUSED. See Final Owner Render Browser Acceptance; earlier statuses remain historical. No deployment or test rerun performed in this documentation-only update.
 
 ## 1. Initial state
 
@@ -399,3 +399,62 @@ Frontend commands used the existing offlineNetwork.cjs preload and sequential No
 Backend changed: **NO**. Frontend product source changed: **NO**. Hotelbeds/API/runtime behavior changed: **NO**. Booking/payments changed: **NO**. External calls: **0**. Real DB mutations: **0**. No remote/local application DB access, schema changes, migration, Content/Availability/CheckRate/Booking/Cancellation/payment calls, Render/env changes or deploy. Final status/diff-stat/full-diff/diff-check performed; changes remain unstaged.
 
 **Offline regression: PASS. Concatenation repair: NOT IMPLEMENTED — source boundary unavailable. Owner acceptance: NOT DECLARED. Deploy: NOT RUN.**
+
+## Final Owner Render Browser Acceptance
+
+**DEPLOYED STAGING: PASS. OWNER BROWSER ACCEPTANCE: PASS.** Owner inspected Grand Kaptan Details on deployed staging and completed browser acceptance. The evidence below is owner-confirmed; it is not an independent browser run by Codex.
+
+### Exact offer observed
+
+| Field | Owner-observed value |
+| --- | --- |
+| Hotel | Grand Kaptan |
+| Room | Side Sea View |
+| Board | All Inclusive / Всё включено |
+| Check-in | 5 October 2026 |
+| Check-out | 12 October 2026 |
+| Nights | 7 |
+| Adults | 2 |
+| Rooms | 1 |
+| Total | 1 014,42 EUR |
+| Per night | 144,92 EUR |
+
+Hotelbeds TEST was visible. Booking was disabled. Payment was unavailable. Gallery counter 1/6 and the thumbnail strip were present. Location was ALANYA, Turkey; address was Oba Göl Mevkii, S/N.
+
+Cancellation condition displayed the human-readable provider timestamp with its original offset: **29 September 2026, 23:59:00 (+03:00)**. Penalty: **461,10 EUR**. This records the displayed provider time and offset, without claiming timezone conversion or free cancellation.
+
+### Desktop and responsive evidence
+
+- **Desktop Details: PASS** by visible owner evidence.
+- **390 px: PASS** by visible owner evidence. No visible horizontal overflow. Header, gallery, thumbnails, offer, price, description, location, conditions and footer fit the responsive layout.
+- **320 px: PASS** by visible owner evidence. No visible horizontal overflow. Header, gallery, thumbnails, offer, price, long description, location, conditions and footer remained usable.
+
+### Network evidence
+
+During Details viewing, resizing, scrolling and content interaction, no new Availability / Content / CheckRate request was observed. A search request from the search flow remained visible in Network history. No exact initial search/provider request count is claimed.
+
+### Accepted content limitation
+
+Grand Kaptan description still contains upstream concatenated text: **"22 EURIdeally..."**. Sprint 5B.3 traced the application pipeline and confirmed that reliable source-boundary metadata for that exact raw fragment was unavailable in the inspected evidence. The exact original concatenation point was not established; the concatenation was not fixed.
+
+**SOURCE BOUNDARY UNAVAILABLE — CANNOT SAFELY REPAIR CONCATENATION.** No heuristic EUR/uppercase/text-specific split was introduced. This known content limitation is accepted by the owner and does not block Sprint 5B closure.
+
+### Final status and update scope
+
+**SPRINT 5B / 5B.1 / 5B.2 / 5B.3**
+
+| Gate | Final status |
+| --- | --- |
+| CODE / OFFLINE | PASS |
+| FULL BACKEND | PASS 388/388 |
+| FULL FRONTEND | PASS 241/241 |
+| DEPLOYED STAGING | PASS |
+| OWNER BROWSER ACCEPTANCE | PASS |
+| HOTELBEDS LIVE | NOT ENABLED |
+| BOOKING | DISABLED |
+| PAYMENTS | DISABLED |
+| PRODUCTION INFRASTRUCTURE | PAUSED |
+
+Backend/frontend test results are retained from the recorded regression runs, not rerun for this owner-evidence update. This final acceptance supersedes earlier pending/not-declared acceptance statuses without changing the historical evidence.
+
+Only `SPRINT_5B_HOTEL_DETAILS_CONTENT_QUALITY_REPORT.md` changed in this update. No source changes, test changes, env changes, deployment, external calls from Codex or DB mutations. At entry, tracked files were clean; the existing 5B.3 test content was preserved unchanged. Unrelated untracked files were untouched. Required diff-check, status, diff-stat and report diff were executed. No git add, commit or push.
