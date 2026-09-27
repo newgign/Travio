@@ -8,7 +8,7 @@ export function createAccountListStore({ loadData, ownerToken, readToken }) {
   const store = {
     getSnapshot: () => state,
     subscribe: fn => { listeners.add(fn); return () => listeners.delete(fn); },
-    invalidate: () => { version++; generation++; inFlight = null; },
+    invalidate: () => { version++; generation++; inFlight = null; mutations.clear(); emit({ items: [], pending: [], status: ownerToken ? 'loading' : 'guest' }); },
     load() {
       if (!current()) { emit({ items: [], status: 'guest' }); return Promise.resolve(); }
       if (inFlight) return inFlight;
@@ -44,7 +44,7 @@ export function createAccountListStore({ loadData, ownerToken, readToken }) {
         } catch (error) {
           if (current() && operationGeneration === generation) throw error;
         } finally {
-          mutations.delete(key);
+          if (operationGeneration === generation) mutations.delete(key);
           if (current() && operationGeneration === generation) {
             emit({ pending: state.pending.filter(value => value !== key) });
             if (reloadNeeded && !mutations.size) void store.load();

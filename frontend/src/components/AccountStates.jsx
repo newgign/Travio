@@ -15,5 +15,5 @@ export function AccountEmpty({ favorites = false }) {
 }
 export function AccountAuth() {
   const location = useLocation();
-  return <section className="account-state"><h2>Войдите в аккаунт</h2><p>Для просмотра сохранённых данных нужен вход.</p><Link className="account-button" to="/login" state={{ returnTo: authOrigin(location.pathname) }}>Войти</Link></section>;
+  return <section className="account-state"><h2>Войдите в аккаунт</h2><p>Войдите, чтобы пользоваться избранным и личными данными.</p><div className="account-actions"><Link className="account-button" to="/login" state={{ returnTo: authOrigin(location.pathname) }}>Войти</Link><Link className="account-button secondary" to="/register" state={{ returnTo: authOrigin(location.pathname) }}>Создать аккаунт</Link></div></section>;
 }

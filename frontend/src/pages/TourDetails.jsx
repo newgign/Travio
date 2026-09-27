@@ -24,16 +24,14 @@ export default function TourDetails() {
 
 function DetailsPage({ provider, id, location }) {
   const navigate = useNavigate();
-  const { toggleFavorite, isFavorite } = useFavorites();
+  const { favoriteSessionKey } = useFavorites();
   const selectedOffer = location.state?.selectedOffer || null;
   const [initialSnapshot] = useState(() => validDetailsOffer(selectedOffer) ? selectedOfferSnapshot(selectedOffer, provider, id, location.search) : null);
   const [tour, setTour] = useState(initialSnapshot);
   const [loading, setLoading] = useState(!initialSnapshot && !selectedOffer);
   const [error, setError] = useState(() => selectedOffer && !initialSnapshot ? detailsError({ code: 'SELECTED_OFFER_STALE' }) : null);
   const [activeImage, setActiveImage] = useState(0);
-  const [favoriteError, setFavoriteError] = useState('');
-  const [favoritePending, setFavoritePending] = useState(false);
-  const pendingFavorite=useRef(false);
+
 
   useEffect(() => {
     const controller = new AbortController();
@@ -82,18 +80,10 @@ function DetailsPage({ provider, id, location }) {
   const conditions=rateConditions(tour);
   const { checkIn, checkOut } = stayDates(tour);
   const isTest = tour.provider === 'hotelbeds' && tour.priceEnvironment === 'test';
-  const favoriteActive = isFavorite(tour.providerHotelId ?? tour.id, tour.provider || provider);
   const room = normalizeRoomDisplay(contentText(tour.roomName) || contentText(tour.roomType) || contentText(tour.roomCode)) || 'Номер по выбранному тарифу';
   const board = normalizeBoardDisplay(contentText(tour.boardCode) || contentText(tour.food), contentText(tour.boardName));
 
-  async function handleFavorite() {
-    if(pendingFavorite.current)return;
-    setFavoritePending(true);
-    setFavoriteError('');
-    try { await toggleDetailsFavorite(tour, { hasSession: Boolean(localStorage.getItem('token')), toggleFavorite, navigate, pending:pendingFavorite }); }
-    catch { setFavoriteError('Не удалось обновить избранное. Попробуйте ещё раз.'); }
-    finally { setFavoritePending(false); }
-  }
+
 
   return <><ConsumerMetadata pathname={location.pathname} hotelName={hotelName} /><Navbar /><main className="details-page">
     <button type="button" className="details-back" onClick={back}>← Вернуться к результатам</button>
@@ -103,9 +93,7 @@ function DetailsPage({ provider, id, location }) {
         {place && <p className="details-location">{place}</p>}
         {isTest && <span className="details-test-badge">Hotelbeds TEST</span>}
       </div>
-      <div className="details-favorite-wrap"><button type="button" className="details-favorite" aria-pressed={favoriteActive} aria-label={favoriteActive ? 'Удалить из избранного' : 'Добавить в избранное'} disabled={favoritePending} onClick={handleFavorite}>{favoriteActive ? '♥ В избранном' : '♡ В избранное'}</button>
-        {favoriteError && <p role="alert">{favoriteError}</p>}
-      </div>
+      <DetailsFavoriteButton key={favoriteSessionKey} tour={tour} provider={provider} />
     </header>
 
     <div className="details-layout">
@@ -151,4 +139,24 @@ function DetailsPage({ provider, id, location }) {
       </div>
     </div>
   </main><Footer /></>;
+}
+
+function DetailsFavoriteButton({ tour, provider }) {
+  const navigate = useNavigate();
+  const { toggleFavorite, isFavorite } = useFavorites();
+  const [favoriteError, setFavoriteError] = useState('');
+  const [favoritePending, setFavoritePending] = useState(false);
+  const pendingFavorite=useRef(false);
+  const favoriteActive = isFavorite(tour.providerHotelId ?? tour.id, tour.provider || provider);
+  async function handleFavorite() {
+    if(pendingFavorite.current)return;
+    setFavoritePending(true);
+    setFavoriteError('');
+    try { await toggleDetailsFavorite(tour, { hasSession: Boolean(localStorage.getItem('token')), toggleFavorite, navigate, pending:pendingFavorite }); }
+    catch { setFavoriteError('Не удалось обновить избранное. Попробуйте ещё раз.'); }
+    finally { setFavoritePending(false); }
+  }
+  return <div className="details-favorite-wrap"><button type="button" className="details-favorite" aria-pressed={favoriteActive} aria-label={favoriteActive ? 'Удалить из избранного' : 'Добавить в избранное'} disabled={favoritePending} onClick={handleFavorite}>{favoriteActive ? '♥ В избранном' : '♡ В избранное'}</button>
+        {favoriteError && <p role="alert">{favoriteError}</p>}
+      </div>;
 }

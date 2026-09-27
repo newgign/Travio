@@ -5,7 +5,7 @@ export async function toggleDetailsFavorite(offer, { hasSession, toggleFavorite,
   if(pending)pending.current=true;
   try { await toggleFavorite(offer); }
   catch (error) {
-    if (error?.message === 'AUTH_REQUIRED') navigate('/login');
+    if (error?.status === 401 || error?.code === 'AUTH_REQUIRED' || error?.message === 'AUTH_REQUIRED') navigate('/login');
     else throw error;
   }
   finally {if(pending)pending.current=false;}

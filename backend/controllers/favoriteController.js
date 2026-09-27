@@ -1,6 +1,7 @@
 const pool = require("../db");
 const providerManager = require("../providers/providerManager");
 const offerService = require("../services/offerService");
+const catalog = require("../repositories/providerCatalogRepository");
 
 function serializeHotelData(value) {
   return typeof value === "string" ? JSON.parse(value) : value;
@@ -53,9 +54,21 @@ async function addFavorite(req, res) {
 
     const provider = providerManager.getProvider(providerName);
     const filters = req.body.filters || {};
-    const hotels = providerName === "hotelbeds"
-      ? [await provider.getHotelById(hotelId, filters)].filter(Boolean)
-      : await provider.searchHotels(filters);
+    // A saved hotel is not an offer: Hotelbeds favorites use local content only.
+    let snapshot;
+    let hotels;
+    if (providerName === "hotelbeds") {
+      const row = await catalog.findHotel(providerName, String(hotelId));
+      const text = value => typeof value === "string" ? value.trim() : "";
+      hotels = row ? [{ providerHotelId: row.provider_hotel_id }] : [];
+      if (row) snapshot = {
+        provider: providerName, providerHotelId: String(row.provider_hotel_id),
+        name: text(row.name), country: text(row.country_name), countryCode: text(row.country_code),
+        city: text(row.city), destinationCode: text(row.destination_code),
+        stars: Number(row.stars) || 0, image: text(row.image_url),
+        contentEnvironment: text(row.content_environment),
+      };
+    } else hotels = await provider.searchHotels(filters);
 
     const hotel = hotels.find(
       (item) =>
@@ -68,7 +81,7 @@ async function addFavorite(req, res) {
       });
     }
 
-    const snapshot = offerService.generateOffer(hotel, {
+    snapshot = snapshot || offerService.generateOffer(hotel, {
       people: 2,
       nights: 7,
       ...filters,

@@ -11,8 +11,8 @@ export function profileDraft(user) {
 export function profileErrors(draft) {
   const errors = {};
   if (!draft.full_name.trim()) errors.full_name = 'Укажите имя';
-  else if (draft.full_name.trim().length > 255) errors.full_name = 'Имя должно содержать не более 255 символов';
-  if (draft.phone.trim().length > 50) errors.phone = 'Телефон должен содержать не более 50 символов';
+  else if ([...draft.full_name.trim()].length > 255) errors.full_name = 'Имя должно содержать не более 255 символов';
+  if ([...draft.phone.trim()].length > 50) errors.phone = 'Телефон должен содержать не более 50 символов';
   return errors;
 }
 export const emptyPassword = () => ({ currentPassword: '', newPassword: '', confirmPassword: '' });

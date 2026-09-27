@@ -26,10 +26,12 @@ export default function SavedHotelCard({ item, onRemove, pending = false }) {
     <div className="saved-hotel-body"><h2>{title}</h2>
       {stars && <p className="account-category" aria-label={`Категория отеля: ${stars} звёзд`}>{'★'.repeat(stars)}</p>}
       <p className="account-muted">{hotelLocation(item)}</p>
+      {item.provider === 'hotelbeds' && (item.contentEnvironment === 'test' || item.priceEnvironment === 'test') && <p className="account-test-badge">Hotelbeds TEST</p>}
+      <p className="account-note">Отель сохранён без актуального предложения. Наличие и стоимость нужно проверить в поиске.</p>
       {(room || board) && <div className="saved-rate"><small>Сохранённый вариант</small>{room && <p>{room}</p>}{board && <p>{board}</p>}</div>}
       {amount && <div className="saved-price"><span>Последняя сохранённая цена</span><strong>{amount}</strong><small>Текущая стоимость может отличаться.</small></div>}
       <div className="account-actions"><Link className="account-button" to={savedSearchLink(item)}>Посмотреть отель</Link>
-        <button type="button" className="account-button secondary" aria-label={`Удалить из избранного: ${title}`} disabled={pending || working} onClick={remove}>{pending || working ? 'Удаление…' : 'Удалить из избранного'}</button></div>
+        <button type="button" className="account-button secondary" aria-pressed="true" aria-label={`Удалить из избранного: ${title}`} disabled={pending || working} onClick={remove}>{pending || working ? 'Удаление…' : 'Удалить из избранного'}</button></div>
       <p className="account-note">Откроется новый поиск. Проверьте направление и выберите даты, чтобы узнать наличие.</p>
       {error && <p role="alert" className="account-error">Не удалось выполнить действие. Попробуйте ещё раз.</p>}
     </div>

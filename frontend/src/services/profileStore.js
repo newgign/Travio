@@ -19,7 +19,7 @@ export function createProfileStore({ token, readToken = () => localStorage.getIt
   const store = {
     getSnapshot: () => state,
     subscribe: fn => { listeners.add(fn); return () => listeners.delete(fn); },
-    invalidate() { generation++; loading = saving = changing = null; state = { ...state, user: null, draft: null, password: emptyPassword(), status: token ? 'loading' : 'auth' }; },
+    invalidate() { generation++; loading = saving = changing = null; emit({ user: null, draft: null, password: emptyPassword(), dirty: false, saving: false, passwordBusy: false, errors: {}, message: '', saveError: '', passwordErrors: {}, passwordMessage: '', passwordError: '', status: token ? 'loading' : 'auth' }); },
     load() {
       if (loading) return loading;
       const version = generation;
@@ -47,7 +47,7 @@ export function createProfileStore({ token, readToken = () => localStorage.getIt
       const errors = profileErrors(state.draft);
       emit({ errors, message: '', saveError: '' });
       if (Object.keys(errors).length) return Promise.resolve();
-      const payload = { ...state.draft };
+      const payload = { ...state.draft, full_name: state.draft.full_name.trim(), phone: state.draft.phone.trim() };
       emit({ saving: true });
       saving = Promise.resolve().then(() => current(version) ? api.updateProfile(payload) : null).then(result => {
         if (!current(version)) return;

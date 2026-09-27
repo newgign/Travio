@@ -5,12 +5,13 @@ import { normalizeBoardDisplay, normalizeRoomDisplay, stayLabel } from '../utils
 import { countryLabel } from '../utils/testDestinationLabels';
 import { visibleProviderOffer } from "../utils/providerEnvironment";
 import { offerFreshUntil } from '../utils/selectedOfferSnapshot';
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useFavorites } from "../context/FavoritesContext";
 import { offerDetailsLink } from "../utils/hotTours";
 import { formatMoney } from "../utils/money";
 import HotelImage from './HotelImage';
+import { favoriteKey } from '../services/savedAccountData';
 import "./TourCard.css";
 
 function labelFood(tour) {
@@ -18,10 +19,17 @@ function labelFood(tour) {
 }
 
 export default function TourCard({ tour }) {
+  const { favoriteSessionKey } = useFavorites();
+  return <TourCardView key={favoriteSessionKey} tour={tour} />;
+}
+
+function TourCardView({ tour }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { toggleFavorite, isFavorite } = useFavorites();
+  const { toggleFavorite, isFavorite, pendingFavorites = [] } = useFavorites();
 
+  const favoriteLock = useRef(false);
+  const sharedPending = pendingFavorites.includes(favoriteKey(tour));
   const [now, setNow] = useState(() => Date.now());
   const [favoriteError,setFavoriteError]=useState('');
   const [favoritePending,setFavoritePending]=useState(false);
@@ -48,26 +56,27 @@ export default function TourCard({ tour }) {
 
   async function handleFavorite(event) {
     event.stopPropagation();
-    if(favoritePending)return;
+    if(favoriteLock.current || sharedPending)return;
     setFavoriteError('');
     if (!localStorage.getItem("token")) { navigate("/login"); return; }
+    favoriteLock.current = true;
     setFavoritePending(true);
     try { await toggleFavorite(tour); }
     catch (error) {
-      if (error.message === "AUTH_REQUIRED") { navigate("/login"); return; }
+      if (error.status === 401 || error.code === "AUTH_REQUIRED" || error.message === "AUTH_REQUIRED") { navigate("/login"); return; }
       setFavoriteError('Не удалось обновить избранное. Попробуйте ещё раз.');
     }
-    finally { setFavoritePending(false); }
+    finally { favoriteLock.current = false; setFavoritePending(false); }
   }
 
 
-  if (!publicPrice) return <article className="home-loading"><h3>{hotelName}</h3><p>Актуальная стоимость этого сохранённого предложения недоступна.</p><button type="button" className="details-btn" onClick={handleFavorite}>{favoriteActive ? "Удалить из избранного" : "В избранное"}</button><button type="button" className="details-btn" onClick={() => navigate("/results")}>Найти предложения</button></article>;
+  if (!publicPrice) return <article className="home-loading"><h3>{hotelName}</h3><p>Актуальная стоимость этого сохранённого предложения недоступна.</p>{favoriteError && <p role="alert">{favoriteError}</p>}<button type="button" className="details-btn" disabled={favoritePending || sharedPending} aria-pressed={favoriteActive} aria-label={favoriteActive ? "Удалить из избранного" : "Добавить в избранное"} onClick={handleFavorite}>{favoriteActive ? "Удалить из избранного" : "В избранное"}</button><button type="button" className="details-btn" onClick={() => navigate("/results")}>Найти предложения</button></article>;
   const stars=Number(tour.stars);
   const category=Number.isInteger(stars) && stars>=1 && stars<=5;
   return <article className="tour-card">
     <div className="tour-card-image">
       <HotelImage key={`${tour.provider}:${tour.providerHotelId || tour.id}`} src={displayImage} alt={hotelName} loading="lazy" />
-      <button type="button" className={`tour-card-favorite ${favoriteActive?'active':''}`} onClick={handleFavorite} disabled={favoritePending} aria-pressed={favoriteActive} aria-label={favoriteActive?'Удалить из избранного':'Добавить в избранное'}>{favoriteActive?'♥':'♡'}</button>
+      <button type="button" className={`tour-card-favorite ${favoriteActive?'active':''}`} onClick={handleFavorite} disabled={favoritePending || sharedPending} aria-pressed={favoriteActive} aria-label={favoriteActive?'Удалить из избранного':'Добавить в избранное'}>{favoriteActive?'♥':'♡'}</button>
       {tour.priceEnvironment==='test' && <div className="tour-card-overlay-top"><span className="tour-card-test-badge">Hotelbeds TEST</span></div>}
     </div>
     <div className="tour-card-content">

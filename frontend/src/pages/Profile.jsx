@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import { AccountError, AccountLoading } from '../components/AccountStates';
+import { AccountAuth, AccountError, AccountLoading } from '../components/AccountStates';
 import useSession from '../hooks/useSession';
 import { logout } from '../services/session';
 import { createProfileStore } from '../services/profileStore';
@@ -23,9 +23,9 @@ function PasswordField({ name, label, value, error, disabled, onChange }) {
 export function ProfileView({ state, actions, onLogout = logout }) {
   const { user, draft } = state;
   return <main className="account-page profile-page"><header className="account-header"><h1>Личный кабинет</h1><p>Управляйте личными данными и настройками аккаунта</p></header>
-    {state.status === 'loading' ? <AccountLoading label="Загружаем профиль" /> : state.status === 'error' ? <AccountError title="Не удалось загрузить данные профиля" onRetry={actions.load} /> : state.status === 'auth' ? <Navigate to="/login" replace /> : user && draft && <>
+    {state.status === 'loading' ? <AccountLoading label="Загружаем профиль" /> : state.status === 'error' ? <AccountError title="Не удалось загрузить данные профиля" onRetry={actions.load} /> : state.status === 'auth' ? <AccountAuth /> : user && draft && <>
       <section className="profile-summary profile-card" aria-label="Ваш аккаунт"><div className="profile-avatar" aria-hidden="true">{accountInitials(user)}</div><div><h2>{accountName(user)}</h2><p>{user.email}</p>{user.phone && <p>{user.phone}</p>}{displayDate(user.created_at) !== '—' && <p className="account-note">В Asedeliya с {displayDate(user.created_at)}</p>}{user.role === 'admin' && <span className="account-status">Администратор</span>}</div></section>
-      <div className="profile-layout"><section className="profile-card"><h2>Личные данные</h2><form className="profile-form" noValidate onSubmit={event => { event.preventDefault(); actions.save(); }}>
+      <div className="profile-layout"><section className="profile-card"><h2>Личные данные</h2><form className="profile-form" aria-busy={state.saving} noValidate onSubmit={event => { event.preventDefault(); actions.save(); }}>
         {[['full_name', 'Имя', 'text', 'name'], ['phone', 'Телефон', 'tel', 'tel']].map(([name, label, type, autocomplete]) => <div className="profile-field" key={name}><label htmlFor={`profile-${name}`}>{label}</label><input id={`profile-${name}`} type={type} autoComplete={autocomplete} value={draft[name]} disabled={state.saving} onChange={event => actions.edit(name, event.target.value)} aria-invalid={Boolean(state.errors[name])} aria-describedby={state.errors[name] ? `profile-${name}-error` : undefined} />{state.errors[name] && <span id={`profile-${name}-error`} className="account-error">{state.errors[name]}</span>}</div>)}
         <div className="profile-field"><label htmlFor="profile-email">Email</label><input id="profile-email" value={user.email} readOnly aria-describedby="profile-email-note" /><small id="profile-email-note">Используется для входа. Изменение email здесь недоступно.</small></div>
         <div className="profile-field"><label htmlFor="profile-language">Предпочитаемый язык</label><select id="profile-language" value={draft.preferred_language} disabled={state.saving} onChange={event => actions.edit('preferred_language', event.target.value)}><option value="ru">Русский</option><option value="kk">Қазақша</option><option value="en">English</option></select><small>Сохранённое предпочтение не переключает язык сайта автоматически.</small></div>

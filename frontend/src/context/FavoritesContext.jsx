@@ -1,9 +1,8 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useMemo, useSyncExternalStore } from 'react';
 import useSession from '../hooks/useSession';
-import authFetch from '../services/authFetch';
 import { createAccountListStore } from '../services/accountListStore';
-import { favoriteKey, readFavorites, removeSavedFavorite } from '../services/savedAccountData';
+import { favoriteKey, readFavorites, removeSavedFavorite, toggleSavedFavorite } from '../services/savedAccountData';
 
 const FavoritesContext = createContext(null);
 
@@ -23,22 +22,9 @@ export function FavoritesProvider({ children }) {
     const key = favoriteKey(tour);
     return store.mutate(key, () => removeSavedFavorite(tour), items => items.filter(item => favoriteKey(item) !== key));
   }
-  async function toggleFavorite(tour) {
-    const key = favoriteKey(tour);
-    if (isFavorite(tour.providerHotelId ?? tour.id, tour.provider || 'mock')) {
-      await removeFavorite(tour);
-      return false;
-    }
-    // Existing add flow is unchanged. Favorites page never invokes this POST.
-    await store.mutate(key, () => authFetch('/favorites', {
-      method: 'POST',
-      body: JSON.stringify({ provider: tour.provider || 'mock', hotelId: tour.providerHotelId ?? tour.id,
-        filters: { checkIn: tour.checkIn, checkOut: tour.checkOut, departureDate: tour.departureDate, nights: tour.nights, people: tour.adults, children: tour.children, childrenAges: tour.childrenAges, food: tour.boardCode, roomType: tour.roomCode } }),
-    }), (items, result) => [result.data, ...items.filter(item => favoriteKey(item) !== key)]);
-    return true;
-  }
+  const toggleFavorite = tour => toggleSavedFavorite(store, tour);
   return <FavoritesContext.Provider value={{
-    favorites: state.items, loadingFavorites: state.status === 'loading', favoritesStatus: state.status,
+    favoriteSessionKey: token, favorites: state.items, loadingFavorites: state.status === 'loading', favoritesStatus: state.status,
     favoritesKnown: state.status === 'ready', pendingFavorites: state.pending,
     loadFavorites: store.load, removeFavorite, toggleFavorite, isFavorite,
   }}>{children}</FavoritesContext.Provider>;
