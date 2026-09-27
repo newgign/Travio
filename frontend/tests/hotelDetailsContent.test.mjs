@@ -85,6 +85,71 @@ test('5B Details content, exact selection and no external network',async t=>{
       assert.deepEqual(p.hotelDescriptionParagraphs({description:'22 EURIdeally located. Next sentence.'}),['22 EURIdeally located. Next sentence.']);
       assert.deepEqual(p.hotelDescriptionParagraphs({description:'First\r\nline\r\n\r\n\r\nSecond'}),['First\nline','Second']);
     });
+    await t.test('source blank-line boundaries survive mapper, catalog parameters, candidate and selected Details',async()=>{
+      const require=createRequire(import.meta.url);
+      const mapper=require('../../backend/services/hotelbedsContentMapper');
+      const repository=require('../../backend/repositories/providerCatalogRepository');
+      const provider=require('../../backend/sources/hotelbeds');
+      const generator=require('../../backend/services/offerService');
+      const publicCandidate=require('../../backend/services/hotelbedsPublicCandidate');
+      const tokens=require('../../backend/services/offerTokenService');
+      const fragments=['WIFI AMOUNT : 2 WEEKS = 22 EUR','Ideally located <b>provider text</b>.'];
+      // Synthetic source fixture, not evidence of Grand Kaptan's actual raw_data.
+      const raw={code:3424,name:{content:'Grand Kaptan'},countryCode:'TR',destinationCode:'AYT',
+        description:{content:`  ${fragments[0]}\r\n \r\nIdeally\t located <b>provider text</b>.  `},
+        remarks:{content:'PRIVATE_REMARK'},interestPoints:[{description:'PRIVATE_INTEREST'}],
+        facilities:[{description:{content:'PRIVATE_FACILITY'},indYesOrNo:false}],debug:'PRIVATE_DEBUG'};
+      const beforeRaw=JSON.stringify(raw), mapped=mapper.mapHotel(raw);
+      assert.equal(mapped.description,raw.description.content.trim());
+      let writes=0;
+      // Execute the actual repository method with an in-memory SQL boundary only.
+      const stored=await repository.upsertHotel(mapped,{query:async(sql,values)=>{
+        writes++;
+        assert.match(sql,/description,/);assert.match(sql,/raw_data,/);
+        assert.equal(values[14],mapped.description);
+        assert.deepEqual(JSON.parse(values[23]),raw);
+        return {rows:[{provider_hotel_id:values[1],name:values[7],description:values[14],raw_data:JSON.parse(values[23])}]};
+      }});
+      assert.equal(writes,1);
+      const availability={code:3424,currency:'EUR',rooms:[{code:offer.roomCode,name:offer.roomName,rates:[{
+        rateKey:'offline-boundary-rate',rateType:'BOOKABLE',net:String(offer.price),boardCode:offer.boardCode,
+        boardName:offer.boardName,rooms:1,adults:2,children:1,paymentType:'AT_WEB',packaging:false,rateClass:'NOR'}]}]};
+      const normalized=provider.normalizeHotel(availability,offer,stored);
+      assert.equal(normalized.description,mapped.description);
+      const generated=generator.generateOffer({...normalized,priceEnvironment:'test',stagingTestAllowed:true,bookingDisabled:true},offer);
+      const candidate=publicCandidate(generated);
+      assert.equal(candidate.description,mapped.description);
+      assert.doesNotMatch(JSON.stringify(candidate),/PRIVATE_|raw_data|rawData|interestPoints/);
+      const identity=['provider','providerHotelId','rateKey','roomCode','roomName','boardCode','price','currency','checkIn','checkOut','nights','adults','children','childrenAges','occupancy'];
+      for(const field of identity)assert.deepEqual(candidate[field],generated[field]);
+      const snapshot=JSON.stringify(candidate), signedFields=tokens.compactOffer(candidate);
+      const selected=filterOffers([{...candidate,candidateOffers:[candidate]}],new URLSearchParams('food=AI'))[0];
+      assert.equal(selected,candidate);
+      assert.equal(await loadDetailsOffer({selectedOffer:selected,provider:'hotelbeds',id:'3424',search:'?'+offerDetailsLink(selected).split('?')[1]}),candidate);
+      assert.deepEqual(p.hotelDescriptionParagraphs(candidate),fragments);
+      const markup=details(candidate);
+      const paragraphs=[...markup.matchAll(/<p class="details-description">(.*?)<\/p>/gs)].map(match=>match[1]);
+      assert.deepEqual(paragraphs,[fragments[0],'Ideally located &lt;b&gt;provider text&lt;/b&gt;.']);
+      assert.doesNotMatch(markup,/<b>provider|PRIVATE_|Идеально|Дополнительная информация/);
+      assert.equal(JSON.stringify(candidate),snapshot);assert.deepEqual(tokens.compactOffer(candidate),signedFields);
+      assert.equal(JSON.stringify(raw),beforeRaw);assert.equal(network,0);
+    });
+    await t.test('single upstream raw description stays a single legacy paragraph without EUR or punctuation heuristics',()=>{
+      const require=createRequire(import.meta.url);
+      const mapper=require('../../backend/services/hotelbedsContentMapper');
+      const publicCandidate=require('../../backend/services/hotelbedsPublicCandidate');
+      for(const description of ['WIFI AMOUNT : 2 WEEKS = 22 EURIdeally located. Next sentence.', '10 USDGreat view!Another sentence']){
+        const mapped=mapper.mapHotel({code:3424,description:{content:description}});
+        assert.equal(mapped.description,description);
+        const candidate=publicCandidate({...offer,description:mapped.description,rawData:{private:'HIDDEN'}});
+        assert.deepEqual(p.hotelDescriptionParagraphs(candidate),[description]);
+        const markup=details({...candidate,rateComments:null});
+        assert.ok(markup.includes(`<p class="details-description">${description}</p>`));
+        assert.equal((markup.match(/<p class="details-description">/g)||[]).length,1);
+        assert.doesNotMatch(markup,/HIDDEN/);
+      }
+      assert.equal(network,0);
+    });
     await t.test('paragraph markup stays escaped and object descriptions remain safe fallbacks',()=>{
       const markup=details({...offer,description:'<script>bad()</script>\n\n<img src=x onerror=bad()>'});
       assert.match(markup,/<p class="details-description">&lt;script&gt;/);

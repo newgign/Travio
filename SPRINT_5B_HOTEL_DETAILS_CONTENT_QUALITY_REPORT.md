@@ -1,6 +1,6 @@
 # Sprint 5B — Hotel Details & Content Quality
 
-Status: Sprint 5B.2 presentation follow-up: focused PASS 67/67; full frontend PASS 239/239; lint/build/verifier/diff-check PASS. CODE / OFFLINE: PASS. Backend unchanged in 5B.2; prior 5B.1 full backend PASS 388/388 (34 files) retained, not rerun. Owner reported staging checks and presentation defects; acceptance of the 5B.2 fixes remains NOT RUN. DEPLOY BY THIS CONTINUATION: NOT RUN. Earlier results below are historical; see Sprint 5B.2 follow-up.
+Status: Sprint 5B.3 source-boundary audit: focused PASS 69/69; full frontend PASS 241/241; lint/build/verifier/diff-check PASS. Product/backend unchanged; prior 5B.1 backend PASS 388/388 retained, not rerun. Grand Kaptan concatenation remains unresolved: reliable boundaries unavailable in supplied evidence; actual upstream raw_data not available for inspection. SOURCE BOUNDARY UNAVAILABLE — CANNOT SAFELY REPAIR CONCATENATION. Owner acceptance is not declared. DEPLOY BY THIS CONTINUATION: NOT RUN. See Sprint 5B.3 follow-up; earlier results remain historical.
 
 ## 1. Initial state
 
@@ -335,3 +335,67 @@ Used the existing offlineNetwork.cjs preload and sequential Node runner for both
 Backend changed: **NO**. Hotelbeds/API/runtime behavior changed: **NO**. Booking/payments changed: **NO**. External calls: **0**. DB mutations: **0**. No Availability, Content API, CheckRate, Booking, Cancellation API, payments, Render/env changes, deploy, git add/commit/push. Final git status/diff-stat/full-diff/diff-check completed; working tree left unstaged.
 
 **5B.2 CODE / OFFLINE: PASS. OWNER ACCEPTANCE OF THESE FIXES: NOT RUN. DEPLOY BY THIS CONTINUATION: NOT RUN.** Owner should recheck paragraph readability where actual source boundaries exist and readable offset-preserving cancellation times when this version is separately made available.
+
+## Sprint 5B.3 — Description Source Boundary Follow-up
+
+Continued on develop at 997f970 (`fix: polish hotel details content presentation`). Initial status/branch/log/diff-stat/full-diff confirmed clean tracked baseline. Existing unrelated untracked files were preserved. No rollback, staging, commit, push or deploy.
+
+### Owner evidence
+
+Owner reports Grand Kaptan still contains `... / 2 WEEKS = 22 EURIdeally located in the prime touristic area ...` after 5B.2. Owner confirms the exact Side Sea View / All Inclusive offer, 05–12 October 2026, 7 nights, 2 adults, rooms=1, total 1 014,42 EUR and 144,92 EUR/night; gallery 1/6, address, TEST badge, booking disabled/payment unavailable. Cancellation display is now `29 сентября 2026, 23:59:00 (+03:00)`. Opening Details produced no new Availability/Content/CheckRate Fetch/XHR observed by the owner. This is supplied owner evidence, not an independent browser run or full owner acceptance.
+
+### End-to-end source trace
+
+Read the relevant source files completely. The inspected description path is:
+
+| Stage | Exact handling and boundary implications |
+| --- | --- |
+| `backend/integrations/hotelbeds/client.js` | Content methods delegate to request; performRequest returns response.data. No description extraction, joining or prose rewriting. Read only; no method invoked against a provider. |
+| `backend/services/hotelbedsTestContent.js` and `hotelbedsCatalogService.js` | Import/sync iterates hotel objects and calls mapper.mapHotel; neither combines description/remark/facility strings. Neither importer was run. |
+| `backend/services/hotelbedsContentMapper.js` | mapHotel assigns `description: this.text(raw.description)` (line 71). text returns a string with outer trim, or selects content / nested description / nested name with nullish precedence then String(...). It does not concatenate those fields. Interior blank lines in a string survive. There is no supported paragraph-array model here. Non-string selected values can be coerced by String; that is a possible unsupported-input limitation, not evidence of the observed hotel's source shape. No wildcard traversal. |
+| `database/migrations/005_provider_catalog.sql`, `backend/repositories/providerCatalogRepository.js` | description is TEXT; raw_data is separate JSONB. upsertHotel binds description as parameter 15 and complete rawData as parameter 24; updates use EXCLUDED.description/raw_data. Reads return rows using SELECT *. No SQL concatenation. Schema source was inspected only; no migration/query against a real DB was run. |
+| `backend/sources/hotelbeds.js` | searchHotels matches catalog row by provider hotel ID. normalizeHotel copies `content?.description || ""` (line 416); it does not read raw_data.description. Facilities are separately normalized into amenity names/flags. Rate comments originate in the selected rate and remain separate. Interest points/remarks/wildcard fields are not joined into hotel description. |
+| `backend/services/hotelbedsDisplayRates.js`, `offerService.js` | Rate grouping/selecting retains normalized offer metadata; generateOffer spreads hotel fields while calculating existing identity/stay fields. Neither edits description. |
+| `backend/services/searchService.js`, `hotelbedsPublicCandidate.js`, `offerTokenService.js` | candidateOffers uses generateOffer then publicCandidate: description passes only when already a string, unchanged. Raw objects/internal fields are not exposed by this allowlist. Signing uses the existing compact identity contract; description is not part of that signed payload and is not reconstructed from it. No signing change. |
+| `backend/routes/search.js`, `controllers/searchController.js`, `utils/apiResponse.js`; `frontend/src/services/tourService.js`, `resultsSearch.js` | Response wrapping, JSON parsing and tab-memory cache retain candidate description; no text joining. |
+| `frontend/src/pages/Results.jsx`, `utils/localOfferFilters.js`, `components/TourCard.jsx` | Results chooses the existing candidate; Card sends that exact object as selectedOffer in navigation state. Description is not rebuilt from parent/default candidate content. |
+| `frontend/src/utils/selectedOfferSnapshot.js`, `services/detailsOffer.js` | Valid fresh selected object returns by identity with no resolver request or description rewriting. |
+| `frontend/src/utils/detailsPresentation.js`, `pages/TourDetails.jsx`, `styles/TourDetails.css` | Existing 5B.2 helper normalizes whitespace, preserves explicit blank-line paragraph boundaries, and maps them to separate escaped React p elements with spacing/wrapping. It never inserts a boundary at EUR/uppercase, punctuation, amounts, WIFI or Ideally. |
+
+### Finding and evidence limit
+
+**Reliable upstream boundaries available for the actual Grand Kaptan concatenation: NO — not demonstrated in available local evidence.** Workspace searches found owner reports and synthetic tests, not the original Grand Kaptan Content response or exported catalog raw_data. The source path supports one string, but that alone cannot prove what every field in the deployed raw_data contains. A local fixture/export path was requested; none was supplied during this continuation. Remote DB/provider access was not used.
+
+No location that joins the two observed fragments was found in application source. For the supported string/content-string input, internal separators are preserved from mapper through catalog parameters and serializer to Details; this was verified offline. The exact original point of concatenation is **UNDETERMINED without the actual source record**. It would be incorrect to claim that Hotelbeds supplied a single string, that the database lost a boundary, or that raw_data contains recoverable fragments based solely on the screenshot text.
+
+**SOURCE BOUNDARY UNAVAILABLE — CANNOT SAFELY REPAIR CONCATENATION.** Product code and public contract remain unchanged. No speculative descriptionParagraphs field, arbitrary object traversal, facility/remark merging, generated heading/translation or heuristic repair was introduced. Existing old description:string candidates continue to work. Wi-Fi charge information and the concatenated text are retained. This continuation does not claim the visible defect is fixed.
+
+To resolve the remaining factual uncertainty, the needed evidence is a saved local, sanitized Grand Kaptan record containing only provider_hotel_id, description and the relevant raw_data description/explicit text-fragment fields. No credentials, personal contact data or new provider request is needed. Until such evidence exists, the established fallback remains unchanged.
+
+### Tests and regression
+
+Extended only the existing frontend 5B suite with two upstream-to-markup regression cases. Synthetic fixtures are explicitly identified as such, not represented as a capture of actual Grand Kaptan content.
+
+1. Genuine blank-line source boundaries pass through the real mapper, repository upsert method with an in-memory executor capturing SQL parameters (no DB connection), provider normalizer, offer generator, public candidate serializer, Results filter and selected Details loader. Two paragraphs retain order, normalize internal whitespace, retain Wi-Fi charges and English prose, and escape markup. Raw remark/interest/facility/debug sentinels stay out of the public candidate/markup. Exact identity fields, compact signing fields and input objects remain unchanged. No fetch.
+2. Already-concatenated raw content and punctuation/capital-letter examples remain one legacy description paragraph through mapper/serializer/rendering, proving no arbitrary prose split or raw object exposure. Existing 5B.2 paragraph, backward-compatibility, malformed object, offset/time and zero-network coverage remains green.
+
+| Gate | Result |
+| --- | --- |
+| Focused 5B suite | PASS 69/69, exit 0 |
+| Full frontend suite | PASS 241/241, exit 0 |
+| Lint | PASS, 0 errors; same 3 inherited admin hook warnings |
+| Build | PASS; unchanged JS 506.23 kB / gzip 142.57 kB, CSS 110.63 kB / gzip 20.07 kB; existing >500 kB warning |
+| sprint3mVerify | PASS, 205 backend syntax files, 422 scanned files, findings=[] |
+| diff-check | PASS |
+| Backend regression | Not applicable to this change: no backend source/test edits; previous 388/388 not rerun |
+
+Frontend commands used the existing offlineNetwork.cjs preload and sequential Node runner. Logs: OS temporary `sprint5b3-focused.log` and `sprint5b3-frontend.log`. No disposable database, migration or actual catalog write was used. The repository executor in the new test only captures arguments in memory. Build display flag remained process-only.
+
+### Exact changed files and status
+
+- `frontend/tests/hotelDetailsContent.test.mjs` — two source-boundary integration regression cases.
+- `SPRINT_5B_HOTEL_DETAILS_CONTENT_QUALITY_REPORT.md` — current status, trace, evidence limitation and results.
+
+Backend changed: **NO**. Frontend product source changed: **NO**. Hotelbeds/API/runtime behavior changed: **NO**. Booking/payments changed: **NO**. External calls: **0**. Real DB mutations: **0**. No remote/local application DB access, schema changes, migration, Content/Availability/CheckRate/Booking/Cancellation/payment calls, Render/env changes or deploy. Final status/diff-stat/full-diff/diff-check performed; changes remain unstaged.
+
+**Offline regression: PASS. Concatenation repair: NOT IMPLEMENTED — source boundary unavailable. Owner acceptance: NOT DECLARED. Deploy: NOT RUN.**
