@@ -59,7 +59,26 @@ function testNotificationCenterContracts() {
   const service = read("services/notificationService.js");
   const routes = read("routes/notifications.js");
   const server = read("server.js");
-  assert.ok(service.includes('provider === "console"'));
+  // Sprint 2K moved delivery providers behind emailProviderService.
+  assert.ok(service.includes('return emailProviderService.send(content)'));
+  const email = require('../services/emailProviderService');
+  const notifications = require('../services/notificationService');
+  const previous = { EMAIL_ENABLED: process.env.EMAIL_ENABLED, EMAIL_PROVIDER: process.env.EMAIL_PROVIDER };
+  try {
+    process.env.EMAIL_PROVIDER = 'console';
+    for (const enabled of [false, true]) {
+      process.env.EMAIL_ENABLED = String(enabled);
+      assert.deepStrictEqual(email.status(), {enabled, provider:'console', configured:true, mode:enabled?'console':'disabled', externalDelivery:false});
+      const state = notifications.channelStatus();
+      assert.strictEqual(state.provider, 'console');
+      assert.strictEqual(state.enabled, enabled);
+      assert.strictEqual(state.externalDelivery, false);
+    }
+  } finally {
+    for (const [key,value] of Object.entries(previous)) {
+      if (value === undefined) delete process.env[key]; else process.env[key] = value;
+    }
+  }
   assert.ok(service.includes("attempts < 3"));
   assert.ok(service.includes("queueTestNotification"));
   assert.ok(routes.includes('router.post("/test"'));
@@ -96,12 +115,18 @@ function testMigrationAndPaymentRoutes() {
 function testFrontendServiceCenterAndHistory() {
   const profile = fs.readFileSync(path.join(__dirname, "../../frontend/src/pages/Profile.jsx"), "utf8");
   const bookings = fs.readFileSync(path.join(__dirname, "../../frontend/src/pages/MyBookings.jsx"), "utf8");
-  assert.ok(profile.includes("Email-центр"));
-  assert.ok(profile.includes("Платёжный контур"));
-  assert.ok(profile.includes("sendTestNotification"));
-  assert.ok(bookings.includes('status === "test"'));
-  assert.ok(bookings.includes("downloadBookingVoucherPdf"));
-  assert.ok(bookings.includes("🧾"));
+  // 3T Profile is account/preferences only; 3S bookings are persisted read-only data.
+  const card = fs.readFileSync(path.join(__dirname, "../../frontend/src/components/PersistedBookingCard.jsx"), "utf8");
+  const presentation = fs.readFileSync(path.join(__dirname, "../../frontend/src/utils/savedAccountPresentation.js"), "utf8");
+  assert.ok(profile.includes("Email-уведомления"));
+  assert.ok(profile.includes("checked={draft[name]}"));
+  assert.doesNotMatch(profile, /sendTestNotification|paymentService|notificationService/);
+  assert.ok(bookings.includes('<PersistedBookingCard key={booking.id} booking={booking} />'));
+  assert.ok(card.includes('testBooking(booking)'));
+  assert.ok(card.includes('Тестовая запись'));
+  assert.ok(presentation.includes("booking.payment_status === 'test'"));
+  assert.ok(card.includes('Сумма в записи, не подтверждение оплаты.'));
+  assert.doesNotMatch(bookings + card, /downloadBookingVoucherPdf|payBooking/);
 }
 
 function testSprint2GDateFixPreserved() {

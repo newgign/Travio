@@ -184,8 +184,13 @@ function testFrontendRoutesContract() {
 
   assert.ok(app.includes('path="/profile"'));
   assert.ok(app.includes('path="/voucher/:bookingId"'));
-  assert.ok(myBookings.includes("📄 Ваучер / PDF"));
-  assert.ok(myBookings.includes("🔎 Найти новый тариф"));
+  // Sprint 3S intentionally made My Bookings a persisted-data-only view.
+  const card = fs.readFileSync(path.join(__dirname, "../../frontend/src/components/PersistedBookingCard.jsx"), "utf8");
+  assert.ok(myBookings.includes('<PersistedBookingCard key={booking.id} booking={booking} />'));
+  assert.ok(card.includes('to={savedSearchLink('));
+  assert.ok(card.includes('Посмотреть отель</Link>'));
+  assert.ok(card.includes('Для новых дат и тарифов откройте поиск.'));
+  assert.doesNotMatch(myBookings + card, /downloadBookingVoucherPdf|syncProviderBooking|cancelProviderBooking/);
 }
 
 function testTravelerBirthDateIsDateOnly() {
@@ -207,10 +212,9 @@ function testTravelerBirthDateIsDateOnly() {
     travelerStep.includes("birthDate: dateOnlyValue(saved.birth_date)"),
     "Checkout must not slice an ISO timestamp as if it were a date-only value"
   );
-  assert.ok(
-    profilePage.includes("dateOnlyLabel(traveler.birth_date)"),
-    "Profile must display birth dates without timezone conversion"
-  );
+  // Sprint 3T removed traveler editing from Profile; DATE stays in Checkout/API.
+  assert.doesNotMatch(profilePage, /getTravelerProfiles|traveler\.birth_date/);
+  assert.ok(profilePage.includes('createProfileStore({ token })'));
 }
 
 function main() {

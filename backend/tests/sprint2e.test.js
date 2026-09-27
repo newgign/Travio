@@ -52,6 +52,7 @@ async function testCheckRateMapsToBookableRate() {
 
     return {
       hotel: {
+        code: 3424,
         currency: "EUR",
         rooms: [
           {
@@ -60,6 +61,7 @@ async function testCheckRateMapsToBookableRate() {
             rates: [
               {
                 rooms: 1, adults: 2, children: 0,
+                rateClass: "NOR", paymentType: "AT_WEB", packaging: false,
                 rateKey: "rate-new",
                 rateType: "BOOKABLE",
                 net: "130.25",
@@ -75,25 +77,39 @@ async function testCheckRateMapsToBookableRate() {
   };
 
   try {
-    const checked = await hotelbedsProvider.checkRateOffer({
+    // Sprint 3D requires full product identity even when a recheck returns a new key.
+    const selected = {
       provider: "hotelbeds",
       providerHotelId: "3424",
       offerId: "rate-old",
       rateKey: "rate-old",
       occupancy: { rooms: 1, adults: 2, children: 0 },
+      rateClass: "NOR", paymentType: "AT_WEB", packaging: false,
       rateType: "RECHECK",
       recheckRequired: true,
       roomCode: "DBL.ST",
       boardCode: "BB",
       price: 125.55,
       currency: "EUR",
-    });
+    };
+    const before = JSON.stringify(selected);
+    const checked = await hotelbedsProvider.checkRateOffer(selected);
 
     assert.strictEqual(checked.rateKey, "rate-new");
     assert.strictEqual(checked.rateType, "BOOKABLE");
     assert.strictEqual(checked.recheckRequired, false);
     assert.strictEqual(checked.price, 130.25);
     assert.strictEqual(checked.currency, "EUR");
+    for (const field of ["providerHotelId", "roomCode", "boardCode", "rateClass", "paymentType", "packaging"]) {
+      assert.strictEqual(checked[field], selected[field]);
+    }
+    assert.deepStrictEqual(checked.occupancy, selected.occupancy);
+    for (const patch of [{providerHotelId:"999"}, {roomCode:"OTHER"}, {boardCode:"AI"},
+      {currency:"USD"}, {rateClass:undefined}, {paymentType:undefined}, {packaging:undefined},
+      {occupancy:{rooms:1,adults:3,children:0}}]) {
+      await assert.rejects(hotelbedsProvider.checkRateOffer({...selected,...patch}), {code:"RATE_NOT_AVAILABLE"});
+    }
+    assert.strictEqual(JSON.stringify(selected), before);
   } finally {
     hotelbedsClient.checkRates = original;
   }

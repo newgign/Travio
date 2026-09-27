@@ -69,7 +69,12 @@ function testCustomerBookingWorkspace() {
   assert.ok(details.includes("Реальный refund"));
   assert.ok(details.includes("Реального списания денег не было"));
   assert.ok(details.includes("Синхронизировать HB"));
-  assert.ok(bookings.includes("🧾 Открыть заказ"));
+  // Sprint 3S keeps historical details in a safe native disclosure on the list.
+  const card = frontend("components/PersistedBookingCard.jsx");
+  assert.ok(bookings.includes('<PersistedBookingCard key={booking.id} booking={booking} />'));
+  assert.ok(card.includes('<details className="booking-persisted-details"><summary>Детали</summary>'));
+  assert.ok(card.includes('Бронирование, оплата и действия у поставщика сейчас недоступны.'));
+  assert.doesNotMatch(card, /syncProviderBooking|cancelProviderBooking|payBooking|downloadBookingVoucherPdf/);
   assert.ok(service.includes("getBookingDetails"));
   assert.ok(success.includes("🧾 Открыть заказ"));
 }
