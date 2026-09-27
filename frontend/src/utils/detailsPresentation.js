@@ -4,17 +4,31 @@ import { editSearchLink, pluralCount } from './resultsPresentation';
 import { formatMoney } from './money';
 
 export const contentText = value => typeof value === 'string' ? value.trim() : '';
-export const hotelDescription = offer => contentText(offer.description) || 'Описание отеля пока недоступно.';
+export const hotelDescription = offer => contentText(offer.description)
+  .replace(/\r\n?/g, '\n').replace(/[^\S\n]+/g, ' ')
+  .split('\n').map(line => line.trim()).join('\n').replace(/\n{3,}/g, '\n\n')
+  || 'Описание отеля пока недоступно.';
+// Only explicit blank lines delimit paragraphs; never guess boundaries in prose.
+export const hotelDescriptionParagraphs = offer => hotelDescription(offer).split('\n\n');
 export const hotelAddress = offer => contentText(offer.address);
+export function cancellationDateLabel(value) {
+  const parts = typeof value === 'string' && /^(\d{4}-\d{2}-\d{2})(?:T((?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d{1,3})?)?)(Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)?)?$/.exec(value);
+  if (!parts || displayDate(parts[1]) === '—') return '';
+  // Format the calendar date in UTC, but keep supplied clock/offset as text.
+  const date = displayDate(parts[1]).replace(/\s*г\.$/u, '');
+  if (!parts[2]) return date;
+  const offset = parts[3] === 'Z' ? 'UTC (Z)' : parts[3] ? `(${parts[3]})` : '(часовой пояс не указан)';
+  return `${date}, ${parts[2]} ${offset}`;
+}
 export function rateConditions(offer) {
   const comments=contentText(offer.rateComments);
   const policies=(Array.isArray(offer.cancellationPolicies)?offer.cancellationPolicies:[]).flatMap(policy=>{
     if(!policy || typeof policy!=='object')return [];
     const from=contentText(policy.from), currency=policy.currency ?? offer.currency;
-    // Display the supplied timestamp verbatim: never invent a timezone/deadline.
-    if(!/^\d{4}-\d{2}-\d{2}(?:T(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d{1,3})?)?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)?)?$/.test(from) || displayDate(from)==='—' || !/^[A-Z]{3}$/.test(currency || ''))return [];
+    const fromLabel = cancellationDateLabel(from);
+    if(!fromLabel || !/^[A-Z]{3}$/.test(currency || ''))return [];
     if(!['number','string'].includes(typeof policy.amount) || !/^\d+(?:\.\d+)?$/.test(String(policy.amount)) || !Number.isFinite(Number(policy.amount)))return [];
-    return [{from,amount:formatMoney(policy.amount,currency)}];
+    return [{from,fromLabel,amount:formatMoney(policy.amount,currency)}];
   }).slice(0,20);
   return {comments,policies};
 }

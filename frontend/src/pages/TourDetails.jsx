@@ -10,7 +10,7 @@ import { selectedOfferSnapshot } from '../utils/selectedOfferSnapshot';
 import { visibleProviderOffer } from '../utils/providerEnvironment';
 import { normalizeBoardDisplay, normalizeRoomDisplay } from '../utils/hotelOfferDisplay';
 import { editSearchLink } from '../utils/resultsPresentation';
-import { contentText, hotelAddress, hotelDescription, rateConditions, detailsBackTarget, detailsError, detailsSummary, displayDate, galleryImages, hotelAmenities, hotelCategory, hotelLocation, stayDates } from '../utils/detailsPresentation';
+import { contentText, hotelAddress, hotelDescriptionParagraphs, rateConditions, detailsBackTarget, detailsError, detailsSummary, displayDate, galleryImages, hotelAmenities, hotelCategory, hotelLocation, stayDates } from '../utils/detailsPresentation';
 import { loadDetailsOffer, watchDetailsExpiry, validDetailsOffer } from '../services/detailsOffer';
 import { toggleDetailsFavorite } from '../utils/detailsFavorite';
 import '../styles/TourDetails.css';
@@ -129,7 +129,7 @@ function DetailsPage({ provider, id, location }) {
       </aside>
       <div className="details-content">
         <section className="details-section" aria-labelledby="hotel-info-title"><h2 id="hotel-info-title">Об отеле</h2>
-          <p className="details-description">{hotelDescription(tour)}</p>
+          {hotelDescriptionParagraphs(tour).map((paragraph,index) => <p className="details-description" key={index}>{paragraph}</p>)}
           {amenities.length > 0 && <><h3>Удобства</h3><ul className="details-amenities">{amenities.slice(0,8).map(amenity => <li key={amenity}>{amenity}</li>)}</ul>
             {amenities.length>8 && <details className="details-more"><summary>Показать все удобства ({amenities.length})</summary><ul className="details-amenities">{amenities.slice(8).map(amenity=><li key={amenity}>{amenity}</li>)}</ul></details>}
           </>}
@@ -140,7 +140,7 @@ function DetailsPage({ provider, id, location }) {
         </section>}
         <section className="details-section" aria-labelledby="rate-conditions-title"><h2 id="rate-conditions-title">Условия тарифа</h2>
           {conditions.comments && <p className="details-description">{conditions.comments}</p>}
-          {conditions.policies.length>0 && <><h3>Штрафы при отмене по выбранному тарифу</h3><ul className="details-policies">{conditions.policies.map((policy,index)=><li key={index}>С <time dateTime={policy.from}>{policy.from}</time> — {policy.amount}</li>)}</ul><p>Даты и время указаны как получены от поставщика, без изменения часового пояса.</p></>}
+          {conditions.policies.length>0 && <><h3>Штрафы при отмене по выбранному тарифу</h3><ul className="details-policies">{conditions.policies.map((policy,index)=><li key={index}>С <time dateTime={policy.from}>{policy.fromLabel}</time> — {policy.amount}</li>)}</ul><p>Даты и время указаны как получены от поставщика, без изменения часового пояса.</p></>}
           <p>Подробные условия тарифа будут доступны после повторной проверки перед оформлением.</p>
         </section>
         <details className="details-technical"><summary>Техническая информация</summary><dl>

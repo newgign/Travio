@@ -71,6 +71,73 @@ test('5B Details content, exact selection and no external network',async t=>{
     });
     await t.test('description uses stored content and preserves paragraph breaks',()=>{assert.match(html,/Stored catalog description/);assert.match(html,/Second paragraph/);assert.equal(p.hotelDescription(offer),offer.description);});
     await t.test('missing description is factual fallback',()=>{assert.match(details({...offer,description:null}),/Описание отеля пока недоступно/);assert.equal(p.hotelDescription({description:{content:'Not a string'}}),'Описание отеля пока недоступно.');});
+    await t.test('explicit source paragraphs separate charges from prose without translation or truncation',()=>{
+      const description='  WIFI AMOUNT (EXCEPT LOBBY) : 1 HOUR = 1 EUR / 1 DAY = 3 EUR / 22 EUR\r\n \r\nIdeally located in the prime touristic area.  ';
+      const paragraphs=p.hotelDescriptionParagraphs({description});
+      assert.deepEqual(paragraphs,['WIFI AMOUNT (EXCEPT LOBBY) : 1 HOUR = 1 EUR / 1 DAY = 3 EUR / 22 EUR','Ideally located in the prime touristic area.']);
+      const markup=details({...offer,description});
+      for(const paragraph of paragraphs)assert.ok(markup.includes(`<p class="details-description">${paragraph}</p>`));
+      assert.doesNotMatch(markup,/EURIdeally|Дополнительная информация|Идеально расположен/);
+      assert.equal(network,0);
+    });
+    await t.test('description normalizes whitespace without guessing boundaries in a single raw string',()=>{
+      assert.equal(p.hotelDescription({description:' \tWIFI\u00a0  AMOUNT\t:  22 EURIdeally located. Next sentence. '}),'WIFI AMOUNT : 22 EURIdeally located. Next sentence.');
+      assert.deepEqual(p.hotelDescriptionParagraphs({description:'22 EURIdeally located. Next sentence.'}),['22 EURIdeally located. Next sentence.']);
+      assert.deepEqual(p.hotelDescriptionParagraphs({description:'First\r\nline\r\n\r\n\r\nSecond'}),['First\nline','Second']);
+    });
+    await t.test('paragraph markup stays escaped and object descriptions remain safe fallbacks',()=>{
+      const markup=details({...offer,description:'<script>bad()</script>\n\n<img src=x onerror=bad()>'});
+      assert.match(markup,/<p class="details-description">&lt;script&gt;/);
+      assert.match(markup,/<p class="details-description">&lt;img/);
+      assert.doesNotMatch(markup,/<script|<img src="x"/);
+      for(const description of [{content:'private'},['private'],null,42]){
+        assert.deepEqual(p.hotelDescriptionParagraphs({description}),['Описание отеля пока недоступно.']);
+        assert.doesNotMatch(details({...offer,description}),/private|\[object Object\]/);
+      }
+    });
+    await t.test('description paragraphs have spacing and wrap without clipping content',async()=>{
+      const css=postcss.parse(await source('styles/TourDetails.css'));
+      const rule=selector=>css.nodes.find(node=>node.selector===selector);
+      assert.ok(rule('.details-section .details-description + .details-description').nodes.some(node=>node.prop==='margin-top' && node.value==='16px'));
+      assert.ok(rule('.details-section p').nodes.some(node=>node.prop==='overflow-wrap' && node.value==='anywhere'));
+      assert.ok(rule('.details-section p').nodes.some(node=>node.prop==='line-height' && Number(node.value)>=1.5));
+    });
+    await t.test('cancellation date is readable with original offset, amount and timestamp preserved',()=>{
+      const cancellationPolicies=[{from:'2026-09-29T23:59:00+03:00',amount:'150.50',currency:'USD'}];
+      const saved=JSON.stringify(cancellationPolicies);
+      const value=p.rateConditions({...offer,cancellationPolicies}).policies[0];
+      assert.equal(value.from,cancellationPolicies[0].from);
+      assert.equal(value.fromLabel,'29 сентября 2026, 23:59:00 (+03:00)');
+      assert.match(value.amount,/150,50/);assert.match(value.amount,/\$/);assert.doesNotMatch(value.amount,/€/);
+      assert.ok(details({...offer,cancellationPolicies}).includes(`<time dateTime="${value.from}">${value.fromLabel}</time>`));
+      assert.equal(JSON.stringify(cancellationPolicies),saved);
+      assert.equal(network,0);
+    });
+    await t.test('cancellation clock and date never convert through browser local timezone',()=>{
+      const original=process.env.TZ;
+      try {
+        for(const zone of ['Pacific/Honolulu','Asia/Tokyo','UTC']){
+          process.env.TZ=zone;
+          assert.equal(p.cancellationDateLabel('2026-09-29T00:01:02.123+03:00'),'29 сентября 2026, 00:01:02.123 (+03:00)');
+          assert.equal(p.cancellationDateLabel('2026-09-29T23:59-07:30'),'29 сентября 2026, 23:59 (-07:30)');
+        }
+      } finally {if(original===undefined)delete process.env.TZ;else process.env.TZ=original;}
+    });
+    await t.test('UTC, date-only and absent timezone remain explicit without invented offsets',()=>{
+      assert.equal(p.cancellationDateLabel('2026-09-29T23:59Z'),'29 сентября 2026, 23:59 UTC (Z)');
+      assert.equal(p.cancellationDateLabel('2026-09-29'),'29 сентября 2026');
+      assert.equal(p.cancellationDateLabel('2026-09-29T23:59'),'29 сентября 2026, 23:59 (часовой пояс не указан)');
+    });
+    await t.test('malformed cancellation dates are omitted and zero penalty never promises free cancellation',()=>{
+      for(const from of ['2026-02-30T23:59+03:00','2026-09-29T24:00+03:00','2026-09-29T23:59+03:99','invalid',{},null]){
+        assert.equal(p.cancellationDateLabel(from),'');
+        const markup=details({...offer,cancellationPolicies:[{from,amount:'0',currency:'EUR'}]});
+        assert.doesNotMatch(markup,/details-policies|Invalid Date|Бесплатная отмена|free cancellation/i);
+      }
+      const markup=details({...offer,cancellationPolicies:[{from:'2026-09-29T23:59+03:00',amount:0,currency:'EUR'}]});
+      assert.match(markup,/0,00/);assert.doesNotMatch(markup,/Бесплатная отмена|free cancellation/i);
+      assert.equal(network,0);
+    });
     await t.test('provider HTML is escaped as text, never executed',()=>{
       const markup=details({...offer,description:'<script>alert(1)</script><img src=x onerror=evil()>',rateComments:'<b>Rate text</b>'});assert.match(markup,/&lt;script&gt;/);assert.match(markup,/&lt;b&gt;Rate text/);assert.doesNotMatch(markup,/<script|<img src="x"|<b>Rate text/);
     });

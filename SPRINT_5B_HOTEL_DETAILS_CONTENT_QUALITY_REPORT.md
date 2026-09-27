@@ -1,6 +1,6 @@
 # Sprint 5B — Hotel Details & Content Quality
 
-Status: Sprint 5B.1 legacy cleanup verified on 2026-09-27. FULL BACKEND: PASS 388/388, all 34 files. Focused 5B: PASS 59/59; full frontend: PASS 231/231; lint/build/verifier/diff-check: PASS. CODE / OFFLINE: PASS. LOCAL TEST DB CLEANUP: PASS. OWNER BROWSER ACCEPTANCE: NOT RUN. DEPLOY: NOT RUN. See Legacy Regression Cleanup below; earlier failed runs remain historical evidence.
+Status: Sprint 5B.2 presentation follow-up: focused PASS 67/67; full frontend PASS 239/239; lint/build/verifier/diff-check PASS. CODE / OFFLINE: PASS. Backend unchanged in 5B.2; prior 5B.1 full backend PASS 388/388 (34 files) retained, not rerun. Owner reported staging checks and presentation defects; acceptance of the 5B.2 fixes remains NOT RUN. DEPLOY BY THIS CONTINUATION: NOT RUN. Earlier results below are historical; see Sprint 5B.2 follow-up.
 
 ## 1. Initial state
 
@@ -288,3 +288,50 @@ Final `git status --short`, `git diff --stat`, complete `git diff`, and `git -c 
 External service/provider calls: **0**. Real external DB mutations: **0**. Local disposable test mutations: **ALLOWED / CLEANED**. Hotelbeds runtime/transport/behavior changed by 5B.1: **NO**. Booking behavior changed: **NO**. Payments behavior changed: **NO**. Real Availability/Content/CheckRate/Booking/Cancellation/payment operations: **0**.
 
 **CODE / OFFLINE: PASS. OWNER BROWSER ACCEPTANCE: NOT RUN. DEPLOY: NOT RUN.** Browser/layout acceptance remains the separate owner checklist in section 28.
+
+## Sprint 5B.2 — Owner Content Presentation Follow-up
+
+Continued on develop, HEAD ba86ade (`test: refresh legacy regression contracts`), after initial `git status --short`, `git diff --stat`, and full `git diff`. Tracked tree was clean: 5B/5B.1 are committed baseline. Unrelated untracked README.txt, docs/, 3N report and unusual filenames were left untouched.
+
+### Owner staging evidence and remaining issues
+
+Owner supplied a written account of browser/screenshot observations on deployed staging for Grand Kaptan; no screenshot image was attached for independent inspection in this continuation. Reported PASS: exact Side Sea View / All Inclusive offer, 05–12 October 2026, 7 nights, 2 adults, rooms=1, total 1 014,42 EUR, per-night 144,92 EUR, visible Hotelbeds TEST, disabled booking/unavailable payment, gallery 1/6, address and cancellation conditions present. Owner observed no new Availability/Content/CheckRate request when opening Details. These are owner-reported checks, not a new independent browser run or full acceptance declaration.
+
+Owner identified a long English provider description with Wi-Fi charges and concatenated text such as `22 EURIdeally located`, plus the raw cancellation ISO `2026-09-29T23:59:00+03:00` in visible text.
+
+### Source audit and exact presentation changes
+
+Read the existing description chain: `hotelbedsContentMapper.mapHotel` extracts `text(raw.description)`; the catalog repository stores one description field; `hotelbeds.normalizeHotel` copies `content.description`; the public candidate permits a string only. No separately identified charge/description fragment fields or trusted translation are exposed to Details. No live provider payload, remote/local DB or external service was accessed to infer additional structure.
+
+- Frontend description normalization trims text/lines, normalizes CRLF/CR to LF, collapses repeated horizontal whitespace including tabs/nonbreaking spaces, and normalizes multiple blank lines. Explicit blank-line boundaries become separate semantic `<p>` elements; single source line breaks remain line breaks. No sentence splitting, word-boundary guessing, truncation, translation or generated hotel facts.
+- Charges and original English wording remain. Without a reliable boundary, `EURIdeally` inside one raw string deliberately remains unchanged. This is a limitation of the available source contract, not a claim that every observed concatenation was repaired. Where the source supplies a blank-line boundary between `EUR` and `Ideally`, separate paragraphs prevent concatenation. No invented charge sublabel or new source-field contract was added.
+- Paragraphs remain React text, including escaped provider markup. Non-string descriptions retain the neutral fallback. Existing line-height 1.65 and overflow-wrap:anywhere remain; adjacent description paragraphs now have 16px spacing. All information is visible by default, without collapse or clipping.
+- Cancellation display now formats validated calendar/clock parts as `29 сентября 2026, 23:59:00 (+03:00)`. Seconds/fractional seconds and the supplied signed offset are retained. `Z` is displayed as `UTC (Z)`; a timestamp without offset explicitly says the timezone is unspecified; date-only input stays date-only. No browser-local timezone conversion or location-based assumption. Original timestamp stays in `<time dateTime>` and the offer remains unmodified. Invalid timestamps are omitted through existing policy validation. Amount/currency formatting and zero-penalty semantics are unchanged; no free-cancellation promise.
+
+### Tests and regression
+
+Extended only the existing `frontend/tests/hotelDetailsContent.test.mjs` with eight subtests. Coverage includes genuine paragraph boundaries, whitespace, escaped markup, retained factual charges/English wording, no guessed split or object rendering, readable cancellation dates, exact amount/currency and source timestamp preservation, explicit offsets, multiple local TZ settings, Z/date-only/missing-offset inputs, malformed dates, zero-penalty semantics, CSS spacing/wrapping and zero external fetches. All prior 5B cases remain green.
+
+| Gate | Result |
+| --- | --- |
+| Focused 5B | PASS 67/67, exit 0 |
+| Full frontend | PASS 239/239, exit 0 |
+| Lint | PASS, 0 errors; same 3 admin hook warnings |
+| Build | PASS; JS 506.23 kB / gzip 142.57 kB; CSS 110.63 kB / gzip 20.07 kB; existing >500 kB warning |
+| sprint3mVerify | PASS, 205 backend syntax files; 422 scanned files; findings=[] |
+| diff-check | PASS |
+| Backend regression | Not rerun: no backend source/test changes; previous 388/388 remains historical evidence |
+
+Used the existing offlineNetwork.cjs preload and sequential Node runner for both frontend suites; logs are OS-temp `sprint5b2-focused.log` / `sprint5b2-frontend.log`. Build TEST display flag was process-only, with no env-file change. No disposable DB was needed or created. SSR/CSS tests are not browser layout acceptance.
+
+### Exact changed files and safety
+
+1. `frontend/src/utils/detailsPresentation.js` — conservative description/paragraph helpers and cancellation display label.
+2. `frontend/src/pages/TourDetails.jsx` — semantic description paragraphs and readable time label with original dateTime.
+3. `frontend/src/styles/TourDetails.css` — adjacent paragraph spacing.
+4. `frontend/tests/hotelDetailsContent.test.mjs` — eight additional presentation/safety cases.
+5. `SPRINT_5B_HOTEL_DETAILS_CONTENT_QUALITY_REPORT.md` — this follow-up and current status.
+
+Backend changed: **NO**. Hotelbeds/API/runtime behavior changed: **NO**. Booking/payments changed: **NO**. External calls: **0**. DB mutations: **0**. No Availability, Content API, CheckRate, Booking, Cancellation API, payments, Render/env changes, deploy, git add/commit/push. Final git status/diff-stat/full-diff/diff-check completed; working tree left unstaged.
+
+**5B.2 CODE / OFFLINE: PASS. OWNER ACCEPTANCE OF THESE FIXES: NOT RUN. DEPLOY BY THIS CONTINUATION: NOT RUN.** Owner should recheck paragraph readability where actual source boundaries exist and readable offset-preserving cancellation times when this version is separately made available.

@@ -32,6 +32,7 @@
 .details-section h2 { font-size:23px; margin:0 0 16px; line-height:1.25; }
 .details-section h3 { font-size:17px; margin:24px 0 12px; }
 .details-section p { margin:0; color:#64748b; line-height:1.65; overflow-wrap:anywhere; }
+.details-section .details-description + .details-description { margin-top:16px; }
 .details-offer-facts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:24px; margin:24px 0 0; }
 .details-offer-facts dt { margin-bottom:8px; font-size:13px; color:#64748b; }
 .details-offer-facts dd { margin:0; font-size:17px; line-height:1.45; overflow-wrap:anywhere; }
