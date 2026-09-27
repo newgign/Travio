@@ -37,6 +37,8 @@ function App() {
       <Route path="/tour/:id" element={<TourDetails />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/bookings" element={<ProtectedRoute><MyBookings /></ProtectedRoute>} />
+      <Route path="/bookings/:bookingId" element={<ProtectedRoute><BookingDetails /></ProtectedRoute>} />
 
       <Route
         path="/checkout/:provider/:tourId"

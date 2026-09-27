@@ -20,8 +20,10 @@ function testBookingDetailsApi() {
   assert.ok(routes.includes('router.get("/:id/details", authMiddleware, getMyBookingDetails)'));
   assert.ok(controller.includes("const getMyBookingDetails"));
   assert.ok(controller.includes("bookingEventService.listEvents"));
-  assert.ok(controller.includes("refundReadiness"));
-  assert.ok(controller.includes("notification_outbox"));
+  // 5D account details expose a safe historical projection, not operational payloads.
+  assert.ok(controller.includes("publicDetails(booking, events)"));
+  assert.ok(controller.includes('req.user.role !== "admin" && Number(booking.user_id) !== Number(req.user.id)'));
+  assert.doesNotMatch(controller, /payment_idempotency_key:\s|refundReadiness:/);
 }
 
 function testLifecycleAuditMigration() {
@@ -65,10 +67,10 @@ function testCustomerBookingWorkspace() {
   const success = frontend("components/checkout/SuccessStep.jsx");
   assert.ok(app.includes('path="/my-bookings/:bookingId"'));
   assert.ok(details.includes("История заказа"));
-  assert.ok(details.includes("Audit trail"));
-  assert.ok(details.includes("Реальный refund"));
+  assert.ok(details.includes("bookingEventLabel(event.event_type)"));
+  assert.ok(details.includes("Оплата и возвраты недоступны."));
   assert.ok(details.includes("Реального списания денег не было"));
-  assert.ok(details.includes("Синхронизировать HB"));
+  assert.doesNotMatch(details, /syncProviderBooking|cancelProviderBooking|simulateProviderCancellation|downloadBookingVoucherPdf/);
   // Sprint 3S keeps historical details in a safe native disclosure on the list.
   const card = frontend("components/PersistedBookingCard.jsx");
   assert.ok(bookings.includes('<PersistedBookingCard key={booking.id} booking={booking} />'));
@@ -100,7 +102,8 @@ function testMockBookingSnapshotCompleteness() {
   assert.ok(offer.includes("checkIn: hotel.checkIn || departureDate || null"));
   assert.ok(offer.includes("addDaysIso(hotel.checkIn || departureDate, nights)"));
   assert.ok(offer.includes("roomName: hotel.roomName || roomType || null"));
-  assert.ok(details.includes("offer.roomType || offer.room_type"));
+  assert.ok(details.includes("bookingFacts(booking)"));
+  assert.ok(frontend("utils/savedAccountPresentation.js").includes("offer.roomType || offer.room_type"));
   assert.ok(voucher.includes("offer.roomType"));
 }
 
@@ -127,9 +130,9 @@ function testSandboxRefundFlow() {
   assert.ok(sql.includes("ux_refund_requests_idempotency"));
   assert.ok(paymentService.includes("requestSandboxRefund"));
   assert.ok(paymentService.includes("completeSandboxRefund"));
-  assert.ok(details.includes("Запросить тестовый возврат"));
-  assert.ok(details.includes("Завершить sandbox-возврат"));
-  assert.ok(details.includes("Реального возврата денег не было"));
+  assert.doesNotMatch(details, /requestSandboxRefund|completeSandboxRefund|handleRequestRefund|handleCompleteRefund/);
+  assert.ok(details.includes("refundLabel(booking)"));
+  assert.ok(details.includes("Оплата и возвраты недоступны."));
 }
 
 function main() {

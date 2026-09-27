@@ -3,7 +3,7 @@ const offerResolverService = require("../services/offerResolverService");
 const checkoutSessionService = require("../services/checkoutSessionService");
 const logger = require("../utils/logger");
 const bookingEventService = require("../services/bookingEventService");
-const { buildRefundReadiness } = require("../services/refundReadinessService");
+const { publicBooking, publicDetails } = require("../services/bookingHistoryPublic");
 const adminAuditService = require("../services/adminAuditService");
 
 function normalizeSearchFilters(filters = {}, people) {
@@ -18,7 +18,12 @@ function normalizeSearchFilters(filters = {}, people) {
 function buildBookingProjection(whereClause = "") {
   return `
     SELECT
-      b.*,
+      b.*, b.currency AS stored_currency,
+      b.booking_date::text AS booking_date,
+      b.confirmed_at::text AS confirmed_at,
+      b.cancelled_at::text AS cancelled_at,
+      b.provider_cancelled_at::text AS provider_cancelled_at,
+      b.voucher_generated_at::text AS voucher_generated_at,
       COALESCE(
         NULLIF(b.offer_snapshot->>'name', ''),
         NULLIF(b.offer_snapshot->>'title', ''),
@@ -399,7 +404,7 @@ const getMyBookings = async (req, res) => {
       [req.user.id]
     );
 
-    return res.json(result.rows);
+    return res.json(result.rows.map(publicBooking));
   } catch (error) {
     require("../utils/logger").error("GET MY BOOKINGS ERROR:", { error: error });
     return res.status(500).json({ message: "Ошибка загрузки бронирований" });
@@ -422,66 +427,8 @@ const getMyBookingDetails = async (req, res) => {
       return res.status(403).json({ message: "Нет доступа к этому бронированию" });
     }
 
-    const [events, notificationResult, refundResult] = await Promise.all([
-      bookingEventService.listEvents(booking.id),
-      pool.query(
-        `
-        SELECT id, event_type, subject, status, provider, attempts, sent_at, created_at, updated_at
-        FROM notification_outbox
-        WHERE booking_id = $1
-        ORDER BY created_at DESC, id DESC
-        LIMIT 20
-        `,
-        [booking.id]
-      ),
-      pool.query(
-        `
-        SELECT id, amount, currency, status, provider, external_id, idempotency_key, reason,
-               metadata, requested_at, processed_at, created_at, updated_at
-        FROM refund_requests
-        WHERE booking_id = $1
-        ORDER BY created_at DESC, id DESC
-        LIMIT 10
-        `,
-        [booking.id]
-      ),
-    ]);
-
-    const payment = booking.payment_id
-      ? {
-          id: booking.payment_id,
-          status: booking.payment_status,
-          method: booking.payment_method,
-          paidAt: booking.paid_at,
-          gatewayProvider: booking.gateway_provider,
-          externalId: booking.payment_external_id,
-          idempotencyKey: booking.payment_idempotency_key,
-          failureCode: booking.payment_failure_code,
-          failureMessage: booking.payment_failure_message,
-          metadata: booking.payment_metadata || {},
-          refundedAmount: Number(booking.refunded_amount) || 0,
-          refundStatus: booking.refund_status || "not_requested",
-          amount: Number(booking.price) || 0,
-          currency: booking.currency || "KZT",
-        }
-      : null;
-
-    return res.json({
-      success: true,
-      booking,
-      payment,
-      refundReadiness: buildRefundReadiness(booking, payment ? {
-        amount: payment.amount,
-        status: payment.status,
-        gateway_provider: payment.gatewayProvider,
-        metadata: payment.metadata,
-        refunded_amount: payment.refundedAmount,
-        refund_status: payment.refundStatus,
-      } : null),
-      refunds: refundResult.rows,
-      events,
-      notifications: notificationResult.rows,
-    });
+    const events = await bookingEventService.listEvents(booking.id, { publicHistory: true });
+    return res.json(publicDetails(booking, events));
   } catch (error) {
     require("../utils/logger").error("GET BOOKING DETAILS ERROR:", { error: error });
     return res.status(500).json({ message: "Ошибка загрузки деталей бронирования" });

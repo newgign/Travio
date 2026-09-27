@@ -4,6 +4,7 @@ import { destinationLabel } from './testDestinationLabels';
 const titles = {
   '/':'Asedeliya — поиск отелей', '/results':'Отели — Asedeliya',
   '/favorites':'Избранное — Asedeliya', '/my-bookings':'Мои бронирования — Asedeliya',
+  '/bookings':'Мои бронирования — Asedeliya',
   '/profile':'Личный кабинет — Asedeliya', '/login':'Вход — Asedeliya',
   '/register':'Регистрация — Asedeliya', '/help':'Помощь — Asedeliya',
   '/contacts':'Контакты — Asedeliya',
@@ -24,6 +25,7 @@ export function consumerTitle(pathname, { params, destinations = [], hotelName }
     if (name && name !== row.code) return `Отели: ${name} — Asedeliya`;
   }
   if (Object.hasOwn(titles,path)) return titles[path];
+  if (/^\/(?:my-bookings|bookings)\/[^/]+$/.test(path)) return 'Детали заказа — Asedeliya';
   if (/^\/tour\/[^/]+(?:\/[^/]+)?$/.test(path)) return `${displayName(hotelName) || 'Отель'} — Asedeliya`;
   const topic = path.startsWith('/help/') ? path.slice(6) : '';
   if (Object.hasOwn(helpArticles,topic)) return `${helpArticles[topic].title} — Asedeliya`;

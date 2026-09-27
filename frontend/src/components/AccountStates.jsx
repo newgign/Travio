@@ -9,7 +9,7 @@ export function AccountError({ title, onRetry }) {
 export function AccountEmpty({ favorites = false }) {
   return <section className="account-state">{favorites && <span className="account-empty-icon" aria-hidden="true">♡</span>}
     <h2>{favorites ? 'В избранном пока ничего нет' : 'У вас пока нет бронирований'}</h2>
-    <p>{favorites ? 'Добавляйте понравившиеся отели, чтобы быстро вернуться к ним позже.' : 'Когда оформление станет доступно, ваши заявки появятся здесь.'}</p>
+    <p>{favorites ? 'Добавляйте понравившиеся отели, чтобы быстро вернуться к ним позже.' : 'Сохранённых записей заказов пока нет. Бронирование и оплата сейчас отключены.'}</p>
     <Link className="account-button" to="/#home-search">Найти отели</Link>
   </section>;
 }

@@ -60,11 +60,11 @@ async function safeRecordEvent(payload) {
   }
 }
 
-async function listEvents(bookingId) {
+async function listEvents(bookingId, { publicHistory = false } = {}) {
   const result = await pool.query(
     `
-    SELECT id, booking_id, user_id, event_key, event_type, actor_type,
-           title, description, status, metadata, occurred_at, created_at
+    SELECT ${publicHistory ? 'id, event_type, occurred_at::text AS occurred_at' :
+      'id, booking_id, user_id, event_key, event_type, actor_type, title, description, status, metadata, occurred_at, created_at'}
     FROM booking_events
     WHERE booking_id = $1
     ORDER BY occurred_at DESC, id DESC

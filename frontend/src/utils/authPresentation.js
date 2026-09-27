@@ -4,7 +4,7 @@ const accountPaths = new Set(['/profile', '/favorites', '/my-bookings']);
 const adminPaths = new Set(['/admin', '/admin/bookings']);
 // No query/hash, decoding or arbitrary URL parsing: exact application paths only.
 export function authReturnPath(value, role) {
-  return typeof value === 'string' && (accountPaths.has(value) || (role === 'admin' && adminPaths.has(value))) ? value : '/';
+  return typeof value === 'string' && (accountPaths.has(value) || /^\/(?:my-bookings|bookings)(?:\/[1-9]\d{0,9})?$/.test(value) || (role === 'admin' && adminPaths.has(value))) ? value : '/';
 }
 export const authOrigin = value => authReturnPath(value, 'admin');
 export const authFields = mode => mode === 'register' ? ['full_name', 'email', 'phone', 'password', 'confirmPassword'] : ['email', 'password'];

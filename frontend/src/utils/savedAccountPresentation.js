@@ -51,14 +51,17 @@ export function bookingAmount(booking) {
 export function bookingFacts(booking) {
   const offer = booking.offer_snapshot && typeof booking.offer_snapshot === 'object' ? booking.offer_snapshot : {};
   const filters = booking.search_filters && typeof booking.search_filters === 'object' ? booking.search_filters : {};
-  const start = offer.checkIn || offer.departureDate || filters.checkIn || filters.departureDate;
-  const end = offer.checkOut || filters.checkOut;
-  const guests = offer.adults != null ? detailsGuests(offer) : Number(booking.people) > 0 ? pluralCount(booking.people, ['гость', 'гостя', 'гостей']) : 'Гости не указаны';
+  const start = offer.checkIn || offer.check_in || offer.stay?.checkIn || offer.departureDate || filters.checkIn || filters.departureDate;
+  const end = offer.checkOut || offer.check_out || offer.stay?.checkOut || filters.checkOut;
+  const adults = offer.adults ?? offer.occupancy?.adults;
+  const children = offer.children ?? offer.occupancy?.children;
+  const guests = adults != null ? detailsGuests({ adults, children: Number.isInteger(Number(children)) && Number(children) >= 0 ? children : 0 }) : Number.isInteger(Number(booking.people)) && Number(booking.people) > 0 ? pluralCount(booking.people, ['гость', 'гостя', 'гостей']) : 'Гости не указаны';
+  const nights = offer.nights ?? filters.nights;
   return {
     offer, location: hotelLocation({ country: booking.country, city: booking.city, destinationCode: offer.destinationCode }),
     dates: [displayDate(start), displayDate(end)].filter(value => value !== '—').join(' — ') || 'Даты не указаны',
-    nights: offer.nights || filters.nights ? stayLabel(offer.nights || filters.nights).replace(/^за /, '') : '',
-    guests, room: storedRoom(offer), board: storedBoard(offer),
+    nights: Number.isInteger(Number(nights)) && Number(nights) > 0 ? stayLabel(nights).replace(/^за /, '') : '',
+    guests, checkIn: displayDate(start), checkOut: displayDate(end), rooms: Number.isInteger(Number(offer.rooms ?? offer.occupancy?.rooms)) && Number(offer.rooms ?? offer.occupancy?.rooms) > 0 ? Number(offer.rooms ?? offer.occupancy?.rooms) : null, room: storedRoom({ ...offer, roomName: offer.roomName || offer.room_name, roomType: offer.roomType || offer.room_type, roomCode: offer.roomCode || offer.room_code }), board: storedBoard({ ...offer, boardCode: offer.boardCode || offer.board_code || offer.board }),
   };
 }
 export function sortedBookings(items, group = 'all') {
@@ -75,4 +78,20 @@ export function refundLabel(booking) {
   const label = Object.hasOwn(labels, booking.refund_status) ? labels[booking.refund_status] : '';
   if (!label) return '';
   return booking.gateway_provider === 'sandbox' ? `Тестовый возврат: ${booking.refund_status === 'requested' ? 'запрошен' : 'выполнен без движения денег'}` : label;
+}
+
+export function bookingNotice(booking) {
+  return testBooking(booking)
+    ? 'Тестовая запись — не подтверждает реальную бронь Hotelbeds или право на заселение.'
+    : 'Сохранённая запись. Режим создания не подтверждён. Запись не является подтверждением реальной брони Hotelbeds; проверка поставщика не выполняется.';
+}
+export function bookingPayment(booking) {
+  const labels = { pending: 'Ожидает оплаты по записи', requires_action: 'Ожидает действия по записи', paid: 'Оплата отмечена в записи', failed: 'Ошибка оплаты по записи', test: 'Тестовый платёж' };
+  const value = textValue(booking.payment_status).toLowerCase();
+  const label = Object.hasOwn(labels, value) ? labels[value] : 'Данные об оплате отсутствуют или неизвестны';
+  return booking.gateway_provider === 'sandbox' ? `Sandbox: ${label}` : label;
+}
+export function bookingEventLabel(type) {
+  const labels = { booking_created:'Запись создана', booking_confirmed:'Подтверждение отмечено в истории', booking_status_changed:'Статус записи изменён', payment_intent_created:'Платёжная запись создана', payment_completed:'Завершение оплаты отмечено в истории', provider_synced:'Состояние поставщика сохранено', cancellation_quote:'Условия отмены сохранены', booking_cancelled:'Отмена отмечена в истории', voucher_generated:'Формирование документа отмечено в истории', refund_requested:'Запрос возврата отмечен в истории', refund_completed:'Завершение возврата отмечено в истории' };
+  return Object.hasOwn(labels,type) ? labels[type] : 'Событие истории';
 }
