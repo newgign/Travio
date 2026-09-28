@@ -156,7 +156,7 @@ function DetailsFavoriteButton({ tour, provider }) {
     catch { setFavoriteError('Не удалось обновить избранное. Попробуйте ещё раз.'); }
     finally { setFavoritePending(false); }
   }
-  return <div className="details-favorite-wrap"><button type="button" className="details-favorite" aria-pressed={favoriteActive} aria-label={favoriteActive ? 'Удалить из избранного' : 'Добавить в избранное'} disabled={favoritePending} onClick={handleFavorite}>{favoriteActive ? '♥ В избранном' : '♡ В избранное'}</button>
+  return <div className="details-favorite-wrap"><button type="button" className="details-favorite" aria-pressed={favoriteActive} aria-label={favoriteActive ? 'Удалить из избранного' : 'Добавить в избранное'} disabled={favoritePending} aria-busy={favoritePending} onClick={handleFavorite}>{favoriteActive ? '♥ В избранном' : '♡ В избранное'}</button>
         {favoriteError && <p role="alert">{favoriteError}</p>}
       </div>;
 }

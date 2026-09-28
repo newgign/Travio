@@ -11,7 +11,7 @@ import '../styles/Favorites.css';
 export function FavoritesView({ favorites, status, pending = [], onRetry, onRemove }) {
   return <main className="account-page favorites-page"><header className="account-header"><h1>Избранное</h1><p>Сохранённые отели для будущих поездок</p>
     {status === 'ready' && favorites.length > 0 && <p className="account-count">Сохранено {hotelCount(favorites.length)}</p>}</header>
-    {status === 'guest' || status === 'auth' ? <AccountAuth /> : status === 'loading' ? <AccountLoading label="Загружаем избранное" /> : status === 'error' ? <AccountError title="Не удалось загрузить избранное" onRetry={onRetry} /> :
+    {status === 'guest' || status === 'auth' ? <AccountAuth /> : status === 'error' ? <AccountError title="Не удалось загрузить избранное" onRetry={onRetry} /> : status !== 'ready' ? <AccountLoading label="Загружаем избранное" /> :
       favorites.length === 0 ? <AccountEmpty favorites /> : <div className="favorites-grid">{favorites.map(item => <SavedHotelCard key={favoriteKey(item)} item={item} pending={pending.includes(favoriteKey(item))} onRemove={onRemove} />)}</div>}
   </main>;
 }

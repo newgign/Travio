@@ -4,7 +4,7 @@ export function AccountLoading({ label }) {
   return <div role="status" aria-label={label} className="account-skeleton-list"><span>{label}</span>{[1, 2, 3].map(i => <div key={i} className="account-skeleton" aria-hidden="true" />)}</div>;
 }
 export function AccountError({ title, onRetry }) {
-  return <section className="account-state" role="alert"><h2>{title}</h2><button type="button" className="account-button" onClick={onRetry}>Повторить</button></section>;
+  return <section className="account-state" role="alert"><h2>{title}</h2><button type="button" className="account-button" disabled={typeof onRetry !== 'function'} onClick={onRetry}>Повторить</button></section>;
 }
 export function AccountEmpty({ favorites = false }) {
   return <section className="account-state">{favorites && <span className="account-empty-icon" aria-hidden="true">♡</span>}

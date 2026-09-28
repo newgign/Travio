@@ -89,11 +89,10 @@ export async function searchTours(filters = {}) {
   }
 
   const result = await response.json();
+  if (!Array.isArray(result?.data)) throw Error("INVALID_SEARCH_RESPONSE");
 
   return {
-    data: Array.isArray(result?.data)
-      ? result.data
-      : [],
+    data: result.data,
 
     meta: {
       page: Number(result?.meta?.page) || 1,

@@ -21,7 +21,7 @@ export function BookingDetailsView({ status, data, onRetry }) {
   return <main className="account-page booking-history-details">
     <Link className="booking-history-back" to="/my-bookings">← Мои бронирования</Link>
     <header className="account-header"><h1>Детали заказа</h1><p>Сохранённые данные и история записи</p></header>
-    {status === 'guest' || status === 'auth' ? <AccountAuth /> : status === 'loading' ? <AccountLoading label="Загружаем заказ" /> : status === 'error' ? <AccountError title="Не удалось открыть заказ." onRetry={onRetry} /> : !booking || data.notFound ? <section className="account-state"><h2>Запись не найдена или недоступна.</h2></section> : <>
+    {status === 'guest' || status === 'auth' ? <AccountAuth /> : status === 'error' ? <AccountError title="Не удалось открыть заказ." onRetry={onRetry} /> : status !== 'ready' ? <AccountLoading label="Загружаем заказ" /> : !booking || data.notFound ? <section className="account-state"><h2>Запись не найдена или недоступна.</h2></section> : <>
       <section className="booking-history-section" aria-label="Сводка заказа">
         <div className="booking-history-heading"><h2>Запись № {booking.id}</h2><span className={`account-status ${state.tone}`}>{state.label}</span></div>
         {testBooking(booking) && <span className="account-test-badge">TEST · Тестовая запись</span>}

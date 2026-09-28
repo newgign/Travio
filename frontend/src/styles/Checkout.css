@@ -884,3 +884,9 @@ height:220px;
     .checkout-trust-row{gap:6px}
     .checkout-trust-row span{width:100%;box-sizing:border-box;border-radius:11px}
 }
+
+/* Safe feedback must wrap without widening the checkout card. */
+.checkout-card[role] { min-width:0; overflow-wrap:anywhere; }
+.checkout-card[role] .checkout-buttons { flex-wrap:wrap; }
+.checkout-card[role] button { max-width:100%; white-space:normal; }
+.checkout-card[role] :focus-visible { outline:3px solid #2563eb; outline-offset:3px; }

@@ -1,3 +1,4 @@
+import { checkoutFailureMessage } from "../utils/feedbackPresentation";
 import { useRef, useState } from "react";
 import {
     useLocation,
@@ -228,39 +229,25 @@ export default function Checkout() {
 
         catch (err) {
 
-            console.error(
-                "CHECKOUT PAYMENT ERROR:",
-                err
-            );
-
             if (err.code === "HOTELBEDS_RATE_EXPIRED" || err.code === "HOTELBEDS_NEW_RATE_REQUIRED") {
-                alert(
-                    err.message ||
-                    "Тариф больше недоступен. Asedeliya не создал бронь. Выполните новый поиск."
-                );
+                alert(checkoutFailureMessage(err.code));
                 navigate(`/results${location.search}`);
                 return;
             }
 
             if (err.code === "HOTELBEDS_CONFIRMATION_UNKNOWN" || err.code === "HOTELBEDS_RECONCILIATION_UNAVAILABLE") {
-                alert(
-                    err.message ||
-                    "Результат Hotelbeds требует сверки. Не повторяйте бронирование."
-                );
+                alert(checkoutFailureMessage(err.code));
                 navigate("/my-bookings");
                 return;
             }
 
             if (err.code === "HOTELBEDS_AT_HOTEL_UNSUPPORTED") {
-                alert(err.message);
+                alert(checkoutFailureMessage(err.code));
                 navigate(`/results${location.search}`);
                 return;
             }
 
-            alert(
-                err.message ||
-                "Ошибка при оформлении бронирования"
-            );
+            alert(checkoutFailureMessage(err.code));
 
         }
 

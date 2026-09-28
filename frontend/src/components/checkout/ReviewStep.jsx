@@ -1,3 +1,4 @@
+import { reviewFailureMessage } from "../../utils/feedbackPresentation";
 import RateConditions from "../RateConditions";
 import { useCallback, useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
@@ -98,19 +99,9 @@ export default function ReviewStep({
 
             setCheckout(data);
 
-        } catch (err) {
-
-            console.error(
-                "Ошибка загрузки Checkout:",
-                err
-            );
-
+        } catch {
             setCheckout(null);
-
-            setError(
-                err.message ||
-                "Не удалось загрузить информацию о туре"
-            );
+            setError(reviewFailureMessage);
 
         } finally {
 
@@ -140,7 +131,7 @@ export default function ReviewStep({
 
         return (
 
-            <div className="checkout-card">
+            <div className="checkout-card" role="status">
 
                 <h2>
                     Загрузка заказа...
@@ -165,7 +156,7 @@ export default function ReviewStep({
 
         return (
 
-            <div className="checkout-card">
+            <div className="checkout-card" role="alert">
 
                 <h2>
                     Не удалось загрузить информацию о туре

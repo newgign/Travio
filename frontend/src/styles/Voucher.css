@@ -375,3 +375,9 @@
   opacity: .6;
   cursor: wait;
 }
+
+/* Feedback and actions remain readable at narrow widths. */
+.voucher-loading, .voucher-warning { overflow-wrap:anywhere; box-sizing:border-box; }
+.voucher-actions, .voucher-action-buttons { flex-wrap:wrap; }
+.voucher-actions button { min-height:44px; max-width:100%; }
+.voucher-shell :focus-visible { outline:3px solid #2563eb; outline-offset:3px; }

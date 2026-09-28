@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { voucherFailureMessage, pdfFailureMessage } from "../utils/feedbackPresentation";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { downloadBookingVoucherPdf, getBookingVoucher } from "../services/bookingService";
 import { formatMoney } from "../utils/money";
@@ -26,6 +27,8 @@ export default function Voucher() {
   const [voucher, setVoucher] = useState(null);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState("");
+  const downloadLock = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -34,7 +37,7 @@ export default function Voucher() {
       .then((result) => {
         if (active) setVoucher(result?.voucher || null);
       })
-      .catch((error) => alert(error.message || "Не удалось сформировать ваучер"))
+      .catch(() => { if (active) setVoucher(null); })
       .finally(() => active && setLoading(false));
 
     return () => {
@@ -43,14 +46,14 @@ export default function Voucher() {
   }, [bookingId]);
 
   if (loading) {
-    return <div className="voucher-shell"><div className="voucher-loading">Формируем ваучер...</div></div>;
+    return <div className="voucher-shell"><div className="voucher-loading" role="status">Формируем ваучер...</div></div>;
   }
 
   if (!voucher) {
     return (
       <div className="voucher-shell">
-        <div className="voucher-loading">
-          Ваучер недоступен. <Link to="/my-bookings">Вернуться к бронированиям</Link>
+        <div className="voucher-loading" role="alert">
+          {voucherFailureMessage} <Link to="/my-bookings">Вернуться к бронированиям</Link>
         </div>
       </div>
     );
@@ -60,6 +63,9 @@ export default function Voucher() {
   const confirmed = voucher.status === "CONFIRMED";
 
   async function downloadPdf() {
+    if (downloadLock.current) return;
+    downloadLock.current = true;
+    setDownloadError("");
     try {
       setDownloading(true);
       const { blob, filename } = await downloadBookingVoucherPdf(bookingId);
@@ -71,9 +77,10 @@ export default function Voucher() {
       link.click();
       link.remove();
       URL.revokeObjectURL(url);
-    } catch (error) {
-      alert(error.message || "Не удалось скачать PDF");
+    } catch {
+      setDownloadError(pdfFailureMessage);
     } finally {
+      downloadLock.current = false;
       setDownloading(false);
     }
   }
@@ -83,12 +90,14 @@ export default function Voucher() {
       <div className="voucher-actions no-print">
         <Link to="/my-bookings">← Мои бронирования</Link>
         <div className="voucher-action-buttons">
-          <button type="button" onClick={downloadPdf} disabled={downloading}>
+          <button type="button" onClick={downloadPdf} disabled={downloading} aria-busy={downloading}>
             {downloading ? "Готовим PDF..." : "⬇️ Скачать PDF"}
           </button>
           <button type="button" className="voucher-print-button" onClick={() => window.print()}>🖨️ Печать</button>
         </div>
       </div>
+
+      {downloadError && <p className="voucher-warning no-print" role="alert">{downloadError}</p>}
 
       <article className={`voucher-document ${cancelled ? "is-cancelled" : ""}`}>
         {voucher.isTest && (

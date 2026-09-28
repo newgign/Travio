@@ -70,13 +70,13 @@ function TourCardView({ tour }) {
   }
 
 
-  if (!publicPrice) return <article className="home-loading"><h3>{hotelName}</h3><p>Актуальная стоимость этого сохранённого предложения недоступна.</p>{favoriteError && <p role="alert">{favoriteError}</p>}<button type="button" className="details-btn" disabled={favoritePending || sharedPending} aria-pressed={favoriteActive} aria-label={favoriteActive ? "Удалить из избранного" : "Добавить в избранное"} onClick={handleFavorite}>{favoriteActive ? "Удалить из избранного" : "В избранное"}</button><button type="button" className="details-btn" onClick={() => navigate("/results")}>Найти предложения</button></article>;
+  if (!publicPrice) return <article className="home-loading"><h3>{hotelName}</h3><p>Актуальная стоимость этого сохранённого предложения недоступна.</p>{favoriteError && <p role="alert">{favoriteError}</p>}<button type="button" className="details-btn" disabled={favoritePending || sharedPending} aria-busy={favoritePending || sharedPending} aria-pressed={favoriteActive} aria-label={favoriteActive ? "Удалить из избранного" : "Добавить в избранное"} onClick={handleFavorite}>{favoriteActive ? "Удалить из избранного" : "В избранное"}</button><button type="button" className="details-btn" onClick={() => navigate("/results")}>Найти предложения</button></article>;
   const stars=Number(tour.stars);
   const category=Number.isInteger(stars) && stars>=1 && stars<=5;
   return <article className="tour-card">
     <div className="tour-card-image">
       <HotelImage key={`${tour.provider}:${tour.providerHotelId || tour.id}`} src={displayImage} alt={hotelName} loading="lazy" />
-      <button type="button" className={`tour-card-favorite ${favoriteActive?'active':''}`} onClick={handleFavorite} disabled={favoritePending || sharedPending} aria-pressed={favoriteActive} aria-label={favoriteActive?'Удалить из избранного':'Добавить в избранное'}>{favoriteActive?'♥':'♡'}</button>
+      <button type="button" className={`tour-card-favorite ${favoriteActive?'active':''}`} onClick={handleFavorite} disabled={favoritePending || sharedPending} aria-busy={favoritePending || sharedPending} aria-pressed={favoriteActive} aria-label={favoriteActive?'Удалить из избранного':'Добавить в избранное'}>{favoriteActive?'♥':'♡'}</button>
       {tour.priceEnvironment==='test' && <div className="tour-card-overlay-top"><span className="tour-card-test-badge">Hotelbeds TEST</span></div>}
     </div>
     <div className="tour-card-content">
