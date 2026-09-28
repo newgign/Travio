@@ -14,33 +14,39 @@ const { publicBooking } = require('../../backend/services/bookingHistoryPublic')
 test('5D stored booking history quality', async t => {
   const server = await createServer({root:fileURLToPath(new URL('..',import.meta.url)),configFile:false,server:{middlewareMode:true,hmr:false},esbuild:{jsx:'automatic'}});
   const oldStorage=globalThis.localStorage, oldWindow=globalThis.window;
-  let token='owner';
-  globalThis.localStorage={getItem:key=>key==='token'?token:key==='user'?'{}':null};
+  let token='owner', userId=7;
+  globalThis.localStorage={getItem:key=>key==='token'?token:key==='user'?JSON.stringify(userId ? {id:userId} : null):null};
   globalThis.window=new EventTarget();
-  const requests=[];
+  const requests=[], historyRequests=[];
   const row={id:12,provider:'hotelbeds',provider_status:'CONFIRMED',status:'Подтверждена',booking_date:'2026-09-27 23:30:00',total_amount:'1014.42',stored_currency:'EUR',currency:'EUR',people:3,
     provider_client_reference:'TRAVIO-12',provider_booking_id:'TEST-12',payment_status:'test',
     offer_snapshot:{name:'Stored Grand Kaptan',country:'Turkey',city:'ALANYA',checkIn:'2026-10-05',checkOut:'2026-10-12',nights:7,adults:2,children:1,occupancy:{rooms:1},roomName:'Side Sea View',boardCode:'AI',priceEnvironment:'test',rateKey:'SECRET',offerToken:'SECRET'},
     provider_response:{secret:'SECRET'},payment_metadata:{secret:'SECRET'},price:999999};
   const booking=publicBooking(row), data={success:true,booking,events:[{id:1,event_type:'booking_created',occurred_at:'2026-09-27 23:30:00'}]};
-  let failure=0;
+  let failure=0, listResponse=[booking], releaseHistory=null;
   t.mock.method(globalThis,'fetch',async(url,options={})=>{
     const path=new URL(url,'http://localhost').pathname.replace(/^\/api/,'');
     assert.equal(options.method || 'GET','GET');
     assert.ok(['/bookings/me','/bookings/12/details'].includes(path),'unexpected network '+path);
     requests.push(path);
-    return {ok:!failure,status:failure || 200,text:async()=>JSON.stringify(failure?{message:'SECRET SQL https://private/token'}:path.endsWith('/me')?[booking]:data)};
+    if(path==='/bookings/me') {
+      historyRequests.push({url,authorization:options.headers.Authorization});
+      if(releaseHistory)await releaseHistory;
+    }
+    return {ok:!failure,status:failure || 200,text:async()=>JSON.stringify(failure?{message:'SECRET SQL https://private/token'}:path.endsWith('/me')?listResponse:data)};
   });
   try {
     const {MyBookingsView:List}=await server.ssrLoadModule('/src/pages/MyBookings.jsx');
     const {BookingDetailsView:Details}=await server.ssrLoadModule('/src/pages/BookingDetails.jsx');
     const p=await server.ssrLoadModule('/src/utils/savedAccountPresentation.js');
-    const {createBookingHistory,bookingHistory}=await server.ssrLoadModule('/src/services/bookingHistory.js');
+    const {createBookingHistory,bookingHistory,scheduleBookingHistoryLoad}=await server.ssrLoadModule('/src/services/bookingHistory.js');
     const {authReturnPath}=await server.ssrLoadModule('/src/utils/authPresentation.js');
     const render=(View,props)=>renderToStaticMarkup(React.createElement(MemoryRouter,{},React.createElement(View,props)));
     const list=(status='ready',bookings=[booking],extra={})=>render(List,{status,bookings,...extra});
     const details=(status='ready',value=data)=>render(Details,{status,data:value});
-    const history=(api)=>createBookingHistory({token:'owner',readToken:()=>token,...(api?{api}:{})});
+    const history=(api)=>createBookingHistory({token:'owner',userId:7,readToken:()=>token,...(api?{api}:{})});
+    const tick=()=>new Promise(resolve=>setTimeout(resolve,10));
+    const listState=h=>list(h.list.getSnapshot().status,h.list.getSnapshot().items);
     for(const [label,view] of [['list',list],['details',details]]) {
       await t.test(label+' guest has login and no private flash',()=>{const html=view('guest');assert.match(html,/Войдите в аккаунт|href="\/login"/);assert.doesNotMatch(html,/Stored Grand|1\s*014/);});
       await t.test(label+' loading has accessible status and hides old data',()=>{const html=view('loading');assert.match(html,/role="status"/);assert.doesNotMatch(html,/Stored Grand/);});
@@ -48,6 +54,58 @@ test('5D stored booking history quality', async t => {
       await t.test(label+' expired authorization hides data',()=>{assert.doesNotMatch(view('auth'),/Stored Grand/);assert.match(view('auth'),/Войти/);});
     }
     await t.test('empty explains no saved records and links to search',()=>{const html=list('ready',[]);assert.match(html,/Сохранённых записей заказов пока нет/);assert.match(html,/href="\/#home-search"/);});
+    await t.test('5D.1 only confirmed ready-empty may render EMPTY',()=>{
+      for(const status of [undefined,null,'idle','unknown','loading']) {
+        const html=render(List,{bookings:[],status});assert.match(html,/role="status"/);assert.doesNotMatch(html,/У вас пока нет бронирований/);
+      }
+      const h=history();assert.equal(h.list.getSnapshot().status,'loading');assert.match(listState(h),/role="status"/);assert.doesNotMatch(listState(h),/У вас пока нет бронирований/);
+    });
+    await t.test('5D.1 real mount scheduler waits for auth identity, then one exact GET and confirmed EMPTY',async()=>{
+      const start=historyRequests.length;
+      const {default:base}=await server.ssrLoadModule('/src/services/api.js');
+      token=null;userId=null;
+      let h=bookingHistory(token,userId);
+      scheduleBookingHistoryLoad(h);await tick();assert.equal(historyRequests.length,start);assert.match(listState(h),/Войдите в аккаунт/);
+      token='owner';window.dispatchEvent(new Event('travio-auth-changed'));
+      h=bookingHistory(token,userId);scheduleBookingHistoryLoad(h);await tick();assert.equal(historyRequests.length,start);
+      let finish;releaseHistory=new Promise(resolve=>{finish=resolve;});listResponse=[];
+      userId=7;window.dispatchEvent(new Event('travio-auth-changed'));
+      h=bookingHistory(token,userId);assert.equal(h.list.getSnapshot().status,'loading');
+      const cancel=scheduleBookingHistoryLoad(h);cancel(); // StrictMode setup/cleanup/setup.
+      scheduleBookingHistoryLoad(h);await tick();
+      assert.equal(historyRequests.length,start+1);assert.deepEqual(historyRequests.at(-1),{url:base+'/bookings/me',authorization:'Bearer owner'});
+      assert.match(listState(h),/role="status"/);assert.doesNotMatch(listState(h),/У вас пока нет бронирований/);
+      assert.equal(bookingHistory(token,userId),h);scheduleBookingHistoryLoad(h);await tick();assert.equal(historyRequests.length,start+1);
+      finish();await h.ensureListLoaded();releaseHistory=null;
+      assert.equal(h.list.getSnapshot().status,'ready');assert.deepEqual(h.list.getSnapshot().items,[]);assert.match(listState(h),/У вас пока нет бронирований/);
+      scheduleBookingHistoryLoad(h);await tick();assert.equal(historyRequests.length,start+1); // same-session Back/rerender.
+      listResponse=[booking];
+    });
+    await t.test('5D.1 fresh module on hard reload cannot reuse prior confirmed empty memory',async()=>{
+      const {bookingHistory:freshHistory,scheduleBookingHistoryLoad:mount}=await server.ssrLoadModule('/src/services/bookingHistory.js?hard-reload-5d1');
+      const h=freshHistory(token,userId),start=historyRequests.length;
+      assert.equal(h.list.getSnapshot().status,'loading');mount(h);await tick();await h.ensureListLoaded();
+      assert.equal(historyRequests.length,start+1);assert.match(listState(h),/Stored Grand Kaptan/);
+    });
+    await t.test('5D.1 logout and next identity clear both EMPTY and READY, including same-token identity changes',async()=>{
+      for(const response of [[],[booking]]) {
+        listResponse=response;let h=bookingHistory(token,userId);await h.list.load();
+        const previous=h;token=null;userId=null;window.dispatchEvent(new Event('travio-auth-changed'));
+        assert.deepEqual(previous.list.getSnapshot().items,[]);assert.notEqual(previous.list.getSnapshot().status,'ready');
+        h=bookingHistory(token,userId);await h.ensureListLoaded();assert.equal(h.list.getSnapshot().status,'guest');
+        token='owner';userId=8;window.dispatchEvent(new Event('travio-auth-changed'));
+        h=bookingHistory(token,userId);assert.notEqual(h,previous);assert.equal(h.list.getSnapshot().status,'loading');
+        const start=historyRequests.length;listResponse=[];scheduleBookingHistoryLoad(h);await tick();await h.ensureListLoaded();assert.equal(historyRequests.length,start+1);
+        userId=7;window.dispatchEvent(new Event('travio-auth-changed'));const next=bookingHistory(token,userId);
+        assert.notEqual(next,h);assert.equal(next.list.getSnapshot().status,'loading');scheduleBookingHistoryLoad(next);await tick();await next.ensureListLoaded();assert.equal(historyRequests.length,start+2);
+      }
+      listResponse=[booking];
+    });
+    await t.test('5D.1 identity change while history is pending discards old empty response',async()=>{
+      let finish;const h=history({getMyBookings:()=>new Promise(resolve=>{finish=resolve;})});
+      const load=h.ensureListLoaded();await Promise.resolve();userId=8;finish([]);await load;
+      assert.notEqual(h.list.getSnapshot().status,'ready');assert.doesNotMatch(listState(h),/У вас пока нет бронирований/);userId=7;
+    });
     const expected=[['hotel',/Stored Grand Kaptan/],['destination',/ALANYA/],['check in',/5 октября 2026/],['check out',/12 октября 2026/],['nights',/7 ночей/],['adults',/2 взрослых/],['children',/1 ребёнок/],['room',/Side Sea View/],['board',/Всё включено/],['total',/1\s*014,42/],['currency',/€/],['created',/27 сентября 2026/],['test',/Тестовая запись/]];
     for(const [name,pattern] of expected) await t.test('stored '+name+' in list and details',()=>{assert.match(list(),pattern);assert.match(details(),pattern);});
     await t.test('status mappings are shared and unknown is neutral',()=>{
@@ -104,7 +162,11 @@ test('5D stored booking history quality', async t => {
       const a=h.list.load(),b=h.list.load();await Promise.resolve();assert.equal(a,b);assert.equal(calls,1);assert.equal(h.list.getSnapshot().status,'loading');finish([booking]);await a;
     });
     await t.test('retry recovers both app list and details errors',async()=>{
-      const h=history();for(const store of [h.list,h.details('12')]){failure=500;await store.load();assert.equal(store.getSnapshot().status,'error');assert.deepEqual(store.getSnapshot().items,[]);failure=0;await store.load();assert.equal(store.getSnapshot().status,'ready');}
+      const h=history();for(const store of [h.list,h.details('12')]){
+        const start=requests.length;failure=500;await store.load();assert.equal(store.getSnapshot().status,'error');assert.deepEqual(store.getSnapshot().items,[]);assert.equal(requests.length,start+1);
+        if(store===h.list){assert.match(listState(h),/Не удалось загрузить бронирования/);assert.doesNotMatch(listState(h),/SECRET|SQL|https:|У вас пока нет/);scheduleBookingHistoryLoad(h);await tick();assert.equal(requests.length,start+1);}
+        failure=0;const retry=store.load();assert.equal(store.getSnapshot().status,'loading');assert.equal(store.load(),retry);await retry;assert.equal(store.getSnapshot().status,'ready');assert.equal(requests.length,start+2);
+      }
     });
     await t.test('403 and 404 unify not-found, other failures stay retryable',async()=>{
       for(const status of [403,404,500,401]) {const h=history({getBookingDetails:async()=>{throw Object.assign(Error('SECRET'),{status});}});const d=h.details('12');await d.load();assert.equal(d.getSnapshot().status,status===401?'auth':status===500?'error':'ready');if(status===403||status===404)assert.match(details('ready',d.getSnapshot().items[0]),/Запись не найдена или недоступна/);}
@@ -125,6 +187,9 @@ test('5D stored booking history quality', async t => {
       const app=await readFile(new URL('../src/App.jsx',import.meta.url),'utf8');assert.match(app,/path="\/bookings\/\:bookingId" element={<ProtectedRoute><BookingDetails/);
       const source=await readFile(new URL('../src/pages/BookingDetails.jsx',import.meta.url),'utf8');assert.doesNotMatch(source,/error\.message|err\.message|syncProviderBooking|cancelProviderBooking|simulateProviderCancellation|downloadBookingVoucher|paymentService|offerResolver|setInterval|selectedOffer/);
       const controller=await readFile(new URL('../../backend/controllers/bookingController.js',import.meta.url),'utf8');assert.match(controller,/WHERE b.user_id = \$1/);assert.match(controller,/req.user.role !== "admin" && Number\(booking.user_id\) !== Number\(req.user.id\)/);
+      const page=await readFile(new URL('../src/pages/MyBookings.jsx',import.meta.url),'utf8');assert.match(page,/useEffect\(\(\) => scheduleBookingHistoryLoad\(history\), \[history\]\)/);assert.match(page,/bookingHistory\(token, userId\), \[token, userId\]/);
+      const routes=await readFile(new URL('../../backend/routes/bookingRoutes.js',import.meta.url),'utf8');assert.match(routes,/router.get\("\/me", authMiddleware, getMyBookings\)/);
+      const backend=await readFile(new URL('../../backend/server.js',import.meta.url),'utf8');assert.match(backend,/app.use\("\/api\/bookings", bookingRoutes\)/);
     });
     for(const forbidden of ['Availability','Content','CheckRate','Booking','Cancellation']) await t.test('no '+forbidden+' provider network',()=>{assert.ok(requests.every(path=>path==='/bookings/me'||path==='/bookings/12/details'));});
   } finally {globalThis.localStorage=oldStorage;globalThis.window=oldWindow;await server.close();}

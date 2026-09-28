@@ -62,8 +62,9 @@ export function BookingDetailsView({ status, data, onRetry }) {
 
 export default function BookingDetails() {
   const { bookingId } = useParams();
-  const { token } = useSession();
-  const store = useMemo(() => bookingHistory(token).details(bookingId), [token, bookingId]);
+  const { token, user } = useSession();
+  const userId = user?.id;
+  const store = useMemo(() => bookingHistory(token, userId).details(bookingId), [token, userId, bookingId]);
   const state = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
   useEffect(() => {
     const timer = setTimeout(() => { if (store.getSnapshot().status === 'loading' || store.getSnapshot().status === 'guest') store.load(); }, 0);
