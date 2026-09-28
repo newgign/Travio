@@ -271,3 +271,71 @@ Final status/diff-stat/full-diff/diff-check reviewed. Changes left unstaged. Exi
 **SOURCE HARDENING IMPLEMENTED. DEPLOYED OWNER RE-ACCEPTANCE REQUIRED. ROOT CAUSE: NOT CONCLUSIVELY CONFIRMED.**
 
 **OWNER BROWSER ACCEPTANCE: NOT RUN / pending redeploy and recheck. STAGING HISTORY LOAD: NOT VERIFIED.** After the owner separately deploys the reviewed version, verify its commit, clear Network and hard-reload `/my-bookings`: observe own GET `/api/bookings/me` (or configured API-base equivalent), LOADING before resolution, then [] -> EMPTY / records -> READY / failure -> ERROR. The previously observed `me` label alone is insufficient evidence. Do not create a staging booking or call Hotelbeds to obtain READY evidence. All earlier owner-skipped 5C checks remain NOT RUN.
+
+## Final Owner Render Browser Acceptance
+
+This section records subsequently supplied owner browser evidence and supersedes the earlier pending deployment/history-load status for the checks below. Earlier offline results remain historical; no tests, build or deployment were performed for this report-only update. This is owner-reported acceptance, not an independent browser run or server-side traffic audit.
+
+### Deployment
+
+- Sprint 5D/5D.1 deployed to Render staging.
+- Frontend staging loaded successfully.
+- Authenticated `/my-bookings` tested.
+- **DEPLOYED STAGING: PASS.**
+
+### Guest acceptance
+
+Guest opening `/my-bookings` redirected to login. No booking history or private booking data was exposed. **GUEST AUTH-REQUIRED: PASS.**
+
+### Authenticated EMPTY acceptance
+
+The authenticated user opened `/my-bookings`; visible UI: **“У вас пока нет бронирований”**.
+
+Owner Network evidence confirmed the current history endpoint **GET `/api/bookings/me`**. Previous Headers evidence confirmed that Request URL ends with `/api/bookings/me` and Request Method is `GET`. The owner then enabled Chrome DevTools **Disable cache** and reloaded: Preview returned `[]`, Response returned `[]`, and My Bookings rendered the EMPTY state.
+
+| Check | Owner result |
+| --- | --- |
+| HISTORY ENDPOINT | PASS |
+| HISTORY REQUEST AFTER AUTH | PASS |
+| BACKEND EMPTY RESPONSE [] | PASS |
+| CONFIRMED [] -> EMPTY UI | PASS |
+| AUTHENTICATED EMPTY | PASS |
+
+These observations confirm the deployed empty-history flow. They do not conclusively establish the cause of the earlier ambiguous `me` observation.
+
+### Provider/network safety
+
+During owner My Bookings acceptance, no Hotelbeds Availability, Content, CheckRate, Booking or Cancellation requests were observed from the history view.
+
+**NO PROVIDER CALLS FROM HISTORY VIEW: PASS.** This conclusion is limited to owner browser Network evidence; no independent server-side traffic audit is claimed.
+
+### Not run
+
+The staging account contains no stored booking records.
+
+- **READY BOOKING LIST: NOT RUN — no stored bookings.**
+- **BOOKING DETAILS: NOT RUN — no stored bookings.**
+
+Do not create a booking merely to obtain acceptance evidence. Voucher/payment/cancellation behavior inside an existing booking details page remains covered by CODE/OFFLINE tests, but not by deployed owner browser acceptance. Earlier owner-skipped 5C checks remain NOT RUN.
+
+### Final Sprint status
+
+**SPRINT 5D / 5D.1**
+
+| Gate | Final status |
+| --- | --- |
+| CODE / OFFLINE | PASS |
+| FULL FRONTEND | 344/344 PASS |
+| FULL BACKEND | 399/399 PASS — prior 5D run; backend unchanged in 5D.1, not rerun |
+| DEPLOYED STAGING | PASS |
+| GUEST AUTH-REQUIRED | PASS |
+| AUTHENTICATED EMPTY | PASS |
+| HISTORY LOAD | PASS |
+| CONFIRMED [] -> EMPTY | PASS |
+| NO PROVIDER CALLS OBSERVED | PASS — owner browser Network evidence |
+| READY / DETAILS OWNER ACCEPTANCE | NOT RUN — no stored bookings |
+| Hotelbeds LIVE | DISABLED |
+| Real booking | DISABLED |
+| Payments | DISABLED |
+
+Only this report was edited for this acceptance update. Source code, tests, env and runtime configuration remain unchanged. No git add/commit/push or deployment was performed; the report is left unstaged for owner review.
