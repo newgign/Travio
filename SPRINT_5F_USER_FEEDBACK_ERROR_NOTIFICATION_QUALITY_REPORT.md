@@ -199,3 +199,101 @@ Prepare only, after separate owner deployment:
 - No registration, password mutation, new booking or voucher generation for acceptance. REGISTRATION OWNER MUTATION: NOT RUN. PASSWORD CHANGE OWNER MUTATION: NOT RUN. BOOKING READY/DETAILS OWNER ACCEPTANCE: NOT RUN unless existing stored records later permit it.
 
 Final status, diff-stat, full tracked diff and diff-check reviewed; the three new scoped files were inspected separately. Only the 15 frontend files and three new files listed above belong to 5F. No git add/commit/push/reset/restore/clean; changes remain unstaged for owner review.
+
+## Final Owner Render Browser Acceptance
+
+This section records subsequently supplied owner browser evidence and supersedes the earlier pending owner acceptance status only for the tested scope below. This is owner-reported staging acceptance, not an independent browser run. Previous CODE/OFFLINE results remain historical; no tests, build or deployment were performed for this report-only update.
+
+### Desktop Profile
+
+The owner used an existing authenticated staging account. Profile rendered authenticated READY state, with no visible raw technical errors or stale success/error message. The password/security section remained separate from general profile fields. This confirms visible form separation, not a password-change mutation test.
+
+Notification preference copy stated that preferences are saved to the account and reminders become available after service launch; it did not claim current email/reminder delivery. Desktop layout showed no visible overlap or horizontal overflow. Favorites and My Bookings navigation cards rendered correctly.
+
+| Check | Owner result |
+| --- | --- |
+| PROFILE DESKTOP | PASS |
+| PROFILE READY STATE | PASS |
+| NO RAW TECHNICAL ERRORS | PASS |
+| NO STALE SUCCESS/ERROR FEEDBACK | PASS |
+| PASSWORD SECTION ISOLATION | PASS |
+| NOTIFICATION PREFERENCE WORDING | PASS |
+| DESKTOP LAYOUT | PASS |
+
+### Favorites
+
+The owner opened authenticated `/favorites`. The final EMPTY UI displayed **“В избранном пока ничего нет”**, with its CTA rendered correctly. No raw technical error or stale success/error feedback was visible.
+
+- **FAVORITES EMPTY UI: PASS.**
+- **FAVORITES SAFE FEEDBACK: PASS.**
+
+The screenshot demonstrates final EMPTY UI. UNKNOWN != EMPTY is covered by Sprint 5F offline tests and was not independently time-captured by the screenshot.
+
+### My Bookings
+
+The owner opened authenticated `/my-bookings`. The final EMPTY UI displayed **“У вас пока нет бронирований”**, with its CTA rendered correctly. No raw technical error or stale success/error feedback was visible.
+
+- **MY BOOKINGS EMPTY UI: PASS.**
+- **MY BOOKINGS SAFE FEEDBACK: PASS.**
+
+The screenshot demonstrates final EMPTY UI. UNKNOWN != EMPTY and ERROR != EMPTY are covered by offline tests and were not independently forced in owner browser acceptance.
+
+### Responsive 390 px
+
+The owner inspected Profile at 390 px width. The account layout used one column; identity card, profile fields, notification preferences, security section and Favorites/My Bookings cards fit. The footer rendered, the mobile header remained usable, and no horizontal overflow was visible.
+
+- **PROFILE 390PX: PASS.**
+- **RESPONSIVE FEEDBACK 390PX: PASS.**
+
+### Responsive 320 px
+
+The owner inspected Profile at 320 px width. Hamburger/mobile navigation rendered; Profile used one column. Cards, inputs, buttons and the security section fit the viewport. Notification preference content remained readable, with no visible horizontal overflow.
+
+- **PROFILE 320PX: PASS.**
+- **RESPONSIVE FEEDBACK 320PX: PASS.**
+- **MOBILE HEADER 320PX: PASS.**
+
+### Network observation
+
+The shown owner browser Network evidence included application requests labelled `profile`, `special-offers` and `test-options`. No visible Availability, Content, CheckRate, Booking or Cancellation requests were observed in that evidence.
+
+This is browser observation only, not an independent server-side traffic audit. It does not establish the absence of all server-side provider traffic beyond the shown evidence.
+
+### Not run
+
+- **REGISTRATION OWNER MUTATION: NOT RUN.**
+- **PASSWORD CHANGE OWNER MUTATION: NOT RUN.**
+- **BOOKING READY/DETAILS OWNER ACCEPTANCE: NOT RUN.**
+
+Do not create users, mutate passwords or create fake bookings merely for acceptance. Mutation success/failure, forced error states and transient loading behavior are not upgraded to browser PASS by final-state screenshots. Earlier skipped acceptance outside this tested scope remains unchanged.
+
+### Final Sprint 5F status
+
+| Gate | Final status |
+| --- | --- |
+| CODE / OFFLINE | PASS |
+| FOCUSED 5F | 76/76 PASS |
+| FULL FRONTEND | 490/490 PASS |
+| LINT | PASS |
+| BUILD | PASS |
+| VERIFIER | PASS |
+| DIFF-CHECK | PASS |
+| DEPLOYED STAGING | PASS |
+| OWNER BROWSER ACCEPTANCE | PASS — tested scope |
+| PROFILE | PASS |
+| FAVORITES EMPTY | PASS |
+| MY BOOKINGS EMPTY | PASS |
+| 390PX | PASS |
+| 320PX | PASS |
+| SAFE USER-FACING FEEDBACK | PASS — tested scope |
+| NOTIFICATION PREFERENCE WORDING | PASS |
+| REGISTRATION OWNER MUTATION | NOT RUN |
+| PASSWORD CHANGE OWNER MUTATION | NOT RUN |
+| BOOKING READY/DETAILS OWNER ACCEPTANCE | NOT RUN |
+| Backend changed | NO |
+| DB/schema changed | NO |
+| Hotelbeds behavior changed | NO |
+| Booking/payment runtime changed | NO |
+| Email/notification runtime changed | NO |
+
+Only this report was changed for this acceptance update. Source code, tests, env and runtime configuration remain unchanged. No git add/commit/push or deployment was performed; the report is left unstaged for owner review.
