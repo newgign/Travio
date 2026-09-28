@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { createAuthFormStore } from '../services/authFormStore';
-import { authFields, authOrigin, focusAuthError } from '../utils/authPresentation';
+import { authFields, authOrigin, authReturnPath, focusAuthError } from '../utils/authPresentation';
+import useSession from '../hooks/useSession';
+import { SessionStatus } from './SessionBoundary';
 import '../styles/Auth.css';
 
 const labels = { full_name: 'Имя', email: 'Email', phone: 'Телефон (необязательно)', password: 'Пароль', confirmPassword: 'Повторите пароль' };
@@ -18,7 +20,7 @@ function AuthField({ name, mode, state, onEdit }) {
   </div>{hint && <small id={`${id}-hint`}>Не менее 8 символов</small>}{error && <span className="auth-error" id={`${id}-error`}>{error}</span>}</div>;
 }
 
-export function AuthView({ mode, state, actions, returnTo = '/', registered = false }) {
+export function AuthView({ mode, state, actions, returnTo = '/', registered = false, notice = '' }) {
   const register = mode === 'register';
   function submit(event) {
     event.preventDefault();
@@ -28,6 +30,7 @@ export function AuthView({ mode, state, actions, returnTo = '/', registered = fa
   return <main className="auth-page"><section className="auth-card" aria-labelledby="auth-heading">
     <header><Link to="/" className="auth-logo">✈️ Asedeliya</Link><h1 id="auth-heading">{register ? 'Создать аккаунт' : 'Вход в аккаунт'}</h1><p>{register ? 'Сохраняйте понравившиеся отели и управляйте личными данными.' : 'Войдите, чтобы управлять избранным, профилем и поездками.'}</p></header>
     {!register && registered && <p className="auth-success" role="status" aria-live="polite">Аккаунт создан. Теперь войдите в Asedeliya.</p>}
+    {notice && <p role="status" aria-live="polite">{notice}</p>}
     <form noValidate onSubmit={submit} aria-busy={state.pending}>
       {authFields(mode).map(name => <AuthField key={name} name={name} mode={mode} state={state} onEdit={actions.edit} />)}
       {state.error && <p className="auth-error auth-server-error" role="alert">{state.error}</p>}
@@ -39,11 +42,14 @@ export function AuthView({ mode, state, actions, returnTo = '/', registered = fa
 }
 
 export default function AuthPage({ mode }) {
+  const session = useSession();
   const navigate = useNavigate();
   const location = useLocation();
   const returnTo = authOrigin(location.state?.returnTo);
   const store = useMemo(() => createAuthFormStore({ mode, returnTo, onSuccess: navigate }), [mode, returnTo, navigate]);
   const state = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
   useEffect(() => store.connect(), [store]);
-  return <AuthView key={`${mode}:${location.key}`} mode={mode} state={state} actions={store} returnTo={returnTo} registered={location.state?.registered === true} />;
+  if (!['guest', 'authenticated'].includes(session.status)) return <SessionStatus status={session.status} />;
+  if (session.status === 'authenticated') return <Navigate to={authReturnPath(returnTo, session.user.role)} replace />;
+  return <AuthView key={`${mode}:${location.key}`} mode={mode} state={state} actions={store} returnTo={returnTo} registered={location.state?.registered === true} notice={session.notice} />;
 }

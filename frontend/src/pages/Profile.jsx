@@ -53,8 +53,9 @@ export default function Profile() {
   const store = useMemo(() => createProfileStore({ token }), [token]);
   const state = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
   useEffect(() => {
+    const disconnect = store.connect();
     const timer = setTimeout(() => store.load(), 0);
-    return () => { clearTimeout(timer); store.invalidate(); };
+    return () => { clearTimeout(timer); disconnect(); };
   }, [store]);
   if (!token || !user || state.status === 'auth') return <Navigate to="/login" replace state={{ returnTo: '/profile' }} />;
   return <><Navbar /><ProfileView key={token} state={state} actions={store} /><Footer /></>;

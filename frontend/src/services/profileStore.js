@@ -1,15 +1,17 @@
 import { getProfile, updateProfile, changePassword } from './profileService';
-import { clearSession, updateSessionUser } from './session';
+import { clearSession, updateSessionUser, readSession, sessionSnapshot, subscribeSession, takeRestoredProfile } from './session';
 import { emptyPassword, passwordErrors, profileDraft, profileErrors, publicProfile } from '../utils/profilePresentation';
 
 // Page-local draft state; the existing session remains the only shared user store.
-export function createProfileStore({ token, readToken = () => localStorage.getItem('token'), api = { getProfile, updateProfile, changePassword }, publish = updateSessionUser } = {}) {
+export function createProfileStore({ token, readToken = () => localStorage.getItem('token'), readUserId = () => typeof localStorage === 'undefined' ? null : readSession(sessionSnapshot()).user?.id, api = { getProfile: () => takeRestoredProfile(token) || getProfile(), updateProfile, changePassword }, publish = updateSessionUser } = {}) {
+  const ownerId = readUserId();
+  const sameIdentity = () => ownerId == null || String(readUserId()) === String(ownerId);
   let state = { status: token ? 'loading' : 'auth', user: null, draft: null, dirty: false, saving: false, errors: {}, message: '', saveError: '', password: emptyPassword(), passwordErrors: {}, passwordBusy: false, passwordMessage: '', passwordError: '' };
   let generation = 0, loading = null, saving = null, changing = null;
   const listeners = new Set();
   const emit = patch => { state = { ...state, ...patch }; listeners.forEach(fn => fn()); };
-  const current = version => Boolean(token) && token === readToken() && version === generation;
-  const auth = () => { clearSession(token); emit({ status: 'auth', user: null, draft: null, password: emptyPassword(), dirty: false, saving: false, passwordBusy: false }); };
+  const current = version => Boolean(token) && token === readToken() && sameIdentity() && version === generation;
+  const auth = () => { if (sameIdentity()) clearSession(token); store.invalidate(); emit({ status: 'auth' }); };
   const failed = (error, patch) => { if (error.status === 401 || error.code === 'AUTH_REQUIRED') auth(); else emit(patch); };
   const handleFailure = (version, error, patch) => {
     if (version !== generation) return;
@@ -19,6 +21,10 @@ export function createProfileStore({ token, readToken = () => localStorage.getIt
   const store = {
     getSnapshot: () => state,
     subscribe: fn => { listeners.add(fn); return () => listeners.delete(fn); },
+    connect() {
+      const disconnect = subscribeSession(() => { if (!current(generation)) store.invalidate(); });
+      return () => { disconnect(); store.invalidate(); };
+    },
     invalidate() { generation++; loading = saving = changing = null; emit({ user: null, draft: null, password: emptyPassword(), dirty: false, saving: false, passwordBusy: false, errors: {}, message: '', saveError: '', passwordErrors: {}, passwordMessage: '', passwordError: '', status: token ? 'loading' : 'auth' }); },
     load() {
       if (loading) return loading;

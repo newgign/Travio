@@ -37,7 +37,7 @@ export function createAuthFormStore({ mode, returnTo, onSuccess }) {
           // Yield before dispatch so immediate unmount/logout can prevent POST.
           await Promise.resolve();
           if (!current()) return;
-          const response = await fetch(`${API_URL}/auth/${mode}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal });
+          const response = await fetch(`${API_URL}/auth/${mode}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal, redirect: 'error' });
           if (!response.ok) throw Object.assign(Error('AUTH_REQUEST_FAILED'), { status: response.status });
           const data = await response.json();
           if (!current()) return;
