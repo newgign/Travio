@@ -183,3 +183,85 @@ Prepare only; NOT RUN. On a separately approved staging deployment:
 - No booking creation to obtain READY/Details evidence. Preserve prior skipped acceptance states.
 
 OWNER BROWSER ACCEPTANCE: NOT RUN. REGISTRATION OWNER MUTATION: NOT RUN. PASSWORD CHANGE OWNER MUTATION: NOT RUN. No deploy, Render/env change, production provisioning, git add/commit/push performed.
+
+## Final Owner Render Browser Acceptance
+
+This section records subsequently supplied owner evidence from Render staging and supersedes earlier NOT RUN browser/deployment status only for the tested scope below. It is owner-reported evidence, not an independent Codex browser run. Existing offline results remain historical; no tests, build or deployment were performed for this report-only update.
+
+### Login and authenticated state
+
+The owner used an existing staging account. Login UI rendered correctly; successful login reached authenticated state. The authenticated header displayed the user/admin state, and Profile rendered authenticated account data. Favorites and My Bookings opened under the authenticated user and each showed a valid EMPTY state.
+
+| Check | Owner result |
+| --- | --- |
+| LOGIN UI | PASS |
+| LOGIN -> AUTHENTICATED STATE | PASS |
+| PROFILE AFTER LOGIN | PASS |
+| FAVORITES AFTER LOGIN | PASS |
+| MY BOOKINGS AFTER LOGIN | PASS |
+
+### Session restore / bootstrap
+
+The owner opened `/profile` while authenticated, selected Chrome DevTools Network Fetch/XHR, enabled **Disable cache**, and reloaded the page. Network confirmed **GET `/api/auth/profile`**, status **200 OK**. Profile remained/restored as authenticated after reload.
+
+| Check | Owner result |
+| --- | --- |
+| SESSION RESTORE AFTER RELOAD | PASS |
+| AUTH BOOTSTRAP | PASS |
+| PROFILE IDENTITY VALIDATION | PASS |
+| GET /api/auth/profile | PASS |
+
+A static screenshot does not independently prove absence of private UI flashing in every frame. Protected bootstrap behavior remains covered by CODE/OFFLINE tests; no frame-by-frame browser proof is claimed.
+
+### Logout and protected route
+
+The owner logged out. The authenticated header/private account state disappeared and login UI rendered. The owner then directly attempted protected `/profile`; the final browser URL was `/login`. No private Profile content was visible in the resulting state.
+
+| Check | Owner result |
+| --- | --- |
+| LOGOUT -> GUEST STATE | PASS |
+| DIRECT /profile AFTER LOGOUT | PASS |
+| PROTECTED ROUTE REDIRECT TO /login | PASS |
+| PRIVATE PROFILE CONTENT AFTER LOGOUT | NOT VISIBLE |
+
+### Not run
+
+- **REGISTRATION OWNER MUTATION: NOT RUN.**
+- **PASSWORD CHANGE OWNER MUTATION: NOT RUN.**
+- **SECOND-ACCOUNT USER-SWITCH OWNER TEST: NOT RUN.**
+
+Do not create an account, change a password or create a second account merely to obtain acceptance evidence. These untested mutations/scenarios are not upgraded by the tested existing-account flow. Earlier skipped 5C checks and 5D READY/Details acceptance remain unchanged.
+
+### Network safety
+
+During owner auth acceptance, no Hotelbeds Availability, Content, CheckRate, Booking or Cancellation requests were intentionally triggered. The supplied Network evidence establishes the observed own application auth/account requests; it does not constitute a complete independent server-side traffic audit or prove the absence of all background traffic.
+
+### Final Sprint 5E status
+
+| Gate | Final status |
+| --- | --- |
+| CODE / OFFLINE | PASS |
+| FOCUSED 5E | 70/70 PASS |
+| FULL FRONTEND | 414/414 PASS |
+| LINT | PASS |
+| BUILD | PASS |
+| VERIFIER | PASS |
+| DIFF-CHECK | PASS |
+| DEPLOYED STAGING | PASS |
+| OWNER BROWSER ACCEPTANCE | PASS — tested scope |
+| LOGIN | PASS |
+| AUTHENTICATED STATE | PASS |
+| SESSION RESTORE | PASS |
+| AUTH PROFILE VALIDATION | PASS |
+| LOGOUT | PASS |
+| PROTECTED /profile AFTER LOGOUT | PASS |
+| REGISTRATION OWNER MUTATION | NOT RUN |
+| PASSWORD CHANGE OWNER MUTATION | NOT RUN |
+| SECOND-ACCOUNT USER-SWITCH | NOT RUN |
+| Backend changed in 5E | NO |
+| DB/schema changed | NO |
+| Hotelbeds behavior changed | NO |
+| Booking changed | NO |
+| Payments changed | NO |
+
+Only this report was edited for this acceptance update. Implementation, tests, env and runtime configuration remain unchanged. No git add/commit/push or deployment was performed; the report is left unstaged for owner review.
