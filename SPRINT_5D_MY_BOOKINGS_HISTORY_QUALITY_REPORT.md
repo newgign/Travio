@@ -1,6 +1,6 @@
 # Sprint 5D — My Bookings & Booking History Quality
 
-Status: CODE / OFFLINE: PASS. Focused 5D: 53/53. FULL FRONTEND: 339/339. FULL BACKEND: 399/399 (36 files). Lint/build/verifier/diff-check: PASS. OWNER BROWSER ACCEPTANCE: NOT RUN. DEPLOY: NOT RUN. Hotelbeds TEST/read-only; LIVE disabled; booking/payments disabled; production infrastructure paused.
+Status: Sprint 5D.1 CODE / OFFLINE: PASS. Focused 5D: 58/58. FULL FRONTEND: 344/344. FULL BACKEND: prior 5D PASS 399/399 (36 files), not rerun: backend unchanged in 5D.1. Lint/build/verifier/diff-check: PASS. OWNER BROWSER ACCEPTANCE: NOT RUN / pending redeploy and recheck. STAGING HISTORY LOAD: NOT VERIFIED. DEPLOY BY THIS CONTINUATION: NOT RUN. Guest redirect and authenticated EMPTY appearance have owner-reported visual evidence only; see Sprint 5D.1 follow-up. Hotelbeds TEST/read-only; LIVE disabled; booking/payments disabled; production infrastructure paused. Earlier sections retain historical 5D evidence.
 
 ## 1. Initial state
 
@@ -176,3 +176,98 @@ Owner later, on a separately approved deployed version:
 - At 390 and 320 (preferably also 768/1440): list/empty/card/details/status/hotel/stay/price/disclosures/footer, no horizontal overflow or obstruction.
 - Network: only own booking GETs and ordinary stored images; no Availability, Content, CheckRate, Booking or Cancellation. Back reuses loaded list; no polling.
 - If staging has no booking records: READY/details owner acceptance stays NOT RUN. Record actual evidence without upgrading skipped 5C items.
+
+## Sprint 5D.1 — Owner History Load Follow-up
+
+### Entry and owner browser evidence
+
+The initial 5D.1 work started from the committed Sprint 5D baseline on develop, HEAD **83d16c6** (`docs: record Sprint 5D offline verification`). The post-limit continuation on 2026-09-28 recovered five already modified files after executing status, branch, latest commit, diff-stat and full diff; its tracked tree was not clean. All unrelated untracked paths from the earlier report remain untouched. No new sprint/report/suite was created.
+
+**RECOVERED WORK BEFORE CONTINUATION**
+
+1. `frontend/src/pages/MyBookings.jsx` — explicit ready gate, token/user dependencies, shared scheduler and identity-specific view key.
+2. `frontend/src/services/bookingHistory.js` — token plus validated user-ID ownership, session invalidation, ensure-loaded and cancellable scheduler.
+3. `frontend/src/pages/BookingDetails.jsx` — user ID added to shared cache ownership and memo dependencies only.
+4. `frontend/tests/myBookingsQuality.test.mjs` — five follow-up cases and strengthened existing assertions, with prior 58/58 result.
+5. `SPRINT_5D_MY_BOOKINGS_HISTORY_QUALITY_REPORT.md` — existing 5D.1 follow-up, regression results and pending owner acceptance.
+
+**WORK COMPLETED AFTER CONTINUATION**
+
+Read all five recovered files and traced the session/store/service contract again. Preserved the implementation and existing focused suite without rewriting or duplicating coverage. Repeated all mandatory offline frontend gates; results are recorded below. Updated this existing report to distinguish recovered work from this continuation and to correct the ambiguous owner Network label. BookingDetails remains limited to shared user isolation; no booking, price, voucher, payment or cancellation semantics changed.
+
+Owner reports deployed staging evidence:
+
+- Guest `/my-bookings`: **PASS** — redirect to login, no private data exposed.
+- Authenticated `/my-bookings`: “У вас пока нет бронирований” — **EMPTY appearance visually PASS**.
+- After clearing Network, reloading and filtering Fetch/XHR, **no dedicated booking/history GET was observed**; only the label `me` was reported. Its exact request path is not established by that label.
+- **BACKEND HISTORY LOAD: NOT VERIFIED / POSSIBLE DEFECT. Overall owner acceptance is not PASS.** These are supplied owner observations, not an independent staging browser run.
+
+### Trace and root-cause boundary
+
+Read complete current MyBookings, bookingHistory, accountListStore, session/useSession, ProtectedRoute, account states, bookingService, authFetch/API base, auth form/session establishment, FavoritesContext and focused suite; checked App, backend server mount, booking/auth routes and list controller.
+
+Current source path is `/my-bookings` -> ProtectedRoute -> MyBookings effect -> bookingHistory.list -> getMyBookings -> authFetch -> **GET `${API_URL}/bookings/me`**. Backend mounts `/api/bookings`; router GET `/me` requires authMiddleware; controller queries `WHERE b.user_id = $1` and serializes its rows. Default production URL is **`/api/bookings/me`**; VITE_API_URL may replace the API base; development fallback is `http://localhost:5000/api`. The response is an array, not embedded account history. No backend modification is necessary for this existing contract.
+
+Session resolution here means the shared session's token and user ID are known from the existing session store. Login writes token/user and emits the existing auth event; ProtectedRoute checks them. The history GET itself is authorized by backend JWT middleware. This frontend does not wait for or use an `auth/me` response to obtain bookings. Its current profile endpoint is `/api/auth/profile`; the ambiguous owner-observed `me` label cannot establish whether a booking-history request occurred.
+
+**The cause of the missing request on deployed staging is not established from available evidence.** The baseline store already started authenticated instances as `loading` with `items=[]`, and its usual successful loader was the transition to `ready`. Its module-only cache could reuse a previously loaded empty array on same-session SPA navigation/Back, but could not survive a true hard reload of the document. There is no persisted history cache, combined auth/history request or source branch demonstrated to skip the first authenticated hard-reload GET permanently. The deployed commit and exact observed request path were requested; they were not available during this continuation. A deployment/version mismatch is a possibility, not a finding. No claim that the observed staging defect has been reproduced or repaired.
+
+Two source-level gaps were identified and corrected independently of that uncertainty:
+
+1. MyBookingsView checked known guest/loading/error values, then fell through to `bookings.length === 0`. Thus an absent/unknown status could render EMPTY without positive ready evidence. Normal baseline store initialization was already loading; this fallback flaw is not proof of what happened on staging.
+2. Cache ownership and page memo dependencies used only token. A user-identity change with the same token, or identity becoming known after a token, was not an explicit dependency. The identity guard now includes both token and user ID.
+
+### Exact fix and state model
+
+- MyBookings permits records/EMPTY only when **status is exactly `ready`**. Unknown/uninitialized values show loading. Guest/auth retains login UI; error retains the fixed safe message and retry. Existing valid EMPTY copy is unchanged.
+- No new status vocabulary is imposed on the shared account store: AUTH_REQUIRED = guest/auth; LOADING = loading; READY = ready with records; EMPTY = ready with `items=[]`; ERROR = error. A new authenticated store starts loading, never ready-empty. Only successful validated history responses establish ready in the production history flow.
+- bookingHistory now keys ownership by **token + normalized user ID**, reusing existing session events and account store guards. Missing token or identity cannot dispatch a private read. MyBookings memo/effect depends on both; BookingDetails uses the same identity so navigation shares one correctly owned cache. No new cross-tab mechanism.
+- The page uses the extracted `scheduleBookingHistoryLoad(history)` mount/cancel function and `ensureListLoaded()`. This keeps the existing zero-delay effect timing and in-flight deduplication, while allowing the actual scheduling path to be exercised offline. A cancelled mount does not dispatch; repeated mount scheduling during a pending request creates one GET. Ready data is retained for Back; errors require explicit retry. No polling or new network endpoint.
+- Logout/session identity changes invalidate the old list/details/filter state. The next identity gets a fresh loading store. Old pending responses cannot publish another user's EMPTY/READY result, including when only user ID changes.
+- No changes to backend, auth verification, accountListStore, API base, bookingService, provider transport, booking/payment behavior or schema.
+
+### Tests and regression
+
+Extended only **frontend/tests/myBookingsQuality.test.mjs**. Added five follow-up subtests and strengthened existing retry/route/network coverage, without deleting previous cases:
+
+- initial/unknown states never render EMPTY;
+- guest -> token without identity -> known identity uses the real mount scheduler and real bookingService/authFetch against a deterministic fetch mock; exact API-base + `/bookings/me` and bearer header asserted;
+- cancelled/repeated scheduling, pending LOADING, successful empty response, and cached same-session revisits produce the expected single GET;
+- a fresh Vite module instance models document-reload memory reset and performs a new history GET rather than inheriting the old EMPTY cache;
+- both prior EMPTY and READY are cleared at logout; next user and same-token identity changes trigger fresh loads;
+- late old-account empty response is discarded;
+- HTTP failure remains ERROR with fixed safe text, ordinary remount does not retry automatically, explicit retry produces exactly one additional GET;
+- unchanged route mount/auth/controller contract, shared page scheduler dependencies, and allowed GET-only request paths asserted. Unexpected fetch paths fail the mock; existing provider prohibition coverage remains.
+
+These are scheduler/store/service tests plus SSR/source assertions, **not a mounted browser or staging-network acceptance run**. The fresh-module test models hard-reload memory semantics; it is not represented as an actual browser reload. No external request or real account/DB mutation was performed.
+
+| Gate | 5D.1 result |
+| --- | --- |
+| Focused 5D | **PASS 58/58**, zero skipped/todo |
+| Full frontend | **PASS 344/344**, zero skipped/todo |
+| Lint | PASS, 0 errors; same 3 inherited admin hook warnings |
+| Build | PASS; JS 500.75 kB / gzip 141.89 kB; CSS 105.15 kB / gzip 19.16 kB |
+| Bundle warning | Existing >500 kB warning remains |
+| sprint3mVerify | PASS; 208 backend syntax files, 430 scanned files, findings=[] |
+| diff-check | PASS |
+| Backend | Unchanged; full backend not rerun, prior 399/399 remains historical |
+
+Used the existing offlineNetwork.cjs preload, sequential Node test runner and force-exit for focused/full frontend, then npm.cmd --prefix frontend run lint/build and node backend/scripts/sprint3mVerify.cjs. Build TEST flag was process-only. Logs: OS-temp `sprint5d1-focused.log` and `sprint5d1-frontend.log`. No disposable DB was needed or created.
+
+Post-limit continuation reran these mandatory gates on 2026-09-28: focused **58/58**, full frontend **344/344**, no failures/skips/todo; lint **PASS** with the same three warnings; build **PASS** with the same sizes above; verifier **PASS**, 208 backend syntax files / 430 scanned files / findings=[]; final diff-check **PASS**. New run logs: OS-temp `sprint5d1-cont-focused.log` and `sprint5d1-cont-frontend.log`. Backend remains unchanged, so no backend regression or database was needed. Source/tests were preserved as recovered; only this report was edited after recovery.
+
+### Exact changed files and final status
+
+1. frontend/src/pages/MyBookings.jsx — positive ready gate, user-identity dependencies and shared load scheduler.
+2. frontend/src/services/bookingHistory.js — token/user ownership, ensure-loaded and mount/cancel scheduler.
+3. frontend/src/pages/BookingDetails.jsx — shared history owner includes user ID.
+4. frontend/tests/myBookingsQuality.test.mjs — follow-up coverage and strengthened existing checks.
+5. SPRINT_5D_MY_BOOKINGS_HISTORY_QUALITY_REPORT.md — current status and this follow-up.
+
+Final status/diff-stat/full-diff/diff-check reviewed. Changes left unstaged. Existing unrelated files and prior sprint reports untouched. No git add/commit/push/reset/restore/clean, env edit, deploy, Render change or schema migration.
+
+**History request triggered after token/user identity resolves: YES, verified offline. EMPTY only after confirmed successful []: YES in the history flow. Backend changed: NO. External calls: 0. Hotelbeds calls: 0. Real DB mutations: 0.** Booking/payments remain disabled; production infrastructure remains paused.
+
+**SOURCE HARDENING IMPLEMENTED. DEPLOYED OWNER RE-ACCEPTANCE REQUIRED. ROOT CAUSE: NOT CONCLUSIVELY CONFIRMED.**
+
+**OWNER BROWSER ACCEPTANCE: NOT RUN / pending redeploy and recheck. STAGING HISTORY LOAD: NOT VERIFIED.** After the owner separately deploys the reviewed version, verify its commit, clear Network and hard-reload `/my-bookings`: observe own GET `/api/bookings/me` (or configured API-base equivalent), LOADING before resolution, then [] -> EMPTY / records -> READY / failure -> ERROR. The previously observed `me` label alone is insufficient evidence. Do not create a staging booking or call Hotelbeds to obtain READY evidence. All earlier owner-skipped 5C checks remain NOT RUN.
