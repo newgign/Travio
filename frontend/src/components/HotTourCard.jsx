@@ -1,7 +1,7 @@
 ﻿import { Link } from "react-router-dom";
 import CollectionImage from "./CollectionImage";
 import { formatMoney } from "../utils/money";
-import { offerDetailsLink } from "../utils/hotTours";
+import { offerDetailsLink, confirmedPriceDrop } from "../utils/hotTours";
 
 const foodLabels = { RO: "Без питания", BB: "Завтраки", HB: "Завтрак и ужин", FB: "Полный пансион", AI: "Всё включено", UAI: "Ультра всё включено" };
 const roomLabels = { Standard: "Стандартный номер", Deluxe: "Номер делюкс", Suite: "Люкс", Family: "Семейный номер" };
@@ -11,19 +11,18 @@ function plural(value, words) {
 }
 export default function HotTourCard({ tour }) {
   const evidence = tour.discountEvidence;
-  const confirmed = tour.priceEnvironment === "live" && evidence?.source === "price_history" && evidence.originalPrice > tour.price;
+  const confirmed = confirmedPriceDrop(tour);
   const name = tour.name || tour.title || tour.hotel || "Отель";
   const dateValue = tour.checkIn || tour.departureDate;
   const date = dateValue ? new Date(`${String(dateValue).slice(0, 10)}T00:00:00`) : null;
   const food = tour.boardName || foodLabels[tour.food] || foodLabels[tour.boardCode];
   const room = tour.roomName || tour.roomType;
-  const stars = Math.min(5, Math.max(0, Math.floor(Number(tour.stars) || 0)));
+  const stars = Number.isInteger(Number(tour.stars)) && Number(tour.stars)>=1 && Number(tour.stars)<=5 ? Number(tour.stars) : 0;
   return <article className="hot-trip-card">
-    <div className="hot-trip-photo"><CollectionImage src={tour.image || tour.images?.[0]} alt={name} />{confirmed && <span className="hot-trip-badge">🔥 Горящее предложение · −{Math.round((evidence.originalPrice - tour.price) / evidence.originalPrice * 100)}%</span>}</div>
+    <div className="hot-trip-photo"><CollectionImage src={tour.image || tour.images?.[0]} alt={name} />{confirmed && <span className="hot-trip-badge">Снижение в истории · −{Math.round((evidence.originalPrice - tour.price) / evidence.originalPrice * 100)}%</span>}</div>
     <div className="hot-trip-content">
       <div className="hot-trip-meta">
         {stars > 0 && <span aria-label={`${stars} звёзд`}>{"★".repeat(stars)}</span>}
-        {Number(tour.rating) > 0 && <span>Рейтинг {Number(tour.rating).toLocaleString("ru-RU")}</span>}
       </div>
       <h3 title={name}>{name}</h3>
       <p className="hot-trip-location">{[tour.country, tour.city].filter(Boolean).join(" / ")}</p>
@@ -37,11 +36,12 @@ export default function HotTourCard({ tour }) {
       </ul>
       <div className="hot-trip-bottom">
         {confirmed && <><small>Ранее зафиксировано</small><del>{formatMoney(evidence.originalPrice, tour.currency)}</del></>}
+        <small>Цена на момент наблюдения, не текущая доступность</small>
         <strong>{formatMoney(tour.price, tour.currency)}</strong>
         {confirmed && <small>Экономия {formatMoney(evidence.originalPrice - tour.price, tour.currency)}</small>}
-        {confirmed && <small>Цена проверена {new Date(evidence.observedAt).toLocaleString("ru-RU")}</small>}
+        {confirmed && <small>Зафиксировано {new Date(evidence.observedAt).toLocaleString("ru-RU")}</small>}
         <small>{tour.provider === "hotelbeds" ? "за проживание · за всех гостей" : "за тур"}</small>
-        <Link className="collection-cta" to={offerDetailsLink(tour)} state={{ selectedOffer: tour }}>Подробнее</Link>
+        <Link className="collection-cta" to={offerDetailsLink(tour)} state={{ selectedOffer: tour }}>Подробнее о сохранённом варианте</Link>
       </div>
     </div>
   </article>;

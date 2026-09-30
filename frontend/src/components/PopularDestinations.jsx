@@ -1,12 +1,12 @@
 import TestDestinationCards from './TestDestinationCards';
-export default function PopularDestinations({destinations=[],catalogState='loading'}) {
+export default function PopularDestinations({destinations=[],catalogState='loading',onRetry}) {
   return <section id="popular" className="popular section">
     <span id="countries" aria-hidden="true" />
-    <div className="section-header"><h2>Популярные направления</h2><p>Выберите место для следующего путешествия</p></div>
-    {catalogState==='loading' ? <div className="destination-grid" role="status" aria-label="Загрузка направлений">
+    <div className="section-header"><h2>Направления по странам</h2><p>Выберите направление из загруженного каталога. Затем укажите даты и гостей — поиск начнётся только после отправки формы.</p></div>
+    {!['ready','error'].includes(catalogState) ? <div className="destination-grid" role="status" aria-busy="true" aria-label="Загрузка направлений">
       {Array.from({length:5},(_,i)=><div key={i} className="destination-skeleton collection-pulse" aria-hidden="true" />)}
-    </div> : catalogState==='error' ? <p className="home-catalog-message" role="status">Каталог временно недоступен. Попробуйте открыть страницу позже.</p>
+    </div> : catalogState==='error' ? <div className="home-catalog-message"><p role="alert">Каталог временно недоступен. Попробуйте ещё раз.</p><button type="button" className="collection-cta" disabled={typeof onRetry !== 'function'} onClick={onRetry}>Повторить загрузку направлений</button></div>
       : destinations.length ? <div className="destination-grid"><TestDestinationCards destinations={destinations} /></div>
-        : <p className="home-catalog-message">Направления скоро появятся в каталоге.</p>}
+        : <p className="home-catalog-message">В загруженном каталоге пока нет направлений.</p>}
   </section>;
 }

@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { countryLabel, destinationLabel } from '../utils/testDestinationLabels';
-import { buildHomeSearch, destinationKey, guestLabel, initialHomeSearch, nightLabel } from '../utils/homeSearch';
+import { submitHomeSearch, destinationKey, guestLabel, initialHomeSearch, nightLabel } from '../utils/homeSearch';
 import GuestPanel from './GuestPanel';
 import { beginResultsSearch } from '../services/resultsSearch';
 import './HomeSearch.css';
@@ -16,6 +16,8 @@ function HomeSearchForm({params,destinations,catalogState}) {
   const [open,setOpen]=useState(false);
   const [minimumDate]=useState(()=>new Date(Date.now()+86400000).toISOString().slice(0,10));
   const trigger=useRef(null);
+  const submitted=useRef(false);
+  const [pending,setPending]=useState(false);
   const navigate=useNavigate();
   const test=import.meta.env.VITE_HOTELBEDS_STAGING_TEST_ENABLED==='true';
   const diagnostic=test && params.get('stagingTestHotel')==='3424';
@@ -24,17 +26,18 @@ function HomeSearchForm({params,destinations,catalogState}) {
   const error=field=>errors[field] && <small className="home-field-error" id={`home-error-${field}`}>{errors[field]}</small>;
   function submit(event) {
     event.preventDefault();
-    const result=buildHomeSearch(form,destinations,diagnostic);
+    const result=submitHomeSearch(form,destinations,{lock:submitted,diagnostic,navigate:result=>{
+      setPending(true);beginResultsSearch(result.url);navigate(result.url);
+    }});
     setErrors(result.errors);
-    if(result.url) {beginResultsSearch(result.url);navigate(result.url);}
-    else {if(result.errors.guests)setOpen(true);event.currentTarget.querySelector(`[name="${Object.keys(result.errors)[0]}"]`)?.focus();}
+    if(!result.url && !result.pending) {if(result.errors.guests)setOpen(true);event.currentTarget.querySelector(`[name="${Object.keys(result.errors)[0]}"]`)?.focus();}
   }
   return <div className="home-search-wrap">
     {diagnostic && <div className="home-diagnostic">TEST / diagnostic: отель 3424 · 1 номер</div>}
-    <form id="home-search" className="home-search-surface" aria-label="Поиск отелей" onSubmit={submit} noValidate>
+    <form id="home-search" className="home-search-surface" aria-label="Поиск отелей" onSubmit={submit} aria-busy={pending} noValidate>
       <div className="home-search-field"><label htmlFor="home-destination">Куда</label>
         <select id="home-destination" name="destination" value={form.destination} onChange={change} disabled={diagnostic || catalogState!=='ready'} aria-invalid={!!errors.destination} aria-describedby={errors.destination?'home-error-destination':undefined}>
-          <option value="">{diagnostic?'Диагностический поиск':catalogState==='loading'?'Загрузка направлений…':'Выберите направление'}</option>
+          <option value="">{diagnostic?'Диагностический поиск':!['ready','error'].includes(catalogState)?'Загрузка направлений…':'Выберите направление'}</option>
           {destinations.filter(row=>row.hotelCount>0).map(row=><option key={destinationKey(row)} value={destinationKey(row)}>{destinationLabel(row)}, {countryLabel(row.countryCode,row.countryName)}</option>)}
         </select>{error('destination')}
         {catalogState==='error' && <small role="status">Каталог временно недоступен</small>}
@@ -46,7 +49,7 @@ function HomeSearchForm({params,destinations,catalogState}) {
         <label htmlFor="home-guests">Гости</label><button ref={trigger} id="home-guests" name="guests" type="button" aria-expanded={open} aria-controls="home-guest-panel" aria-invalid={!!errors.guests} aria-describedby={errors.guests?'home-error-guests':undefined} onClick={()=>setOpen(!open)}>{guestLabel(form.adults,form.children)}<span aria-hidden="true">⌄</span></button>
         {open && <GuestPanel form={form} onChange={value=>{setForm(value);setErrors({});}} onClose={close} />}{error('guests')}
       </div>
-      <button type="submit" className="home-search-submit" disabled={!diagnostic && (catalogState!=='ready' || !destinations.some(row=>row.hotelCount>0))}>Найти отели</button>
+      <button type="submit" className="home-search-submit" disabled={pending || (!diagnostic && (catalogState!=='ready' || !destinations.some(row=>row.hotelCount>0)))}>{pending?'Открываем результаты…':'Найти отели'}</button>
     </form>
     <div className="home-search-note">{test?'Тестовый поиск · реальное бронирование и оплата отключены':'Выбирайте из направлений загруженного каталога.'}</div>
   </div>;

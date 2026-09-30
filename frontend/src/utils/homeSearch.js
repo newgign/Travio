@@ -30,3 +30,14 @@ export function buildHomeSearch(form, destinations, diagnostic=false, now=new Da
   if(form.children) query.set('childrenAges',form.childrenAges.map(Number).join(','));
   return {errors:{},url:`/results?${query}`};
 }
+
+// One navigation per mounted form. Invalid input leaves the form available for correction.
+export function submitHomeSearch(form, destinations, {lock, diagnostic=false, navigate, now=new Date()}) {
+  if (lock.current) return {errors:{},pending:true};
+  const result=buildHomeSearch(form,destinations,diagnostic,now);
+  if (result.url) {
+    lock.current=true;
+    try { navigate(result); } catch (error) { lock.current=false; throw error; }
+  }
+  return result;
+}

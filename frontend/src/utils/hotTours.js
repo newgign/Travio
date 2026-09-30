@@ -8,3 +8,13 @@
   });
   return `/tour/${encodeURIComponent(tour.provider || "mock")}/${encodeURIComponent(tour.providerHotelId ?? tour.id)}?${params}`;
 }
+
+// A stored comparison is not evidence of current availability.
+export function confirmedPriceDrop(tour) {
+  const current=Number(tour?.price), previous=Number(tour?.discountEvidence?.originalPrice);
+  return tour?.provider==='hotelbeds' && tour.priceEnvironment==='live' &&
+    tour.discountEvidence?.source==='price_history' && /^[A-Z]{3}$/.test(tour.currency) &&
+    Number.isFinite(current) && Number.isFinite(previous) && current>0 && previous>current &&
+    Math.round((previous-current)/previous*100)>=1 &&
+    Number.isFinite(Date.parse(tour.discountEvidence.observedAt));
+}

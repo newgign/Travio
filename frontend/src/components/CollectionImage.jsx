@@ -1,9 +1,10 @@
-﻿import { useState } from "react";
-import fallback from "../assets/images/hero.png";
-export default function CollectionImage({ src, alt }) {
-  const [loaded, setLoaded] = useState(false);
-  return <div className={`collection-image ${!loaded ? "collection-pulse" : ""}`}>
-    <img src={src || fallback} alt={alt} loading="lazy" onLoad={() => setLoaded(true)}
-      onError={(event) => { if (event.currentTarget.getAttribute("src") !== fallback) event.currentTarget.src = fallback; setLoaded(true); }} />
+import { useState } from 'react';
+export default function CollectionImage({src,alt}) {
+  const [failedSource,setFailedSource]=useState(null);
+  const [loadedSource,setLoadedSource]=useState(null);
+  const visible=Boolean(src) && failedSource!==src;
+  return <div className={`collection-image ${visible && loadedSource!==src ? 'collection-pulse' : ''}`}>
+    {visible ? <img src={src} alt={alt} loading="lazy" onLoad={()=>setLoadedSource(src)} onError={()=>setFailedSource(src)} />
+      : <span className="collection-image-fallback">Фото недоступно</span>}
   </div>;
 }
