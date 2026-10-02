@@ -11,6 +11,10 @@
 @media(max-width:600px) { .destination-grid>.destination-card,.destination-grid>.destination-skeleton { flex-basis:100%; aspect-ratio:4/3; } }
 .destination-card { position:relative; display:block; height:300px; min-width:0; overflow:hidden; border-radius:22px; color:#fff; cursor:pointer; box-shadow:0 10px 30px #0f172a12; transition:transform 200ms,box-shadow 200ms; }
 .collection-image { width:100%; height:100%; background:#dbe7ef; }
+.destination-art-fallback { position:relative; overflow:hidden; min-height:180px; background:radial-gradient(circle at 75% 22%,#f8d49b 0 9%,transparent 9.5%),linear-gradient(145deg,#367b85,#173f60); }
+.destination-art-fallback::before,.destination-art-fallback::after { content:""; position:absolute; width:110%; height:60%; left:-28%; top:32%; border:1px solid #ffffff38; border-radius:50%; transform:rotate(-30deg); }
+.destination-art-fallback::after { left:8%; top:42%; }
+.destination-art-label { position:absolute; top:20px; left:18px; right:18px; color:#fff; font-size:12px; line-height:1.4; letter-spacing:.04em; overflow-wrap:anywhere; }
 .collection-image img { display:block; width:100%; height:100%; object-fit:cover; transition:transform 200ms; }
 .collection-image-fallback { display:flex; width:100%; height:100%; align-items:center; justify-content:center; color:#475569; background:linear-gradient(135deg,#dbeafe,#e2e8f0); font-size:14px; }
 .destination-card::after { content:""; position:absolute; inset:0; background:linear-gradient(transparent 25%,#0f172a99 75%,#0f172ae6); }

@@ -9,8 +9,8 @@ import thailand from '../assets/images/thailand.png';
 const assets = {'TR:AYT':turkey,'EG:SSH':egypt,'AE:DXB':dubai,'TH:HKT':thailand};
 function DestinationImage({src,label}) {
   const [failed,setFailed]=useState(false);
-  return <div className="collection-image" style={{background:'linear-gradient(135deg, #e6eeed, #c5d6d5)',display:'grid',placeItems:'center',minHeight:180}}>
-    {src && !failed ? <img src={src} alt={`Иллюстрация направления: ${label}`} loading="lazy" onError={()=>setFailed(true)} /> : <span style={{color:'#345454'}}>Направление путешествия</span>}
+  return <div className={`collection-image${!src || failed ? ' destination-art-fallback' : ''}`}>
+    {src && !failed ? <img src={src} alt={`Иллюстрация направления: ${label}`} loading="lazy" onError={()=>setFailed(true)} /> : <span className="destination-art-label">Направление путешествия</span>}
   </div>;
 }
 export default function TestDestinationCards({destinations}) {
