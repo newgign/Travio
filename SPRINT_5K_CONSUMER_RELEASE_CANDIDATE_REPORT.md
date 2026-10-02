@@ -47,3 +47,13 @@ Backend/DB/schema/Hotelbeds/booking/payment/runtime unchanged. No git add/commit
 ## 10. Owner acceptance checklist
 
 Prepare only after separately authorized deployment. Existing account: Home -> Login -> Profile -> Favorites -> My Bookings -> Help -> Home. Verify routes open, auth survives navigation, no blank lazy page/raw error/dead CTA/layout break, TEST status remains truthful. Optional existing fresh results only; no fresh Hotelbeds search solely for RC. Quick 390px Home check if needed. Do not create bookings/accounts or change passwords to manufacture PASS. Record only tested scope; owner acceptance currently NOT RUN.
+
+## Sprint 5K.1 — Admin to Home Navigation
+
+Owner requested direct navigation from Admin to consumer Home. Started from clean tracked develop baseline 330e8e7. Added a native React Router Link **«На главную»**, target exactly **/**, above the existing Admin header title. Same-tab navigation; keyboard-accessible link with default browser focus behavior. No new component or CSS redesign. Existing logout implementation, admin role/auth guards and routes unchanged.
+
+Modified only frontend/src/components/admin/Header.jsx, frontend/tests/consumerReleaseCandidate.test.mjs and this report. Two added tests check the actual admin route's semantic link, retained authenticated identity across route rendering, and rejection of guest/non-admin access. SSR/source evidence, not browser click acceptance; no mounted API effects.
+
+CODE / OFFLINE: PASS. Focused **28/28 PASS**; full frontend **752/752 PASS**, zero failures/skips/todo. Lint PASS with the same three inherited admin hook warnings. Build PASS: entry **245.78 kB / gzip 76.65 kB**, **26 JS chunks**, >500 kB warning absent; Admin chunk 82.36 kB / gzip 18.97 kB. Verifier PASS: 208 backend syntax files, 448 scanned files, findings=[]. Diff-check PASS. Each required check ran once after final source. Full frontend log: OS-temp sprint5k1-frontend.log; build TEST flag process-only.
+
+Backend/DB/Hotelbeds/booking/payments unchanged; no new dependency. External/provider calls and real DB mutations: 0. No git add/commit/push/deploy; changes unstaged, unrelated owner files preserved. **OWNER BROWSER RECHECK: REQUIRED** — existing authorized admin opens Admin, tabs to «На главную», activates it and verifies Home plus retained auth state.
