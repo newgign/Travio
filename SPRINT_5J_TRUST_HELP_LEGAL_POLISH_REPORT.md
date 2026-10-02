@@ -53,3 +53,27 @@ Content/UX consistency only: not legal compliance review, Kazakhstan legal certi
 ## 12. Owner browser checklist
 
 Prepare only after separately authorized deployment: desktop Help, shared FAQ, Contacts, booking/cancellation/privacy articles and Footer links. Check understandable TEST/disabled-sales copy, correct canonical contacts, no false promises/dead links, keyboard focus and no broken layout. At 390/320 check long text and Footer wrapping. No Hotelbeds search, account mutation or message sending required. Record only observed scope.
+
+## Final Owner Browser Acceptance
+
+Subsequent owner visual verification on deployed staging supersedes the earlier pending acceptance status only for the tested scope below.
+
+| Owner check | Result |
+| --- | --- |
+| DEPLOYED STAGING | PASS |
+| OWNER BROWSER ACCEPTANCE | PASS — tested scope |
+| Help page | PASS |
+| FAQ | PASS |
+| Booking information page | PASS |
+| Cancellation/refund page | PASS |
+| Privacy page | PASS |
+| Footer help/legal navigation | PASS |
+| Desktop layout | PASS |
+
+The owner confirmed understandable TEST wording and clear statements that real booking/payment are unavailable. Cancellation/refund copy did not promise active refund operations. Privacy was explicitly informational and did not claim legal certification. No unsupported commercial promises or raw technical errors were observed.
+
+Limitations: standalone Contacts was not independently screenshot-verified in this acceptance; 390/320 layouts were not independently rechecked after 5J. This is owner-reported visual evidence, not legal certification or a compliance claim.
+
+Technical results unchanged: Focused 5J **27/27 PASS**; full frontend **724/724 PASS**; lint/build/verifier/diff-check **PASS**. Entry JS **245.78 kB / gzip 76.66 kB**; **26 JS chunks**; >500 kB warning **REMOVED**. Backend/DB/Hotelbeds/booking/payments **UNCHANGED**.
+
+Only this report was edited. Source/tests/env/runtime unchanged; tests/build/verifier not rerun. No git add/commit/push or deployment; report left unstaged.
