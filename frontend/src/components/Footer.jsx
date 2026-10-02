@@ -5,7 +5,7 @@ import "./Footer.css";
 export default function Footer() {
   return <footer id="contacts" className="footer">
     <div className="footer-container">
-      <div className="footer-column"><h2>{site.siteName}</h2><p>Поиск отелей для вашего следующего путешествия.</p></div>
+      <div className="footer-column"><h2>{site.siteName}</h2><p>Поиск отелей для вашего следующего путешествия.</p><p>Тестовый режим: реальное бронирование и оплата недоступны.</p></div>
       <div className="footer-column"><h3>Навигация</h3>
         <Link to="/">Главная</Link><Link to="/results">Отели</Link><Link to="/favorites">Избранное</Link><Link to="/my-bookings">Мои бронирования</Link>
       </div>
