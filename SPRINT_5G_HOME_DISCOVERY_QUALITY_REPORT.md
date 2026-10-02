@@ -285,3 +285,76 @@ Required offlineNetwork/sequential/force-exit focused and full frontend commands
 Centre Portugal fallback polish implemented: YES. Other destination card mappings preserved: YES, verified offline. External calls: 0. Hotelbeds calls: 0. Real DB mutations: 0. No deploy or git add/commit/push; changes left unstaged.
 
 **OWNER BROWSER ACCEPTANCE: REQUIRES RECHECK.** After separate deployment, owner should check Centre Portugal artwork/caption/CTA at desktop, 390 and 320, plus unchanged Antalya, Dubai, Phuket and Sharm el Sheikh images. Confirm readable text, no clipping/overlap or broken image indicator. Do not initiate a provider search merely to check artwork. Earlier browser observations do not establish acceptance of this changed fallback.
+
+## Final Owner Render Browser Acceptance
+
+This section records subsequently supplied owner browser evidence and supersedes the earlier pending/recheck status for the tested scope below. This is owner-reported staging acceptance, not an independent browser run. Offline results are retained from the latest completed 5G.2 checks; no tests, build or deployment were performed for this report-only update.
+
+### Desktop Home
+
+Owner confirmed correct Hero, Home search and destination section rendering. Centre Portugal's intentional CSS fallback rendered correctly; Antalya, Dubai, Phuket and Sharm el Sheikh cards were preserved. The price-drop section is absent after 5G.1, and destinations flow directly to Advantages. FAQ and Footer rendered correctly. No raw technical errors or obvious desktop horizontal overflow were visible.
+
+| Check | Owner result |
+| --- | --- |
+| HOME DESKTOP | PASS |
+| HERO | PASS |
+| SEARCH | PASS |
+| DESTINATIONS | PASS |
+| CENTRE PORTUGAL FALLBACK | PASS |
+| PRICE-DROP SECTION REMOVED | PASS |
+| ADVANTAGES | PASS |
+| FAQ | PASS |
+| FOOTER | PASS |
+| NO RAW TECHNICAL ERRORS OBSERVED | PASS |
+
+### Responsive 320 px
+
+Owner inspected Home at 320 px: hamburger/mobile header rendered, Hero remained readable, search fields and primary CTA fit, and TEST disclosure wrapped correctly. Destination cards stacked in one column and fit the viewport; Centre Portugal's fallback remained intentional. Advantages stacked in one column. No visible horizontal overflow was observed in the inspected upper/middle sections.
+
+| Check | Owner result |
+| --- | --- |
+| HOME 320PX | PASS — inspected upper/middle flow |
+| HERO 320PX | PASS |
+| SEARCH 320PX | PASS |
+| DESTINATIONS 320PX | PASS |
+| ADVANTAGES 320PX | PASS |
+
+Footer at 320 px was not independently screenshot-captured; these observations do not establish separate 320 px Footer acceptance.
+
+### Responsive 390 px
+
+Owner inspected Home at 390 px: header, Hero, search, destination cards, Centre Portugal fallback and Advantages fit. The lower FAQ section rendered, and Footer rendered in a one-column mobile layout. Navigation, contact and help links fit. No visible horizontal overflow was observed.
+
+| Check | Owner result |
+| --- | --- |
+| HOME 390PX | PASS |
+| FAQ 390PX | PASS |
+| FOOTER 390PX | PASS |
+| CONTACTS 390PX | PASS |
+
+### Final Sprint 5G status
+
+| Gate | Final status |
+| --- | --- |
+| CODE / OFFLINE | PASS |
+| DEPLOYED STAGING | PASS |
+| OWNER BROWSER ACCEPTANCE | PASS — tested scope |
+| SPRINT 5G | PASS |
+| SPRINT 5G.1 | PASS |
+| SPRINT 5G.2 | PASS |
+| Focused 5G latest | 83/83 PASS |
+| Full frontend latest | 573/573 PASS |
+| Lint | PASS |
+| Build | PASS |
+| Verifier | PASS |
+| diff-check | PASS |
+| JS | 502.85 kB |
+| gzip | 142.85 kB |
+| Bundle warning | PRESENT >500 kB |
+| Backend changed | NO |
+| DB/schema changed | NO |
+| Hotelbeds behavior changed | NO |
+| Booking changed | NO |
+| Payments changed | NO |
+
+Only this report was edited for this acceptance update. Source code, tests, env and runtime configuration remain unchanged. No new network/provider audit or search execution is inferred from the supplied visual evidence. Previous unrelated skipped acceptance checks remain unchanged. No git add/commit/push or deployment was performed; the report remains unstaged for owner review.
