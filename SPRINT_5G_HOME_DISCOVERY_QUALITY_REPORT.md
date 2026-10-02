@@ -1,6 +1,6 @@
 # Sprint 5G — Home & Discovery Quality
 
-Status: Sprint 5G.1 CODE / OFFLINE: PASS. Focused 5G: 80/80 PASS. Full frontend: 570/570 PASS. Lint/build/verifier/diff-check: PASS. OWNER BROWSER ACCEPTANCE: IN PROGRESS / REQUIRES RECHECK after deployment. No deploy by this follow-up. Hotelbeds TEST/read-only; LIVE, real booking, payments and email delivery remain disabled; production infrastructure paused. Earlier sections retain historical 5G evidence.
+Status: Sprint 5G.2 CODE / OFFLINE: PASS. Focused 5G: 83/83 PASS. Full frontend: 573/573 PASS. Lint/build/verifier/diff-check: PASS. OWNER BROWSER ACCEPTANCE: IN PROGRESS / REQUIRES RECHECK after deployment. No deploy by this follow-up. Hotelbeds TEST/read-only; LIVE, real booking, payments and email delivery remain disabled; production infrastructure paused. Earlier sections retain historical 5G evidence.
 
 ## 1. Initial state
 
@@ -247,3 +247,41 @@ New files: none. Deleted files: none. Changes left unstaged. No git add/commit/p
 Home price-drop section removed: YES. Home special-offers request removed: YES. Backend price-history feature preserved: YES. Backend changed: NO. DB/schema changed: NO. Hotelbeds behavior changed: NO. Booking/payment/email runtime changed: NO. External calls: 0. Hotelbeds calls: 0. Real DB mutations: 0.
 
 **OWNER BROWSER ACCEPTANCE: IN PROGRESS / REQUIRES RECHECK.** After a separate deployment, owner should confirm desktop/390/320 Home flows directly from directions to Advantages/FAQ/footer, without price-drop panel/gap, and Network has no Home special-offers request. Recheck search preparation, directions and existing navigation without a fresh Hotelbeds search merely for acceptance. Offline source/SSR checks do not establish rendered layout or browser Network acceptance. No previous Home browser status is treated as final PASS for this changed UI.
+
+
+## Sprint 5G.2 — Destination Image Polish
+
+Owner browser review after 5G.1 found a grey fallback on the Portugal / Centre Portugal card; the remainder of Home was reported visually correct. This is supplied owner evidence, not an independent browser run.
+
+Initial audit on 2026-10-02: develop, HEAD **9cd7ee8** (`docs: record Sprint 5G.1 home follow-up`), clean tracked baseline. Status/branch/log/stat/full diff reviewed before editing. Unrelated owner paths preserved.
+
+**Root cause:** TestDestinationCards owns its own DestinationImage (not CollectionImage). Its local mapping has TR:AYT, EG:SSH, AE:DXB and TH:HKT only; PT:CEN has no mapped asset. The existing fallback was a muted grey gradient with plain text. Source inspection of catalog/test-options and testCatalogReadiness confirms identity/count metadata, not destination image URLs. No catalog/staging request was made. Repository asset/config search found no identifiable Portugal/Centre Portugal image; other-country/hotel assets were not repurposed as a photograph of Portugal.
+
+Kept the existing missing/failed-image mechanism and replaced the grey inline styling with a dedicated abstract CSS gradient, warm circular accent, decorative contour lines and a small “Направление путешествия” label. This is generic artwork, not an image claiming to depict Centre Portugal. The card's country/name/link and CTA remain unchanged. Missing images render no img element; existing onError switches failed images to the same fallback without another request. Existing caption overlay, responsive card sizing and four local image mappings remain intact. No new asset, external URL, dependency or network operation.
+
+Only these files changed:
+
+1. frontend/src/components/TestDestinationCards.jsx — intentional missing/failed-image fallback class and label.
+2. frontend/src/styles/HomeCollections.css — scoped abstract fallback presentation.
+3. frontend/tests/homeDiscoveryQuality.test.mjs — three added cases: Centre Portugal fallback/identity, four existing local images, shared missing/error fallback with no network dependency.
+4. SPRINT_5G_HOME_DISCOVERY_QUALITY_REPORT.md — current status and this follow-up.
+
+No new/deleted files. Hero, HomeSearch, Advantages, FAQ, Footer, auth/header and Home architecture unchanged. Backend/DB/schema/Hotelbeds behavior and booking/payment runtime unchanged.
+
+| Gate | 5G.2 result |
+| --- | --- |
+| Focused 5G | PASS 83/83 |
+| Full frontend | PASS 573/573 |
+| Lint | PASS; 0 errors, 3 inherited admin hook warnings |
+| Build | PASS |
+| JS / gzip | 502.85 kB / 142.85 kB |
+| CSS / gzip | 106.43 kB / 19.41 kB |
+| Bundle warning | PRESENT >500 kB |
+| Verifier | PASS; backendSyntaxFiles=208, secretScanFiles=439, findings=[] |
+| diff-check | PASS |
+
+Required offlineNetwork/sequential/force-exit focused and full frontend commands completed with zero failures/skips/todo; logs OS-temp sprint5g2-focused.log and sprint5g2-frontend.log. Frontend lint/build, sprint3mVerify and diff-check completed. Build TEST flag process-only, no env-file edit. Backend regression not rerun because backend unchanged. Tests use SSR, source/CSS checks and fetch mocks; no mounted browser/image-error event or rendered geometry acceptance is claimed.
+
+Centre Portugal fallback polish implemented: YES. Other destination card mappings preserved: YES, verified offline. External calls: 0. Hotelbeds calls: 0. Real DB mutations: 0. No deploy or git add/commit/push; changes left unstaged.
+
+**OWNER BROWSER ACCEPTANCE: REQUIRES RECHECK.** After separate deployment, owner should check Centre Portugal artwork/caption/CTA at desktop, 390 and 320, plus unchanged Antalya, Dubai, Phuket and Sharm el Sheikh images. Confirm readable text, no clipping/overlap or broken image indicator. Do not initiate a provider search merely to check artwork. Earlier browser observations do not establish acceptance of this changed fallback.
