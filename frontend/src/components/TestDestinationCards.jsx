@@ -10,7 +10,7 @@ const assets = {'TR:AYT':turkey,'EG:SSH':egypt,'AE:DXB':dubai,'TH:HKT':thailand}
 function DestinationImage({src,label}) {
   const [failed,setFailed]=useState(false);
   return <div className={`collection-image${!src || failed ? ' destination-art-fallback' : ''}`}>
-    {src && !failed ? <img src={src} alt={`Иллюстрация направления: ${label}`} loading="lazy" onError={()=>setFailed(true)} /> : <span className="destination-art-label">Направление путешествия</span>}
+    {src && !failed ? <img src={src} alt={`Иллюстрация направления: ${label}`} loading="lazy" decoding="async" onError={()=>setFailed(true)} /> : <span className="destination-art-label">Направление путешествия</span>}
   </div>;
 }
 export default function TestDestinationCards({destinations}) {

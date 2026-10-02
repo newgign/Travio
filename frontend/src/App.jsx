@@ -1,31 +1,60 @@
+import { lazy } from "react";
 import { Routes, Route } from "react-router-dom";
 
 import "./App.css";
+// Existing global cascade stays eager; legacy CSS is not route-isolated.
+import "./styles/Navbar.css";
+import "./components/Footer.css";
+import "./components/FaqSection.css";
+import "./styles/Help.css";
+import "./components/HomeSearch.css";
+import "./styles/HeroBanner.css";
+import "./styles/Advantages.css";
+import "./styles/Home.css";
+import "./styles/HomeCollections.css";
+import "./components/TourCard.css";
+import "./components/ResultsFilters.css";
+import "./styles/Results.css";
+import "./styles/AccountPages.css";
+import "./styles/Favorites.css";
+import "./styles/TourDetails.css";
+import "./styles/Auth.css";
+import "./styles/Checkout.css";
+import "./styles/MyBookings.css";
+import "./styles/BookingDetails.css";
+import "./styles/Profile.css";
+import "./styles/Voucher.css";
+import "./styles/admin.css";
+import "./styles/Consumer.css";
 
-import Help from "./pages/Help";
-import Contacts from './pages/Contacts';
 import NotFound from './pages/NotFound';
 import ScrollToSection from "./components/ScrollToSection";
 import Home from "./pages/Home";
-import Results from "./pages/Results";
-import Favorites from "./pages/Favorites";
-import TourDetails from "./pages/TourDetails";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import Checkout from "./pages/Checkout";
-import MyBookings from "./pages/MyBookings";
-import BookingDetails from "./pages/BookingDetails";
-import Profile from "./pages/Profile";
-import Voucher from "./pages/Voucher";
-import AdminPanel from "./pages/AdminPanel";
+
 import ProtectedRoute from "./components/ProtectedRoute";
 import ConsumerShell from './components/ConsumerShell';
-import './styles/Consumer.css';
+
+import RouteBoundary from "./components/RouteBoundary";
+
+const Help = lazy(() => import("./pages/Help"));
+const Contacts = lazy(() => import("./pages/Contacts"));
+const Results = lazy(() => import("./pages/Results"));
+const Favorites = lazy(() => import("./pages/Favorites"));
+const TourDetails = lazy(() => import("./pages/TourDetails"));
+const Login = lazy(() => import("./pages/Login"));
+const Register = lazy(() => import("./pages/Register"));
+const Checkout = lazy(() => import("./pages/Checkout"));
+const MyBookings = lazy(() => import("./pages/MyBookings"));
+const BookingDetails = lazy(() => import("./pages/BookingDetails"));
+const Profile = lazy(() => import("./pages/Profile"));
+const Voucher = lazy(() => import("./pages/Voucher"));
+const AdminPanel = lazy(() => import("./pages/AdminPanel"));
 
 function App() {
   return (
     <ConsumerShell>
     <ScrollToSection />
+    <RouteBoundary>
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/help/:topic" element={<Help />} />
@@ -49,7 +78,6 @@ function App() {
         }
       />
 
-
       <Route
         path="/checkout/:tourId"
         element={
@@ -58,7 +86,6 @@ function App() {
           </ProtectedRoute>
         }
       />
-
 
       <Route
         path="/profile"
@@ -115,6 +142,7 @@ function App() {
       />
       <Route path="*" element={<NotFound />} />
     </Routes>
+    </RouteBoundary>
     </ConsumerShell>
   );
 }
