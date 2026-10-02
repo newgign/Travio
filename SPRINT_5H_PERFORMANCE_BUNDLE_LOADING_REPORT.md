@@ -192,3 +192,55 @@ Prepare only after separate authorized deployment; use existing account.
 - Do not create accounts/bookings, change passwords or initiate fresh Hotelbeds search merely for this acceptance. Booking READY/details remain untested without existing records.
 
 All 5H changes left unstaged. Unrelated owner files and prior reports preserved. No deploy, git add, commit or push.
+
+## Final Owner Render Browser Acceptance
+
+This section records subsequently supplied owner browser evidence and supersedes the earlier pending owner acceptance status only for the tested scope below. This is owner-reported evidence, not an independent browser run. Earlier technical results remain historical; no tests, build or verifier were rerun for this report-only update.
+
+### Confirmed owner observations
+
+- Home opened correctly after deployment.
+- Login loaded as a separate lazy JS chunk.
+- Profile loaded separate route-related JS chunks and rendered correctly after lazy navigation.
+- Authentication state remained preserved.
+- `/admin` opened using an existing authorized admin account. Network filtered to JS showed a separate `AdminPanel-*.js` chunk when navigating to Admin.
+- Admin UI and System/3A rendered correctly.
+- No blank route screen, noticeable CSS/layout shift after route navigation or raw lazy-load error was observed.
+
+| Owner acceptance check | Result |
+| --- | --- |
+| DEPLOYED STAGING | PASS |
+| OWNER BROWSER ACCEPTANCE | PASS — tested scope |
+| HOME INITIAL LOAD | PASS |
+| LOGIN LAZY CHUNK | PASS |
+| PROFILE LAZY CHUNK | PASS |
+| ADMIN LAZY CHUNK | PASS |
+| ROUTE-LEVEL CODE SPLITTING | PASS |
+| ADMIN CODE ON-DEMAND | PASS |
+| AUTH STATE PRESERVED | PASS |
+| ADMIN ROLE ACCESS PRESERVED | PASS |
+| CSS/LAYOUT STABLE | PASS — observed |
+
+Network screenshots were filtered to JS. They establish route chunk loading, not an independent Hotelbeds/API traffic audit. These observations do not establish measured page-speed improvement or upgrade other untested checklist items.
+
+### Retained technical results
+
+| Check / measurement | Result |
+| --- | --- |
+| Focused 5H | 91/91 PASS |
+| Full frontend | 664/664 PASS |
+| Lint | PASS |
+| Build | PASS |
+| Verifier | PASS |
+| diff-check | PASS |
+| BEFORE main JS | 502.85 kB / gzip 142.85 kB |
+| AFTER entry | 244.80 kB / gzip 76.47 kB |
+| Largest lazy chunk | Admin 82.30 kB / gzip 18.94 kB |
+| JS chunks | 26 |
+| Entry reduction | 258.05 kB / 51.32% |
+| Initial JS dependency-chain reduction | ~40.31% |
+| Bundle >500 kB warning | REMOVED |
+| Warning threshold modified | NO |
+| Backend / DB / Hotelbeds / booking / payments | UNCHANGED |
+
+Only this report was changed for the acceptance update. Source code, tests, env and runtime configuration were not changed. No git add/commit/push or deployment was performed; the report remains unstaged for owner review.
