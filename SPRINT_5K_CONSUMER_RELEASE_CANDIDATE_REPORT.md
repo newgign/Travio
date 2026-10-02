@@ -57,3 +57,18 @@ Modified only frontend/src/components/admin/Header.jsx, frontend/tests/consumerR
 CODE / OFFLINE: PASS. Focused **28/28 PASS**; full frontend **752/752 PASS**, zero failures/skips/todo. Lint PASS with the same three inherited admin hook warnings. Build PASS: entry **245.78 kB / gzip 76.65 kB**, **26 JS chunks**, >500 kB warning absent; Admin chunk 82.36 kB / gzip 18.97 kB. Verifier PASS: 208 backend syntax files, 448 scanned files, findings=[]. Diff-check PASS. Each required check ran once after final source. Full frontend log: OS-temp sprint5k1-frontend.log; build TEST flag process-only.
 
 Backend/DB/Hotelbeds/booking/payments unchanged; no new dependency. External/provider calls and real DB mutations: 0. No git add/commit/push/deploy; changes unstaged, unrelated owner files preserved. **OWNER BROWSER RECHECK: REQUIRED** — existing authorized admin opens Admin, tabs to «На главную», activates it and verifies Home plus retained auth state.
+
+## Final Owner Browser Acceptance
+
+Owner verified deployed staging: Admin shows «На главную»; the link navigates to `/` and Home opens correctly. The authenticated admin session remains active, with admin identity/header still available. No blank screen or visible navigation error was observed. This subsequent owner evidence supersedes earlier pending acceptance/recheck statements only for this tested scope.
+
+| Result | Status |
+| --- | --- |
+| SPRINT 5K.1 OWNER BROWSER RECHECK | PASS |
+| SPRINT 5K OWNER BROWSER ACCEPTANCE | PASS — tested scope |
+| CONSUMER RC | READY |
+| RELEASE BLOCKERS | 0 |
+
+Technical results unchanged: Focused 5K **28/28 PASS**; full frontend **752/752 PASS**; lint/build/verifier/diff-check **PASS**. Backend/DB/Hotelbeds/booking/payments **UNCHANGED**. READY retains the existing consumer RC scope; it does not imply LIVE sales, booking/payment activation or legal certification. Other untested scenarios remain untested.
+
+Only this report was edited. Tests/build/verifier were not rerun. No git add/commit/push or deployment; report left unstaged.
