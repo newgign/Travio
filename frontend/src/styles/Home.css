@@ -286,7 +286,6 @@
 .home-page :is(h1,h2,h3,p,.collection-cta) { overflow-wrap:anywhere; }
 .home-page .collection-cta { min-height:44px; max-width:100%; border:0; font:inherit; text-align:center; white-space:normal; }
 .home-page .home-catalog-message { border:1px solid #e2e8f0; border-radius:16px; background:#fff; }
-.home-page .hot-tour-skeleton { height:280px; }
 @media(max-width:1100px) { .home-page .hero-overlay.hero-interactive { padding:124px 24px 56px; } }
 @media(max-width:600px) {
   .home-page .hero-overlay.hero-interactive { padding:104px 16px 36px; }

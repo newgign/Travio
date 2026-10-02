@@ -9,14 +9,6 @@ export async function loadHomeCatalog(signal, request=fetch) {
   return data.destinations;
 }
 
-export async function loadHomeSpecials(signal, request=fetch) {
-  const response=await request(`${API_URL}/special-offers`,{signal});
-  if (!response.ok) throw Error('HOME_OFFERS_UNAVAILABLE');
-  const data=await response.json();
-  if (data?.success !== true || !Array.isArray(data.data) || data.data.some(row => !row || typeof row !== 'object' || Array.isArray(row))) throw Error('INVALID_HOME_OFFERS');
-  return data.data;
-}
-
 // Page-owned public data only. No persistent cache, implicit retry or provider resolver.
 export function createHomeLoad(loader) {
   let state={status:'loading',items:[]}, pending=null, controller=null, generation=0;

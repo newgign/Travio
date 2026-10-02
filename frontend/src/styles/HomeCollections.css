@@ -38,9 +38,6 @@
 .collection-cta { display:inline-flex; justify-content:center; align-items:center; background:#2563eb; color:#fff; padding:14px 20px; margin-top:12px; border-radius:12px; text-decoration:none; font-weight:700; cursor:pointer; transition:background 200ms; }
 .collection-cta:hover { background:#1d4ed8; }
 .collection-cta:focus-visible,.destination-card:focus-visible { outline:3px solid #2563eb; outline-offset:4px; }
-.hot-tour-skeleton { height:610px; border-radius:22px; background:#fff; overflow:hidden; }
-.hot-tour-skeleton div { height:230px; background:#dbe7ef; }
-.hot-tour-skeleton span { display:block; height:24px; margin:24px; border-radius:8px; background:#e2e8f0; }
 .collection-pulse { animation:collection-pulse 1.4s ease-in-out infinite alternate; }
 @keyframes collection-pulse { to { opacity:.55; } }
 @media(max-width:1100px) { .collection-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
@@ -73,9 +70,3 @@
 @media(max-width:720px) { .country-grid,.advantages-grid,.footer-container { grid-template-columns:minmax(0,1fr); } .hero-search { grid-template-columns:minmax(0,1fr); } .app { padding:16px; } }
 
 #offers { scroll-margin-top:110px; }
-.hot-tours-empty .section-header { margin-bottom:20px; }
-.hot-tours-empty .home-loading { padding:22px 28px; display:flex; align-items:center; justify-content:space-between; gap:20px; text-align:left; }
-.hot-tours-empty .collection-cta { margin-top:0; flex-shrink:0; }
-@media(max-width:720px) {
-  .hot-tours-empty .home-loading { flex-direction:column; text-align:center; padding:22px; }
-}
