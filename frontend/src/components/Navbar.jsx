@@ -6,7 +6,7 @@ import { site } from "../config/site";
 import useSession from "../hooks/useSession";
 import { logout } from "../services/session";
 import { accountName } from "../utils/profilePresentation";
-import { useId, useRef } from 'react';
+import { useEffect, useId, useRef } from 'react';
 
 export default function Navbar() {
   const { favorites, favoritesKnown } = useFavorites();
@@ -19,6 +19,11 @@ export default function Navbar() {
   const { user } = useSession();
   const menuId = useId();
   const toggleRef = useRef(null);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    if (menuOpen) menuRef.current?.querySelector('a[href]')?.focus();
+  }, [menuOpen]);
 
 
 
@@ -34,7 +39,7 @@ export default function Navbar() {
       <div className="navbar-container">
         <Link to="/" className="logo">✈️ <span>{site.siteName}</span></Link>
 
-        <nav id={menuId} aria-label="Основная навигация" className={`nav-menu ${menuOpen ? "open" : ""}`}>
+        <nav ref={menuRef} id={menuId} aria-label="Основная навигация" className={`nav-menu ${menuOpen ? "open" : ""}`}>
           <Link to="/">Главная</Link>
           <Link to="/results">Отели</Link>
           <Link to="/#countries">Страны</Link>
@@ -61,7 +66,7 @@ export default function Navbar() {
           <button ref={toggleRef} type="button" className={`nav-toggle ${menuOpen ? "active" : ""}`} onClick={() => setMenuOpen(!menuOpen)} aria-label={menuOpen ? 'Закрыть меню' : 'Открыть меню'} aria-expanded={menuOpen} aria-controls={menuId}><span aria-hidden="true" /><span aria-hidden="true" /><span aria-hidden="true" /></button>
         </div>
       </div>
-      {menuOpen && <button type="button" className="nav-backdrop" onClick={() => setMenuOpen(false)} aria-label="Закрыть меню" />}
+      {menuOpen && <button type="button" className="nav-backdrop" onClick={() => { setMenuOpen(false); toggleRef.current?.focus(); }} aria-label="Закрыть меню" />}
     </header>
   );
 }

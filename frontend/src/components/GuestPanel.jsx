@@ -27,7 +27,7 @@ export default function GuestPanel({form,onChange,onClose}) {
     {['adults','children'].map(field=><div className="home-guest-row" key={field}>
       <span>{field==='adults' ? 'Взрослые' : 'Дети'}<small>{field==='adults' ? 'От 1 до 6' : 'До 3 детей, возраст 0–17'}</small></span>
       <div><button type="button" aria-label={field==='adults' ? 'Уменьшить число взрослых' : 'Уменьшить число детей'} disabled={form[field]<=(field==='adults'?1:0)} onClick={()=>onChange(changeGuestCount(form,field,-1))}>−</button>
-        <output aria-live="polite">{form[field]}</output>
+        <output aria-live="polite" aria-label={field==='adults' ? 'Количество взрослых' : 'Количество детей'}>{form[field]}</output>
         <button type="button" aria-label={field==='adults' ? 'Увеличить число взрослых' : 'Увеличить число детей'} disabled={form[field]>=(field==='adults'?6:3)} onClick={()=>onChange(changeGuestCount(form,field,1))}>+</button></div>
     </div>)}
     <div className="home-guest-row"><span>Номера<small>Сейчас доступен поиск одного номера</small></span><div>
