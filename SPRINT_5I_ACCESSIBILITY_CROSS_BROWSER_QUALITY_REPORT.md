@@ -66,3 +66,21 @@ Prepare only, after separately authorized deployment; existing account, no provi
 - FAQ keyboard expand/collapse and fully visible question focus ring; guest adult/child announcements if assistive technology is available.
 - 390/320 plus desktop: no overlap/clipped controls/overflow; no auth or lazy-navigation regression. 768/1440 if available.
 - Record only observed results. No account creation, password change, new booking or fresh Hotelbeds search for acceptance. Safari/Firefox and untested mutation/booking READY scenarios remain NOT RUN.
+
+## Final Owner Browser Acceptance
+
+Subsequent owner manual verification on deployed staging supersedes the earlier pending acceptance status only for the tested scope below. The mobile hamburger/menu was keyboard reachable; Enter/Space opened and closed it, and focus remained/returned correctly after closing. FAQ controls were keyboard reachable with a visible, unclipped focus outline. Guest count controls worked from the keyboard and had understandable accessible naming during browser interaction.
+
+| Owner check | Result |
+| --- | --- |
+| DEPLOYED STAGING | PASS |
+| OWNER BROWSER ACCEPTANCE | PASS — tested scope |
+| MOBILE MENU KEYBOARD | PASS |
+| MENU FOCUS RESTORE | PASS |
+| FAQ KEYBOARD FOCUS | PASS |
+| FAQ FOCUS OUTLINE | PASS |
+| GUEST COUNTER KEYBOARD | PASS |
+
+Technical results unchanged: Focused 5I **33/33 PASS**; full frontend **697/697 PASS**; lint/build/verifier/diff-check **PASS**. Entry JS **245.03 kB / gzip 76.53 kB**; **26 JS chunks**; >500 kB warning **REMOVED**. Backend/DB/Hotelbeds/booking/payments **UNCHANGED**.
+
+This is owner-reported browser evidence, not an independent browser or screen-reader audit. Safari/Firefox testing is not claimed. Only this report was edited; tests/build/verifier were not rerun. No source, env or runtime changes, git add/commit/push or deployment; report left unstaged.
