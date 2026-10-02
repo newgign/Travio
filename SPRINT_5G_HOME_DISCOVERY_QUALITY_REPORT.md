@@ -1,6 +1,6 @@
-﻿# Sprint 5G — Home & Discovery Quality
+# Sprint 5G — Home & Discovery Quality
 
-Status: CODE / OFFLINE: PASS. Focused 5G: 90/90 PASS. Full frontend: 580/580 PASS. Lint/build/verifier/diff-check: PASS. OWNER BROWSER ACCEPTANCE: NOT RUN. No deploy. Hotelbeds TEST/read-only; LIVE, real booking, payments and email delivery remain disabled; production infrastructure paused.
+Status: Sprint 5G.1 CODE / OFFLINE: PASS. Focused 5G: 80/80 PASS. Full frontend: 570/570 PASS. Lint/build/verifier/diff-check: PASS. OWNER BROWSER ACCEPTANCE: IN PROGRESS / REQUIRES RECHECK after deployment. No deploy by this follow-up. Hotelbeds TEST/read-only; LIVE, real booking, payments and email delivery remain disabled; production infrastructure paused. Earlier sections retain historical 5G evidence.
 
 ## 1. Initial state
 
@@ -193,3 +193,57 @@ Prepare only after a separate owner deployment:
 Truthful pricing audit: PASS — offline. Destination semantics audit: PASS — offline. CTA audit: PASS — offline. Homepage architecture: REUSED / HARDENED.
 
 All scoped changes remain unstaged. Existing unrelated paths and prior reports preserved. No git add/commit/push/reset/restore/clean or deploy.
+
+
+## Sprint 5G.1 — Owner UX Follow-up
+
+### Entry and owner evidence
+
+On 2026-10-02, initial status/branch/latest commit/diff-stat/full diff confirmed a clean tracked baseline on develop, HEAD **e00de25** (`docs: record Sprint 5G offline verification`). No partial 5G.1 edits were recovered. Existing unrelated untracked owner paths were preserved.
+
+Owner staging review found the large empty price-drop section visually misleading: “Предложения со снижением цены” and its no-confirmed-price-reduction panel suggested nonworking functionality. This is supplied owner evidence, not an independent browser run. Owner requested removal of the entire section from Home.
+
+### Change and preserved boundaries
+
+Home now renders Hero/search -> directions -> Advantages -> FAQ -> Footer, without price-drop loading, error, retry, empty or populated presentation. Removed its HotTours import/mount and the exclusively associated loadHomeSpecials request implementation. Normal Home discovery now needs only the existing catalog GET; no frontend source calls special-offers.
+
+Removed section-only skeleton/empty CSS. Shared .home-loading was retained because TourCard still uses it. Catalog loading/retry, useHomeLoad, destination semantics, search contract, TEST disclosure, header, contacts and booking/payment-disabled copy remain intact. No replacement promotion was added.
+
+HotToursSection, HotTourCard, CollectionImage and historical price helpers remain available and covered by existing direct component/helper tests. offerDetailsLink remains used by TourCard. Historical price_history backend, endpoint, data and schema remain unchanged. HotTours.jsx is now a two-line legacy export of the pure presentation component, with no fetching or state and no Home mount. Initial removal of this tracked file caused the existing verifier to fail with ENOENT because it scans Git-index paths before staging. Retaining the presentation export allows the required unchanged verifier to run without git add or backend edits. Final checks below passed after this adjustment.
+
+### Tests and regression
+
+Updated only the existing homeDiscoveryQuality.test.mjs. Removed 14 cases specific to the deleted loader/view (including three duplicate offers lifecycle cases); added four checks for absent panel, retained section order/search, catalog-only Home dependency and catalog-only actual loader calls. Fetch mocks now reject special-offers. Historical price-evidence tests and unrelated regression coverage remain. No skips or weakened unrelated assertions.
+
+| Gate | 5G.1 result |
+| --- | --- |
+| Focused 5G | PASS 80/80 |
+| Full frontend | PASS 570/570 |
+| Lint | PASS; 0 errors, 3 inherited admin hook warnings |
+| Build | PASS |
+| JS / gzip | 502.92 kB / 142.88 kB |
+| CSS / gzip | 105.84 kB / 19.25 kB |
+| Bundle warning | PRESENT >500 kB |
+| Verifier | PASS; backendSyntaxFiles=208, secretScanFiles=439, findings=[] |
+| diff-check | PASS |
+| Backend regression | Not rerun; unchanged; 399/399 historical only |
+
+Used required offlineNetwork preload/sequential/force-exit focused and full commands, npm.cmd frontend lint/build, sprint3mVerify and git diff-check. Final focused/full runs have zero failures, cancelled, skipped or todo tests. Logs: OS-temp sprint5g1-focused.log and sprint5g1-frontend.log. Build TEST flag was process-only; env files untouched. No claim of runtime performance improvement; bundle optimization remains outside this follow-up.
+
+### Exact changed files
+
+1. frontend/src/pages/Home.jsx — remove section import/mount.
+2. frontend/src/components/HotTours.jsx — remove Home loading/request/state wrapper; retain pure legacy export.
+3. frontend/src/services/homeCatalog.js — remove Home-only specials loader.
+4. frontend/src/styles/Home.css — remove specials skeleton override.
+5. frontend/src/styles/HomeCollections.css — remove specials skeleton/empty-state styles.
+6. frontend/tests/homeDiscoveryQuality.test.mjs — update removed-section contract and enforce catalog-only Home requests.
+7. SPRINT_5G_HOME_DISCOVERY_QUALITY_REPORT.md — current status and this follow-up.
+
+New files: none. Deleted files: none. Changes left unstaged. No git add/commit/push or deploy.
+
+### Safety and owner recheck
+
+Home price-drop section removed: YES. Home special-offers request removed: YES. Backend price-history feature preserved: YES. Backend changed: NO. DB/schema changed: NO. Hotelbeds behavior changed: NO. Booking/payment/email runtime changed: NO. External calls: 0. Hotelbeds calls: 0. Real DB mutations: 0.
+
+**OWNER BROWSER ACCEPTANCE: IN PROGRESS / REQUIRES RECHECK.** After a separate deployment, owner should confirm desktop/390/320 Home flows directly from directions to Advantages/FAQ/footer, without price-drop panel/gap, and Network has no Home special-offers request. Recheck search preparation, directions and existing navigation without a fresh Hotelbeds search merely for acceptance. Offline source/SSR checks do not establish rendered layout or browser Network acceptance. No previous Home browser status is treated as final PASS for this changed UI.
