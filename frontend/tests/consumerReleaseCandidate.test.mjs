@@ -1,0 +1,60 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+import { PassThrough } from 'node:stream';
+import { createServer } from 'vite';
+import React from 'react';
+import { renderToStaticMarkup, renderToPipeableStream } from 'react-dom/server';
+import { MemoryRouter, matchRoutes } from 'react-router-dom';
+
+const source=path=>readFile(new URL('../src/'+path,import.meta.url),'utf8');
+const render=(View,props={})=>renderToStaticMarkup(React.createElement(MemoryRouter,{},React.createElement(View,props)));
+test('5K consumer release journey, offline imports/rendering and contracts',async t=>{
+  let calls=0;
+  t.mock.method(globalThis,'fetch',async()=>{calls++;throw Error('Network forbidden');});
+  const previous={storage:globalThis.localStorage,window:globalThis.window};
+  const memory=new Map();
+  globalThis.localStorage={getItem:key=>memory.get(key)??null,setItem:(key,value)=>memory.set(key,String(value)),removeItem:key=>memory.delete(key)};
+  globalThis.window=new EventTarget();window.location={href:'/'};
+  const server=await createServer({root:fileURLToPath(new URL('..',import.meta.url)),configFile:false,server:{middlewareMode:true,hmr:false},esbuild:{jsx:'automatic'},define:{'import.meta.env.VITE_HOTELBEDS_STAGING_TEST_ENABLED':'"true"'}});
+  const load=path=>server.ssrLoadModule('/src/'+path);
+  try {
+    const {default:App}=await load('App.jsx');
+    const {default:Boundary}=await load('components/SessionBoundary.jsx');
+    const {FavoritesProvider}=await load('context/FavoritesContext.jsx');
+    const session=await load('services/session.js');
+    const app=await source('App.jsx');
+    const routes=[...app.matchAll(/path="([^"]+)"/g)].map(([,path])=>({path}));
+    const route=path=>new Promise((resolve,reject)=>{
+      let html='';const output=new PassThrough();output.on('data',data=>{html+=data;});output.on('end',()=>resolve(html));output.on('error',reject);
+      const node=React.createElement(Boundary,{},React.createElement(FavoritesProvider,{},React.createElement(MemoryRouter,{initialEntries:[path]},React.createElement(App))));
+      const stream=renderToPipeableStream(node,{onAllReady(){stream.pipe(output);},onError:reject});
+    });
+    for(const [path,pattern] of [['/',/Найдите отель/],['/results',/Найдите подходящий отель/],['/tour/hotelbeds/12',/details-loading/],['/login',/Вход в аккаунт/],['/help',/Как пользоваться поиском/]])await t.test(`${path} resolves its actual lazy route without API side effects`,async()=>{session.logout();assert.match(await route(path),pattern);assert.equal(calls,0);});
+    await t.test('booking/cancellation/privacy help routes render factual pages',async()=>{for(const path of ['/help/booking','/help/cancellation','/help/privacy']){const html=await route(path);assert.doesNotMatch(html,/Страница не найдена/);assert.match(html,/support-article/);}assert.match(await route('/help/booking'),/Реальное бронирование и оплата сейчас отключены/);});
+    await t.test('guest Profile/history/details/admin remain gated; Favorites has auth-required view',async()=>{session.logout();for(const path of ['/profile','/my-bookings','/my-bookings/12','/admin'])assert.doesNotMatch(await route(path),/profile-field|booking-history-section|admin-layout/);assert.match(await route('/favorites'),/Войдите в аккаунт/);const guard=await source('components/ProtectedRoute.jsx');assert.match(guard,/return <Navigate to="\/login"/);assert.match(guard,/adminOnly && user.role !== "admin"/);});
+    await t.test('unvalidated restored identity blocks private route rendering',async()=>{memory.set('token','offline-rc');memory.set('user',JSON.stringify({id:7,role:'admin'}));assert.match(await route('/profile'),/Проверяем сессию/);assert.doesNotMatch(await route('/profile'),/profile-field/);session.logout();});
+    await t.test('validated session opens account routes; logout removes access',async()=>{session.establishSession('offline-rc',{id:7,role:'user',email:'fixture@example.test'},session.beginAuthAttempt());assert.match(await route('/profile'),/Личный кабинет/);assert.match(await route('/favorites'),/Сохранённые отели/);assert.match(await route('/my-bookings'),/Загружаем бронирования/);assert.equal(session.validatedSessionSnapshot().status,'authenticated');session.logout();assert.doesNotMatch(await route('/profile'),/profile-field/);});
+    const search=await load('utils/homeSearch.js');
+    const destinations=[{countryCode:'TR',code:'AYT',hotelCount:1}];
+    const form={destination:search.destinationKey(destinations[0]),checkIn:'2030-06-01',nights:'7',adults:2,children:1,childrenAges:['8'],rooms:1};
+    const now=new Date('2030-01-01');
+    await t.test('search preserves complete destination/date/guest intent',()=>{const result=search.buildHomeSearch(form,destinations,false,now);const query=new URL(result.url,'http://local').searchParams;for(const [key,value] of Object.entries({countryCode:'TR',destinationCode:'AYT',checkIn:'2030-06-01',nights:'7',adults:'2',children:'1',childrenAges:'8',rooms:'1'}))assert.equal(query.get(key),value);assert.equal(matchRoutes(routes,'/results')[0].route.path,'/results');});
+    await t.test('invalid search cannot navigate; rapid repeat navigates once',()=>{let navigations=0;const lock={current:false},options={now,lock,navigate:()=>{navigations++;}};assert.ok(search.submitHomeSearch({...form,checkIn:''},destinations,options).errors.checkIn);assert.equal(navigations,0);search.submitHomeSearch(form,destinations,options);search.submitHomeSearch(form,destinations,options);assert.equal(navigations,1);});
+    await t.test('Home primary CTA and destination cards prepare meaningful search; no price-drop section',async()=>{const html=await route('/');assert.match(html,/type="submit"[^>]*>Найти отели/);assert.doesNotMatch(html,/Предложения со снижением цены/);const cards=await source('components/TestDestinationCards.jsx');assert.match(cards,/to=\{`\/results\?/);assert.doesNotMatch(cards,/fetch\(|loadResultsSearch/);});
+    await t.test('main navigation and Footer links resolve to real routes and anchors',async()=>{const {default:Footer}=await load('components/Footer.jsx');for(const [,href] of ((await route('/'))+render(Footer)).matchAll(/href="([^"]+)"/g)){if(/^(tel:|mailto:)/.test(href))continue;assert.notEqual(href,'#');const path=href.split('#')[0];assert.ok(matchRoutes(routes,path));assert.notEqual(matchRoutes(routes,path)[0].route.path,'*',href);}});
+    await t.test('Results failure/provider-empty/filter-empty remain separate safe notices',async()=>{const {default:Notice}=await load('components/ResultsNotice.jsx');const texts=['ERROR','PROVIDER_EMPTY','FILTER_EMPTY'].map(state=>render(Notice,{state,params:new URLSearchParams(),error:Error('RAW_SQL https://internal.invalid')}));assert.equal(new Set(texts).size,3);assert.match(texts[0],/role="alert"/);assert.doesNotMatch(texts.join(''),/RAW_SQL|internal.invalid/);assert.match(await source('pages/Results.jsx'),/results-skeleton-list/);});
+    await t.test('Results local filtering and sorting retain existing controls',async()=>{assert.match(await source('components/LocalResultsFilters.jsx'),/changePresentationFilter/);assert.match(await source('components/ResultsToolbar.jsx'),/onChange=\{onSort\}/);});
+    await t.test('Details retains selected-offer state, safe invalid branch and booking gate',async()=>{const details=await source('pages/TourDetails.jsx');assert.match(details,/location.state\?\.selectedOffer/);assert.match(details,/SELECTED_OFFER_STALE/);assert.match(details,/role="alert"/);assert.match(details,/disabled>Бронирование отключено/);assert.doesNotMatch(details,/error\.message/);assert.match(await source('components/TourCard.jsx'),/selectedOffer: tour/);});
+    await t.test('MyBookings unknown/error cannot become EMPTY; confirmed ready [] does',async()=>{const {MyBookingsView}=await load('pages/MyBookings.jsx');for(const status of ['unknown','loading','error']){const html=render(MyBookingsView,{status,bookings:[]});assert.doesNotMatch(html,/У вас пока нет бронирований/);assert.match(html,status==='error'?/role="alert"/:/role="status"/);}assert.match(render(MyBookingsView,{status:'ready',bookings:[]}),/У вас пока нет бронирований/);});
+    await t.test('Favorites guest/loading/empty remain distinct and mutation uses own API only',async()=>{const {FavoritesView}=await load('pages/Favorites.jsx');assert.match(render(FavoritesView,{status:'guest',favorites:[]}),/Войдите в аккаунт/);assert.match(render(FavoritesView,{status:'loading',favorites:[]}),/role="status"/);assert.match(render(FavoritesView,{status:'ready',favorites:[]}),/В избранном пока ничего нет/);const data=await source('services/savedAccountData.js');assert.match(data,/authFetch\('\/favorites'/);assert.doesNotMatch(data,/availability|checkRate|loadDetailsOffer|\bfetch\(/i);});
+    await t.test('Profile retains truthful preferences and isolated security form',async()=>{const page=await source('pages/Profile.jsx');assert.match(page,/Напоминания будут доступны после запуска сервиса/);assert.equal((page.match(/<form /g)||[]).length,2);assert.match(page,/actions.save\(\)/);assert.match(page,/actions.savePassword\(\)/);});
+    await t.test('root bootstrap/providers and route-level lazy boundary preserved',async()=>{assert.match(await source('main.jsx'),/<SessionBoundary>[\s\S]*<FavoritesProvider>[\s\S]*<BrowserRouter>/);assert.match(app,/const AdminPanel = lazy/);assert.match(app,/const Profile = lazy/);assert.match(app,/<RouteBoundary>/);assert.match(await source('components/RouteBoundary.jsx'),/<Suspense fallback=\{<RouteLoading/);});
+    await t.test('5I menu keyboard/return and FAQ/guest names remain intact',async()=>{const nav=await source('components/Navbar.jsx');assert.match(nav,/menuRef.current\?\.querySelector\('a\[href\]'\)\?\.focus/);assert.match(nav,/event.key === 'Escape'/);assert.match(nav,/setMenuOpen\(false\); toggleRef.current\?\.focus/);assert.match(nav,/aria-expanded=\{menuOpen\}/);assert.match(await source('components/FaqSection.css'),/outline-offset:-4px/);assert.match(await source('components/GuestPanel.jsx'),/Количество взрослых/);});
+    await t.test('narrow consumer wrapping/menu isolation preserved',async()=>{const css=await source('styles/Consumer.css');assert.match(css,/visibility:hidden; opacity:0; pointer-events:none/);assert.match(css,/max-width:520px/);assert.match(await source('styles/AccountPages.css'),/max-width:600px/);});
+    await t.test('TEST/payment disclosure remains visible on Home and no active sales CTA introduced',async()=>{const html=await route('/');assert.match(html,/Тестовый поиск/);assert.match(html,/реальное бронирование и оплата недоступны/);assert.doesNotMatch(html,/Оплатить сейчас|Забронировать сейчас/);});
+    await t.test('lazy error fallback discards raw errors and exposes native recovery',async()=>{const {default:ErrorBoundary}=await load('components/ConsumerErrorBoundary.jsx');const instance=new ErrorBoundary({resetKey:'rc'});instance.state={...instance.state,...ErrorBoundary.getDerivedStateFromError(Error('RAW_STACK https://internal.invalid'))};const html=renderToStaticMarkup(instance.render());assert.match(html,/href="\/"/);assert.doesNotMatch(html,/RAW_STACK|internal.invalid/);});
+    await t.test('all import/SSR checks made zero network calls',()=>assert.equal(calls,0));
+  } finally {await server.close();globalThis.localStorage=previous.storage;globalThis.window=previous.window;}
+});
