@@ -5,6 +5,7 @@ import {
   FiSettings,
 } from "react-icons/fi";
 
+import { Link } from "react-router-dom";
 import "./../../styles/admin.css";
 
 export default function Header({
@@ -24,6 +25,8 @@ export default function Header({
     <header className="admin-header">
 
       <div>
+
+        <Link to="/">На главную</Link>
 
         <h1 className="admin-title">
           {title}

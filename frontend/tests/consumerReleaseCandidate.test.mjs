@@ -55,6 +55,26 @@ test('5K consumer release journey, offline imports/rendering and contracts',asyn
     await t.test('narrow consumer wrapping/menu isolation preserved',async()=>{const css=await source('styles/Consumer.css');assert.match(css,/visibility:hidden; opacity:0; pointer-events:none/);assert.match(css,/max-width:520px/);assert.match(await source('styles/AccountPages.css'),/max-width:600px/);});
     await t.test('TEST/payment disclosure remains visible on Home and no active sales CTA introduced',async()=>{const html=await route('/');assert.match(html,/Тестовый поиск/);assert.match(html,/реальное бронирование и оплата недоступны/);assert.doesNotMatch(html,/Оплатить сейчас|Забронировать сейчас/);});
     await t.test('lazy error fallback discards raw errors and exposes native recovery',async()=>{const {default:ErrorBoundary}=await load('components/ConsumerErrorBoundary.jsx');const instance=new ErrorBoundary({resetKey:'rc'});instance.state={...instance.state,...ErrorBoundary.getDerivedStateFromError(Error('RAW_STACK https://internal.invalid'))};const html=renderToStaticMarkup(instance.render());assert.match(html,/href="\/"/);assert.doesNotMatch(html,/RAW_STACK|internal.invalid/);});
+    await t.test('5K.1 admin header has a same-tab semantic Home link without auth mutation',async()=>{
+      session.establishSession('offline-rc',{id:7,role:'admin',email:'fixture@example.test'},session.beginAuthAttempt());
+      const before=session.validatedSessionSnapshot();
+      const html=await route('/admin');
+      assert.match(html,/<a href="\/"[^>]*>На главную<\/a>/);
+      const link=html.match(/<a href="\/"[^>]*>На главную<\/a>/)[0];
+      assert.doesNotMatch(link,/target=|tabindex="-1"|onclick=/i);
+      assert.match(await source('components/admin/Header.jsx'),/<Link to="\/">На главную<\/Link>/);
+      assert.match(await route('/'),/Найдите отель/);
+      assert.equal(session.validatedSessionSnapshot().user.id,before.user.id);
+      assert.equal(session.validatedSessionSnapshot().status,'authenticated');
+      session.logout();
+    });
+    await t.test('5K.1 ordinary user cannot open admin after Home link addition',async()=>{
+      session.establishSession('offline-rc',{id:8,role:'user',email:'fixture@example.test'},session.beginAuthAttempt());
+      assert.doesNotMatch(await route('/admin'),/admin-layout/);
+      assert.doesNotMatch(await route('/admin/bookings'),/admin-layout/);
+      session.logout();
+      assert.doesNotMatch(await route('/admin'),/admin-layout/);
+    });
     await t.test('all import/SSR checks made zero network calls',()=>assert.equal(calls,0));
   } finally {await server.close();globalThis.localStorage=previous.storage;globalThis.window=previous.window;}
 });
