@@ -72,17 +72,28 @@ New:
 
 ## 12. Known limitations
 
-Offline contract verified; 6H owner browser acceptance NOT RUN. Single-room supported occupancy unchanged; no new PII persistence, DB/schema/migration or dependencies. Full backend remains limited by 14 DB-blocked cases. TEST only; LIVE/booking/payments/charges/refunds/email/production sales flags unchanged; production infrastructure PAUSED. Successful staging CheckRate confirmation is not claimed. Production sales readiness is not claimed. All changes unstaged.
+Offline contract verified; 6H owner browser acceptance now PASS ? tested scope (section 14). Single-room supported occupancy unchanged; no new PII persistence, DB/schema/migration or dependencies. Full backend remains limited by 14 DB-blocked cases. TEST only; LIVE/booking/payments/charges/refunds/email/production sales flags unchanged; production infrastructure PAUSED. Successful staging CheckRate confirmation is now recorded from explicit owner evidence below. Production sales readiness is not claimed. All changes unstaged.
 
-## 13. Open CheckRate staging diagnostic
+## 13. Historical CheckRate diagnostic
 
-OPEN STAGING DIAGNOSTIC: **Availability -> CheckRate repeated UNAVAILABLE**.
-ROOT CAUSE: **NOT YET ESTABLISHED**.
+Three historical owner attempts returned UNAVAILABLE. Their individual causes remain unproven; they are not all attributed to the subsequently proven premature pre-provider defect. The dedicated 6I follow-up fixed that defect; the owner now reports successful staging CheckRate and downstream review. The current upstream blocker is no longer reproduced in the observed flow.
 
-OPEN STAGING ISSUE: **Three owner CheckRate attempts returned UNAVAILABLE**. Repeated staging UNAVAILABLE root cause remains unresolved. Sprint 6H does not determine whether TEST instability, stale rateKey, request construction or error classification caused this. No provider/CheckRate behavior or UNAVAILABLE mapping changed; diagnosis deferred to a dedicated follow-up.
+## 14. Recorded owner staging acceptance
 
-## 14. Owner acceptance plan
+OWNER BROWSER ACCEPTANCE: **PASS ? tested scope**.
 
-CHECKOUT REVIEW OWNER CASE: **NOT OBSERVED — blocked upstream by CheckRate UNAVAILABLE** (existing owner observations; no new 6H provider attempt made).
+Backend/frontend staging deployment succeeded. Owner observed Hotelbeds TEST Search, Hotel Details and CheckRate PASS; POST `/api/checkout/review` returned HTTP 200. Confirmed offer: Sultan Gardens Resort; Premium Jacuzzi Suite Pool View; BED AND BREAKFAST; **2075.98 EUR**.
 
-Do not force another CheckRate for 6H. If final review becomes naturally reachable after separately authorized staging deployment with one suitable attempt, use synthetic names only. Verify hotel/dates/room/board/price/currency, exact guest count/roles/names and optional entered DOB; Back preserves input, invalid guests cannot reach ready review, no tokens/raw errors/card fields appear, and final booking/payment remain unavailable. If upstream UNAVAILABLE persists, retain NOT OBSERVED without treating it as a 6H runtime failure. OWNER BROWSER ACCEPTANCE: **NOT RUN**. PRODUCTION SALES READY: **NOT CLAIMED**.
+Final Review became reachable and displayed hotel, stay dates, nights, room, board, confirmed CheckRate price/currency and two travellers. Synthetic user-entered traveller data remained available; names and DOB were not fabricated. No raw rateKey, token or provider secret was displayed. Final Review: **PASS ? tested scope**.
+
+POST booking intent returned intentional HTTP 503: code/state `BOOKING_DISABLED`, providerState `PROVIDER_NOT_CALLED`, review.state `REVIEW_READY`, bookingAvailable false, paymentAvailable false. Booking and payment remained unavailable. Hotelbeds Booking API was not called; no real booking, payment, charge or fake confirmation occurred. This is the current intentional safety boundary, not a provider booking failure. HTTP semantics remain unchanged.
+
+Evidence recording only: no runtime edits, tests/build/lint/verifier commands, external calls or deployment performed in this task. Historical offline results above are unchanged. Owner evidence does not establish unreported general smoke checks.
+
+PRODUCTION SALES READY: **NOT CLAIMED**.
+
+## Release evidence recorder outcome
+
+Input: `STAGING_RELEASE_EVIDENCE_6I.json`; generated output: `STAGING_RELEASE_EVIDENCE_6I.md`, using the unchanged 6D schema and recorder.
+
+**STAGING ACCEPTANCE: FAIL**. Recorder's embedded prerequisites reported 6A PASS, 6B manifest FAIL and 6C smoke plan FAIL. Required owner fields not explicitly observed in this supplied evidence remain NOT_RUN: home, authSession, profile, favorites, myBookings, helpLegal, health, readiness. Only changedFeature and changedEndpoint are PASS. Successful deploy alone is not substituted for these checks. No recorder rules or prerequisite metadata were weakened; no additional standalone verifier/gate command was run. The owner feature acceptance recorded above remains PASS ? tested scope, independently of aggregate release acceptance.

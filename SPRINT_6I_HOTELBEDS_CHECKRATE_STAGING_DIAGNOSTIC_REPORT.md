@@ -6,7 +6,7 @@ ROOT-CAUSE CLASSIFICATION: **A. CODE DEFECT FOUND AND FIXED** — offline classi
 
 ## 1. Staging evidence
 
-Owner observed three separate TEST attempts, including different destinations/offers: Availability and Hotel Details passed, selected price/room/board displayed, CheckRate normalized to UNAVAILABLE, UI blocked the offer without raw provider errors. Successful staging CheckRate confirmation NOT OBSERVED; the three historical requests remain unattributed. The later correlated owner request is analyzed in section 13. Start: `develop`, tracked tree clean, HEAD `7b444c1` (Sprint 6H report); 6H committed. Unrelated untracked owner files retained.
+Owner observed three separate TEST attempts, including different destinations/offers: Availability and Hotel Details passed, selected price/room/board displayed, CheckRate normalized to UNAVAILABLE, UI blocked the offer without raw provider errors. At the initial diagnostic stage, successful staging CheckRate confirmation was NOT OBSERVED; the three historical requests remain unattributed. The later correlated owner request is analyzed in section 13. Start: `develop`, tracked tree clean, HEAD `7b444c1` (Sprint 6H report); 6H committed. Unrelated untracked owner files retained.
 
 ## 2. Offer lifecycle
 
@@ -86,9 +86,9 @@ New:
 
 ## 11. Remaining uncertainty
 
-Repeated UNAVAILABLE has not been attributed to Hotelbeds or Asedeliya unless evidence proves it. The three historical attempts lack correlated provider status/reason evidence. No claim of TEST instability, actual stale keys, actual malformed requests or successful staging confirmation. Next manual evidence is required to distinguish provider rejection, identity mismatch, empty-rate availability, configuration/transport failure or response-contract metadata absence. No Render inspection/deployment/provider calls performed here. Production sales readiness NOT CLAIMED. All changes unstaged.
+Repeated UNAVAILABLE has not been attributed to Hotelbeds or Asedeliya unless evidence proves it. The three historical attempts lack correlated provider status/reason evidence. No claim of TEST instability, actual stale keys or actual malformed requests. Subsequent successful staging confirmation is recorded in section 14. Next manual evidence is required to distinguish provider rejection, identity mismatch, empty-rate availability, configuration/transport failure or response-contract metadata absence. No Render inspection/deployment/provider calls performed here. Production sales readiness NOT CLAIMED. All changes unstaged.
 
-## 12. One-call owner diagnostic plan
+## 12. Historical one-call owner diagnostic plan
 
 **READY after a separately authorized backend deployment.** No deployment or owner call performed by Codex.
 
@@ -96,7 +96,7 @@ Repeated UNAVAILABLE has not been attributed to Hotelbeds or Asedeliya unless ev
 2. Browser Network: inspect only General, Payload and Response/Preview for the Checkout request. Record method/status, safe hotel/provider/occupancy fields, normalized checkRateStatus/code and returned requestId. **Do not inspect/share Request Headers. Do not share full Payload/Response**: existing objects contain offer/session tokens and opaque rateKeys. Use selected safe fields only, or redact those values completely; do not share PII.
 3. Owner reads Render backend logs around that returned requestId and filters `checkRateDiagnostic` events. If sharedRequestId appears, include that safe ID's events too. Record ordered stage, decoded/prepared key fingerprint and byte length, occupancy/ages, HTTP status/category, fixed reason, completion stage and normalized outcome. No raw keys/headers/provider bodies needed.
 4. Compare decoded/prepared fingerprints: mismatch identifies pre-provider identity corruption; absence of prepared stage requires tracing the recorded validation/configuration reason; it alone does not identify the exact predicate. Prepared with no HTTP observation identifies pre-response configuration/access/timeout/network/internal failure. Actual 400/404/422 identifies provider request rejection; 401/403 auth, 429 rate limit, 5xx server error remain technical. 2xx plus malformed reason identifies response contract validation; 2xx plus rate identity mismatch identifies product-matching failure; valid empty lists support unavailable. Do not infer exact provider root cause from the category alone.
-5. Share only those safe observations once. If outcome remains UNAVAILABLE/RETRYABLE_ERROR, keep successful staging CheckRate NOT OBSERVED and diagnose from the captured single attempt. No automatic retry storm or additional quota consumption. OWNER ONE-CALL DIAGNOSTIC: **READY, NOT RUN**.
+5. Share only those safe observations once. If outcome remains UNAVAILABLE/RETRYABLE_ERROR, keep successful staging CheckRate NOT OBSERVED and diagnose from the captured single attempt. No automatic retry storm or additional quota consumption. Historical plan status: **READY, NOT RUN at that time**. Subsequent owner retest: PASS, section 14.
 
 ## 13. Staging root-cause follow-up
 
@@ -127,4 +127,22 @@ Follow-up modified files only:
 - `backend/tests/checkRateStagingDiagnostic.test.cjs`
 - `SPRINT_6I_HOTELBEDS_CHECKRATE_STAGING_DIAGNOSTIC_REPORT.md`
 
-Frontend, token schema, transport, DB/schema, booking and payments unchanged. External Hotelbeds calls and real DB mutations: 0. No deployment, staging retest or git staging/commit/push performed. NEXT OWNER ONE-CALL RETEST: READY after separately authorized backend deployment; successful staging confirmation remains NOT OBSERVED.
+Frontend, token schema, transport, DB/schema, booking and payments unchanged. External Hotelbeds calls and real DB mutations: 0. No deployment, staging retest or git staging/commit/push performed. At follow-up completion, the next owner retest was READY after separately authorized deployment. Subsequent deployment/retest evidence is recorded in section 14.
+
+## 14. Recorded owner one-call staging retest
+
+OWNER ONE-CALL STAGING RETEST: **PASS**.
+
+Owner reports successful backend/frontend deployment, Hotelbeds TEST Search PASS, Hotel Details PASS and CheckRate PASS. CheckRate reached the Hotelbeds path after the fix; POST `/api/checkout/review` returned **HTTP 200**. Confirmed offer: **Sultan Gardens Resort**, **Premium Jacuzzi Suite Pool View**, **BED AND BREAKFAST**, **2075.98 EUR**. The proven premature pre-provider UNAVAILABLE defect no longer reproduced in this observed flow. This does not establish identical causes for the three historical UNAVAILABLE attempts.
+
+Traveller step and Final Review were reachable and passed their tested scope. Occupancy and displayed traveller rows matched 2 adults. Names/DOB were not auto-generated; synthetic user-entered data remained available. Review displayed hotel, dates, nights, room, board, confirmed price/currency and two travellers. No raw rateKey/token/provider secret displayed.
+
+Downstream POST booking intent stopped at deliberate **HTTP 503 BOOKING_DISABLED**: code/state BOOKING_DISABLED; providerState **PROVIDER_NOT_CALLED**; review.state REVIEW_READY; bookingAvailable false; paymentAvailable false. No Hotelbeds Booking API call, real booking, payment, charge or fake confirmation. The 503 was the current intentional disabled boundary, not a provider booking failure; HTTP semantics were not changed.
+
+This update records supplied owner evidence only. No runtime changes or fresh test/build/lint/verifier commands, provider calls, deployment or git staging/commit/push performed. Existing offline counts remain unchanged. The 6D recorder is invoked separately using its existing schema; unreported general frontend/health/readiness checks remain NOT_RUN rather than inferred PASS. Production sales readiness remains NOT CLAIMED.
+
+## Release evidence recorder outcome
+
+Input: `STAGING_RELEASE_EVIDENCE_6I.json`; generated output: `STAGING_RELEASE_EVIDENCE_6I.md`, using the unchanged 6D schema and recorder.
+
+**STAGING ACCEPTANCE: FAIL**. Recorder's embedded prerequisites reported 6A PASS, 6B manifest FAIL and 6C smoke plan FAIL. Required owner fields not explicitly observed in this supplied evidence remain NOT_RUN: home, authSession, profile, favorites, myBookings, helpLegal, health, readiness. Only changedFeature and changedEndpoint are PASS. Successful deploy alone is not substituted for these checks. No recorder rules or prerequisite metadata were weakened; no additional standalone verifier/gate command was run. The owner feature acceptance recorded above remains PASS ? tested scope, independently of aggregate release acceptance.

@@ -5,7 +5,7 @@ TRAVELLER / GUEST DATA FLOW: **PASS**.
 
 ## 1. Baseline
 
-Branch `develop`; tracked tree clean at start, unrelated owner untracked files retained. HEAD `0c1408c`; Sprint 6F foundation committed in `07763b2` and report in `6c0e443`. No staging deployment or owner acceptance performed in 6G.
+Branch `develop`; tracked tree clean at start, unrelated owner untracked files retained. HEAD `0c1408c`; Sprint 6F foundation committed in `07763b2` and report in `6c0e443`. At implementation baseline, staging deployment and owner acceptance had not yet been performed. Subsequent owner acceptance is recorded below.
 
 ## 2. Existing traveller architecture found
 
@@ -73,11 +73,24 @@ New:
 
 ## 12. Limitations
 
-Guest flow focused scope and final full frontend pass. Real DB cases remain intentionally unavailable; full backend result is historical and limited. Browser interaction acceptance has not been performed for 6G; the earlier intentional FAQ runtime cleanup is owner-accepted. Drafts live only in existing Checkout component state, not across reloads. Single-room occupancy remains the existing supported scope. No schema/migration/dependency change. TEST-only, LIVE/booking/payments/charges/refunds/email/sales flags unchanged; production infrastructure remains paused. Production sales readiness is not claimed. No git add/commit/push/deploy; all changes unstaged.
+Guest flow focused scope and final full frontend pass. Real DB cases remain intentionally unavailable; full backend result is historical and limited. Owner browser acceptance now passed for the explicitly observed two-adult flow; the earlier intentional FAQ runtime cleanup is owner-accepted. Drafts live only in existing Checkout component state, not across reloads. Single-room occupancy remains the existing supported scope. No schema/migration/dependency change. TEST-only, LIVE/booking/payments/charges/refunds/email/sales flags unchanged; production infrastructure remains paused. Production sales readiness is not claimed. No git add/commit/push/deploy; all changes unstaged.
 
-## 13. Owner acceptance plan
+## 13. Recorded owner staging acceptance
 
-After a separately authorized staging deploy, use one suitable TEST flow with synthetic guest names and no real personal information. Confirm CheckRate once; verify row count/labels match searched occupancy, blank fields are blocked, values remain visible through Back, optional DOB stays blank unless explicitly entered/selected, and no names appear automatically. Continue to safe booking-disabled boundary; verify no booking/payment or raw error. Avoid extra Hotelbeds requests. Owner browser acceptance: NOT RUN.
+OWNER BROWSER ACCEPTANCE: **PASS ? tested scope**.
 
-OWNER BROWSER ACCEPTANCE: **NOT RUN**.
+Owner reported successful backend/frontend staging deployment and Hotelbeds TEST Search, Hotel Details and CheckRate PASS. POST `/api/checkout/review` returned HTTP 200. Confirmed offer: Sultan Gardens Resort; Premium Jacuzzi Suite Pool View; BED AND BREAKFAST; **2075.98 EUR**.
+
+Traveller step became reachable after successful CheckRate. Expected occupancy was 2 adults and the UI displayed 2 adult rows. Names and DOB were not auto-generated. User-entered synthetic traveller data remained available through the flow. Safe progression to Final Review succeeded. Traveller step: **PASS ? tested scope**.
+
+Booking intent reached intentional HTTP 503 `BOOKING_DISABLED`, state `BOOKING_DISABLED`, providerState `PROVIDER_NOT_CALLED`, review.state `REVIEW_READY`, bookingAvailable false, paymentAvailable false. No Hotelbeds Booking API call, real booking, payment, charge or fake booking confirmation. This was the deliberate safety boundary, not a provider booking failure.
+
+Evidence recording only: no runtime edits, tests/build/lint/verifier commands, external calls or deployment performed in this task. Historical offline numbers above are unchanged. General smoke checks not explicitly supplied in this evidence are not assigned PASS.
+
 PRODUCTION SALES READY: **NOT CLAIMED**.
+
+## Release evidence recorder outcome
+
+Input: `STAGING_RELEASE_EVIDENCE_6I.json`; generated output: `STAGING_RELEASE_EVIDENCE_6I.md`, using the unchanged 6D schema and recorder.
+
+**STAGING ACCEPTANCE: FAIL**. Recorder's embedded prerequisites reported 6A PASS, 6B manifest FAIL and 6C smoke plan FAIL. Required owner fields not explicitly observed in this supplied evidence remain NOT_RUN: home, authSession, profile, favorites, myBookings, helpLegal, health, readiness. Only changedFeature and changedEndpoint are PASS. Successful deploy alone is not substituted for these checks. No recorder rules or prerequisite metadata were weakened; no additional standalone verifier/gate command was run. The owner feature acceptance recorded above remains PASS ? tested scope, independently of aggregate release acceptance.
