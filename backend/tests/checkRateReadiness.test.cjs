@@ -125,14 +125,17 @@ test('simultaneous identical CheckRate shares pending call but later retry is fr
   const first = provider.checkRateOffer(offer), second = provider.checkRateOffer({ ...offer }); assert.equal(calls, 1);
   release(); assert.deepEqual(await first, await second); await provider.checkRateOffer(offer); assert.equal(calls, 2);
 });
-test('BOOKABLE retains existing refresh path without unnecessary CheckRate', async t => {
-  const value = response('105', { rateKey: offer.rateKey });
-  t.mock.method(client, 'availability', async () => ({ hotels: { hotels: [value.hotel] } }));
+test('BOOKABLE confirmation uses CheckRate without an Availability refresh', async t => {
+  t.mock.method(client, 'availability', () => assert.fail('Availability cannot confirm checkout'));
+  t.mock.method(client, 'checkRates', async () => { calls++; return response('105'); });
   const { body } = await review({ offerToken: tokens.sign({ ...offer, rateType: 'BOOKABLE', recheckRequired: false }) });
-  assert.equal(calls, 0); assert.equal(body.total, 105); assert.equal(body.checkRateStatus, 'PRICE_CHANGED');
+  assert.equal(calls, 1); assert.equal(body.total, 105); assert.equal(body.checkRateStatus, 'PRICE_CHANGED');
+  assert.equal(captured.offer.checkRatePerformed, true);
 });
-test('BOOKABLE malformed refresh is retryable and cannot use stale search price', async t => {
-  t.mock.method(client, 'availability', async () => ({}));
+test('BOOKABLE malformed CheckRate is retryable and cannot use stale search price', async t => {
+  t.mock.method(client, 'availability', () => assert.fail('Availability cannot confirm checkout'));
+  t.mock.method(client, 'checkRates', async () => { calls++; return {}; });
   const { body } = await review({ offerToken: tokens.sign({ ...offer, rateType: 'BOOKABLE', recheckRequired: false }) });
   assert.equal(body.checkRateStatus, 'RETRYABLE_ERROR'); assert.equal(captured, null);
+  assert.equal(calls, 1);
 });

@@ -81,7 +81,7 @@ const getCheckout = (req, res, next) => checkRateDiagnostic.run(req.requestId, a
       const environment = require('../config/providers').hotelbeds.environment;
       if (offer.priceEnvironment !== environment) throw Object.assign(new Error('Предложение устарело. Выполните новый поиск.'), { status: 409, code: 'OFFER_ENVIRONMENT_MISMATCH' });
       if (environment !== 'test') throw Object.assign(new Error('Проверка доступна только в TEST.'), { status: 503, code: 'CHECKRATE_TEST_ONLY' });
-      if (!offer.rateKey || !offer.providerHotelId || !['BOOKABLE', 'RECHECK'].includes(offer.rateType)
+      if (typeof offer.rateKey !== 'string' || !offer.rateKey.length || !offer.providerHotelId || !['BOOKABLE', 'RECHECK'].includes(offer.rateType)
         || !Number.isFinite(Number(offer.price)) || Number(offer.price) <= 0 || !/^[A-Z]{3}$/.test(offer.currency || '')) {
         throw Object.assign(new Error('Выбранное предложение недействительно.'), { status: 409, code: 'OFFER_TOKEN_INVALID' });
       }
@@ -89,13 +89,11 @@ const getCheckout = (req, res, next) => checkRateDiagnostic.run(req.requestId, a
         || checkRateDiagnostic.childAges(offer.childrenAges, offer.occupancy?.children) === null) {
         throw Object.assign(new Error('Не удалось проверить состав гостей.'), { status: 503, code: 'CHECKRATE_SELECTION_INVALID', diagnosticReason: 'SELECTION_INVALID' });
       }
-      // RECHECK already carries the signed selected identity; do not spend another Availability call.
-      if (offerToken && offer.rateType !== 'RECHECK') offer = await providerManager.getProvider('hotelbeds').refreshOffer(offer);
     }
-    // Hotelbeds requires CheckRate only when Availability returned RECHECK.
-    if (offer.provider === "hotelbeds" && offer.rateType === 'RECHECK') {
+    // Checkout confirmation must come from CheckRate, including selected BOOKABLE rates.
+    if (offer.provider === "hotelbeds") {
       const providerImplementation = providerManager.getProvider("hotelbeds");
-      offer = await providerImplementation.checkRateOffer(offer);
+      offer = await providerImplementation.checkRateOffer(offer, { confirmBookable: true });
 
       if (offer.recheckRequired) {
         const error = new Error(

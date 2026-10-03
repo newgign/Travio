@@ -57,31 +57,34 @@ class HotelbedsProvider {
     return hotelbedsClient.checkRates(rateKey);
   }
 
-  checkRateOffer(offer) {
+  checkRateOffer(offer, { confirmBookable = false } = {}) {
     // Only share simultaneous identical selections; never cache completed rates.
-    const key = JSON.stringify(offer);
+    const key = JSON.stringify({ offer, confirmBookable });
     if (this.checkRatePending.has(key)) {
       const shared = this.checkRatePending.get(key);
       checkRateDiagnostic.emit('PROVIDER_REQUEST_SHARED', { sharedRequestId: shared.checkRateRequestId });
       return shared;
     }
-    const pending = this.performCheckRateOffer(offer).finally(() => this.checkRatePending.delete(key));
+    const pending = this.performCheckRateOffer(offer, { confirmBookable }).finally(() => this.checkRatePending.delete(key));
     pending.checkRateRequestId = checkRateDiagnostic.requestId();
     this.checkRatePending.set(key, pending);
     return pending;
   }
 
-  async performCheckRateOffer(offer) {
-    if (!offer?.rateKey) {
+  async performCheckRateOffer(offer, { confirmBookable = false } = {}) {
+    if (typeof offer?.rateKey !== 'string' || !offer.rateKey.length) {
       const error = new Error("Hotelbeds rateKey отсутствует");
       error.status = 400;
       error.code = "HOTELBEDS_RATE_KEY_REQUIRED";
       throw error;
     }
 
-    if (offer.rateType !== 'RECHECK') {
-      return offer;
+    if (!['BOOKABLE', 'RECHECK'].includes(offer.rateType)) {
+      throw Object.assign(new Error('Не удалось проверить выбранный тариф.'),
+        { status: 503, code: 'CHECKRATE_SELECTION_INVALID', diagnosticReason: 'SELECTION_INVALID' });
     }
+    // Non-checkout callers retain the Availability RECHECK contract.
+    if (offer.rateType === 'BOOKABLE' && !confirmBookable) return offer;
 
     let response;
     try { response = await hotelbedsClient.checkRates(offer.rateKey); }

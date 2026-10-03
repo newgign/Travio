@@ -19,6 +19,16 @@ const rate = (rateKey = key) => ({ rateKey, rateType: 'RECHECK', net: '100.00', 
 const hotel = (rateKey = key) => ({ code: 3424, name: 'Synthetic Hotel', currency: 'EUR', rooms: [{ code: 'DBL', name: 'Double', rates: [rate(rateKey)] }] });
 const selected = (rateKey = key) => offers.generateOffer(provider.normalizeHotel(hotel(rateKey), filters()), filters());
 const response = () => { const value = hotel(); value.rooms[0].rates[0].rateType = 'BOOKABLE'; return { hotel: value }; };
+// Synthetic opaque key: only length/shape mirror owner evidence, never the owner key.
+const stagingKey = '20261026|20261102|7654|DBL.SU|RO|' + 'x'.repeat(111);
+const stagingOffer = rateType => ({ ...selected(stagingKey), providerHotelId: '7654',
+  rateType, recheckRequired: rateType === 'RECHECK', price: 621.32, currency: 'EUR',
+  roomCode: 'DBL.SU', boardCode: 'RO', adults: 2, children: 0, childrenAges: [],
+  occupancy: { rooms: 1, adults: 2, children: 0 }, nights: 7,
+  checkIn: '2026-10-26', checkOut: '2026-11-02' });
+const stagingResponse = () => ({ hotel: { code: 7654, currency: 'EUR', rooms: [{ code: 'DBL.SU', rates: [{
+  ...rate(stagingKey), rateType: 'BOOKABLE', net: '621.32', boardCode: 'RO', children: 0, childrenAges: [],
+}] }] } });
 let events, captured, checkedKey, http;
 beforeEach(t => {
   events = []; captured = null; checkedKey = null;
@@ -44,6 +54,49 @@ async function checkout(offer = selected(), patch = {}, id = requestId) {
 }
 const outcome = () => events.findLast(value => value.stage === 'NORMALIZED_OUTCOME');
 function wireError(t, status, code) { t.mock.method(http.bookingHttp, 'request', async () => { throw { code, response: status ? { status, data: { error: { code: 'private-provider-code', message: 'Synthetic Guest DOB email signature private' } } } : undefined }; }); }
+
+for (const rateType of ['BOOKABLE', 'RECHECK']) {
+  test(`staging-shaped ${rateType} reaches CheckRate once without optional display metadata`, async t => {
+    const value = stagingOffer(rateType);
+    for (const field of ['roomName', 'boardName', 'rateComments', 'rateCommentsId', 'cancellationPolicies']) delete value[field];
+    assert.equal(Buffer.byteLength(value.rateKey), 144);
+    t.mock.method(transport, 'availability', () => assert.fail('Availability must not gate CheckRate'));
+    let calls = 0;
+    t.mock.method(http.bookingHttp, 'request', async config => {
+      calls++; checkedKey = config.data.rooms[0].rateKey;
+      assert.equal(config.url, '/hotel-api/1.0/checkrates');
+      return { status: 200, data: stagingResponse() };
+    });
+    const result = await checkout(value, { hotelId: '7654' });
+    assert.equal(calls, 1); assert.equal(checkedKey, value.rateKey);
+    assert.equal(result.body.checkRateStatus, 'CONFIRMED'); assert.equal(captured.offer.checkRatePerformed, true);
+    assert.equal(outcome().completedAt, 'PROVIDER_RESPONSE_RECEIVED');
+    assert.deepEqual(events.map(event => event.stage), ['REQUEST_RECEIVED', 'TRUSTED_OFFER_DECODED',
+      'PROVIDER_REQUEST_PREPARED', 'PROVIDER_RESPONSE_RECEIVED', 'NORMALIZED_OUTCOME']);
+    const trusted = events[1];
+    assert.equal(trusted.hotelId, '7654'); assert.equal(trusted.rateKeyLength, 144);
+    assert.deepEqual(trusted.occupancy, { rooms: 1, adults: 2, children: 0, childAges: [] });
+    assert.ok(!JSON.stringify(events).includes(value.rateKey));
+  });
+  test(`staging-shaped ${rateType} unavailable is determined only after provider response`, async t => {
+    const value = stagingResponse(); value.hotel.rooms[0].rates = [];
+    let calls = 0;
+    t.mock.method(transport, 'availability', () => assert.fail('Availability must not gate CheckRate'));
+    t.mock.method(http.bookingHttp, 'request', async () => { calls++; return { status: 200, data: value }; });
+    const result = await checkout(stagingOffer(rateType), { hotelId: '7654' });
+    assert.equal(calls, 1); assert.equal(result.body.checkRateStatus, 'UNAVAILABLE'); assert.equal(captured, null);
+    assert.ok(events.some(event => event.stage === 'PROVIDER_REQUEST_PREPARED'));
+    assert.equal(outcome().completedAt, 'PROVIDER_RESPONSE_RECEIVED');
+    assert.equal(outcome().httpStatus, 200); assert.equal(outcome().reason, 'RATE_UNAVAILABLE');
+  });
+}
+test('missing empty and non-string trusted keys fail safely before CheckRate', async () => {
+  for (const rateKey of [undefined, null, '', 123, {}]) {
+    const result = await checkout({ ...stagingOffer('BOOKABLE'), rateKey }, { hotelId: '7654' });
+    assert.equal(result.body.code, 'OFFER_TOKEN_INVALID'); assert.equal(checkedKey, null);
+    assert.equal(captured, null); assert.ok(!events.some(event => event.stage === 'PROVIDER_REQUEST_PREPARED'));
+  }
+});
 
 test('Availability key remains exact through normalization and generated selected offer', () => { const normalized = provider.normalizeHotel(hotel(), filters()); assert.equal(normalized.rateKey, key); assert.equal(selected().rateKey, key); });
 test('signed trusted token and JSON browser transport preserve exact key bytes', () => { const value = selected(); const serialized = JSON.parse(JSON.stringify({ ...value, offerToken: tokens.sign(value) })); assert.equal(tokens.verify(serialized.offerToken).rateKey, key); assert.equal(diagnostic.fingerprint(serialized.rateKey), diagnostic.fingerprint(key)); });
