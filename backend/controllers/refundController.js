@@ -307,4 +307,18 @@ const completeSandboxRefund = async (req, res) => {
   }
 };
 
-module.exports = { requestSandboxRefund, completeSandboxRefund };
+async function createRefundIntent(req, res) {
+  try {
+    const booking = (await pool.query('SELECT * FROM bookings WHERE id = $1', [req.params.id])).rows[0];
+    // Validate ownership before reading payment facts.
+    paymentGatewayService.prepareRefundIntent(req.body, booking, null,
+      { bookingId: req.params.id, userId: req.user.id, isAdmin: req.user.role === 'admin' });
+    const payment = (await pool.query('SELECT * FROM payments WHERE booking_id = $1 ORDER BY id DESC LIMIT 1', [req.params.id])).rows[0];
+    return res.status(503).json(paymentGatewayService.prepareRefundIntent(req.body, booking, payment,
+      { bookingId: req.params.id, userId: req.user.id, isAdmin: req.user.role === 'admin' }));
+  } catch (error) {
+    const result = require('../services/refundReadinessService').intentError(error);
+    return res.status(result.status).json(result.body);
+  }
+}
+module.exports = { requestSandboxRefund, completeSandboxRefund, createRefundIntent };

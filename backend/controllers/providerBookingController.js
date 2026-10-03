@@ -631,7 +631,20 @@ async function cancelProviderBooking(req, res, next) {
   }
 }
 
+async function createCancellationIntent(req, res) {
+  try {
+    const booking = await getBooking(req.params.id);
+    const result = hotelbedsBookingService.prepareCancellationIntent(req.body, booking,
+      { bookingId: req.params.id, userId: req.user.id, isAdmin: req.user.role === 'admin' });
+    return res.status(503).json(result);
+  } catch (error) {
+    const result = require('../services/refundReadinessService').intentError(error);
+    return res.status(result.status).json(result.body);
+  }
+}
+
 module.exports = {
+  createCancellationIntent,
   confirmProviderBooking,
   syncProviderBooking,
   simulateProviderCancellation,

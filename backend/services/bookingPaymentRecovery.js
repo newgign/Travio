@@ -1,7 +1,7 @@
 // Pure recovery policy for trusted server observations, not an operation runner or persisted state machine.
 // No browser route accepts these observations. Current intent boundaries never start operations.
 const disabledCodes = new Set(['BOOKING_DISABLED', 'HOTELBEDS_BOOKING_DISABLED', 'PAYMENTS_DISABLED',
-  'PAYMENT_GATEWAY_DISABLED', 'HOTELBEDS_TEST_PAYMENT_BLOCKED']);
+  'PAYMENT_GATEWAY_DISABLED', 'HOTELBEDS_TEST_PAYMENT_BLOCKED', 'CANCELLATION_UNAVAILABLE', 'REFUND_UNAVAILABLE']);
 const finalCodes = new Set(['VALIDATION_ERROR', 'PAYMENT_VALIDATION_ERROR', 'PAYMENT_PREREQUISITE_MISSING',
   'BOOKING_REJECTED', 'PAYMENT_REJECTED', 'RATE_NOT_AVAILABLE', 'HOTELBEDS_RATE_EXPIRED']);
 function classifyFailure(error = {}, { dispatch = 'UNKNOWN', outcomeKnown = false } = {}) {
@@ -60,4 +60,34 @@ function disabledBoundary(operation, requestId) {
   return { success: recovery.success, code: operation === 'booking' ? 'BOOKING_DISABLED' : 'PAYMENTS_DISABLED',
     state: operation === 'booking' ? 'BOOKING_DISABLED' : 'PAYMENTS_DISABLED', providerState: 'PROVIDER_NOT_CALLED' };
 }
-module.exports = { classifyFailure, plan, disabledBoundary };
+function compensationObservation(operation, value = {}) {
+  if (!value || typeof value !== 'object' || Array.isArray(value))
+    throw Object.assign(new Error('Invalid recovery observation'), { code: 'RECOVERY_INPUT_INVALID' });
+  const prefix = operation === 'cancellation' ? 'CANCELLATION' : 'REFUND';
+  const state = value.state || `${prefix}_NOT_STARTED`;
+  if (state === `${prefix}_NOT_STARTED`) return 'NOT_STARTED';
+  if (state === `${prefix}_UNAVAILABLE`) return 'DISABLED';
+  if (state === `${prefix}_PENDING`) return 'PENDING';
+  if (state === `${prefix}_OUTCOME_UNKNOWN`) return 'OUTCOME_UNKNOWN';
+  if (state === 'failed') return classifyFailure(value.error, { dispatch: value.dispatch || 'UNKNOWN', outcomeKnown: value.outcomeKnown === true });
+  if (state === (operation === 'cancellation' ? 'CANCELLED' : 'refunded'))
+    return value.providerResultObserved === true ? 'OBSERVED_RESULT' : 'OUTCOME_UNKNOWN';
+  throw Object.assign(new Error('Invalid recovery observation'), { code: 'RECOVERY_INPUT_INVALID' });
+}
+function compensationPlan({ requestId, booking, payment, cancellation, refund } = {}) {
+  const recovery = plan({ requestId, booking, payment });
+  const cancellationOutcome = compensationObservation('cancellation', cancellation);
+  const refundOutcome = compensationObservation('refund', refund);
+  const unknown = recovery.reconciliationRequired || [cancellationOutcome, refundOutcome].includes('OUTCOME_UNKNOWN');
+  const refundRequired = cancellationOutcome === 'OBSERVED_RESULT' && ['RETRYABLE', 'NON_RETRYABLE', 'DISABLED'].includes(refundOutcome);
+  const compensation = refundRequired ? 'REFUND_REQUIRED' : recovery.compensation;
+  return { ...recovery, cancellationOutcome, refundOutcome, compensation,
+    state: unknown ? 'RECOVERY_PENDING' : compensation !== 'NONE' ? 'COMPENSATION_REQUIRED'
+      : [cancellationOutcome, refundOutcome].some(value => ['PENDING', 'RETRYABLE'].includes(value)) ? 'RECOVERY_PENDING' : recovery.state,
+    reconciliationRequired: unknown, compensationCompleted: false,
+    refundPrerequisiteSatisfied: !unknown && (cancellationOutcome === 'OBSERVED_RESULT'
+      || recovery.compensation === 'REFUND_REQUIRED' && recovery.bookingOutcome === 'NON_RETRYABLE'),
+    cancellationAttemptAllowed: false, refundAttemptAllowed: false,
+    actionKeys: { ...recovery.actionKeys, cancellation: `${requestId}:cancellation`, refund: `${requestId}:refund` } };
+}
+module.exports = { classifyFailure, plan, disabledBoundary, compensationPlan };

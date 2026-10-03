@@ -17,6 +17,7 @@ const {
   syncProviderBooking,
   simulateProviderCancellation,
   cancelProviderBooking,
+  createCancellationIntent,
 } = require("../controllers/providerBookingController");
 
 const { getVoucher, downloadVoucherPdf } = require("../controllers/voucherController");
@@ -34,6 +35,7 @@ router.get("/:id/voucher.pdf", authMiddleware, downloadVoucherPdf);
 router.post("/:id/provider/confirm", authMiddleware, confirmProviderBooking);
 router.post("/:id/provider/sync", authMiddleware, syncProviderBooking);
 router.post("/:id/provider/cancel/simulate", authMiddleware, simulateProviderCancellation);
+router.post("/:id/provider/cancel/intent", authMiddleware, createCancellationIntent);
 router.post("/:id/provider/cancel", authMiddleware, cancelProviderBooking);
 
 router.get("/", authMiddleware, requireRole("admin"), getBookings);

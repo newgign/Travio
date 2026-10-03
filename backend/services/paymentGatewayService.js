@@ -130,4 +130,7 @@ async function prepareCheckoutIntent(request) {
     message: 'Оплата пока недоступна. Бронь не создана. Списаний нет.' };
 }
 
-module.exports = { readiness, createIntent, prepareCheckoutIntent };
+function prepareRefundIntent(request, booking, payment, access) {
+  return require('./refundReadinessService').prepareRefundIntent(request, booking, payment, access);
+}
+module.exports = { readiness, createIntent, prepareCheckoutIntent, prepareRefundIntent };

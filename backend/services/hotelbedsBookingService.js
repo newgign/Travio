@@ -327,6 +327,8 @@ class HotelbedsBookingService {
     let cancellationFee = null;
 
     for (const candidate of candidateFees) {
+      // Absent/blank/object values are not evidence of a zero cancellation fee.
+      if (!['number', 'string'].includes(typeof candidate) || String(candidate).trim() === '') continue;
       const number = Number(candidate);
       if (Number.isFinite(number) && number >= 0) {
         cancellationFee = number;
@@ -448,6 +450,10 @@ class HotelbedsBookingService {
     });
 
     return this.parseCancellationResponse(response);
+  }
+
+  prepareCancellationIntent(request, booking, access) {
+    return require('./refundReadinessService').prepareCancellationIntent(request, booking, access);
   }
 
   async cancel(reference) {
