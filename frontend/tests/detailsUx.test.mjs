@@ -106,7 +106,7 @@ test('3R Details exact candidate, presentation and offline interaction flow', as
 
     await t.test('header, dates, selected stay, safe hotel information and disabled booking',()=>{
       const html = renderDetails();
-      assert.match(html,/<h1>Offline Grand Hotel<\/h1>/);assert.match(html,/Dubai, ОАЭ/);assert.doesNotMatch(html,/DUBAI/);
+      assert.match(html,/<h1>Offline Grand Hotel<\/h1>/);assert.match(html,/Dubai, ОАЭ/);assert.doesNotMatch(html.replace(/<[^>]*>/g, ''),/DUBAI/);
       assert.match(html,/Ваш вариант проживания/);assert.match(html,/2 взрослых/);
       assert.match(html,/28 сентября 2030/);assert.match(html,/5 октября 2030/);
       assert.match(html,/aria-label="Добавить в избранное"/);assert.match(html,/aria-pressed="false"/);
@@ -244,7 +244,8 @@ test('3R Details exact candidate, presentation and offline interaction flow', as
       assert.match(css,/overflow-x:auto/);assert.match(css,/overflow-wrap:anywhere/);assert.match(css,/:focus-visible/);
       assert.doesNotMatch(css,/position:fixed/);
       const source=await readFile(new URL('../src/pages/TourDetails.jsx',import.meta.url),'utf8');
-      assert.doesNotMatch(source,/setInterval|CheckRate|checkRates|goCheckout|\/checkout|addEventListener/);
+      assert.doesNotMatch(source,/setInterval|CheckRate|checkRates|goCheckout|addEventListener/);
+      assert.match(source, /<CheckoutPriceLink tour=\{tour\} search=\{location.search\}/);
       assert.match(source,/loadDetailsOffer/);assert.match(source,/toggleDetailsFavorite\(tour/);
       const gallerySource=await readFile(new URL('../src/components/HotelImage.jsx',import.meta.url),'utf8');
       assert.match(gallerySource,/onError=\{\(\) => setFailedSource\(src\)\}/);

@@ -40,7 +40,7 @@ export default function Checkout() {
     // =====================================
 
     const submitting = useRef(false);
-    const [step, setStep] = useState(1);
+    const [step, setStep] = useState(provider === "hotelbeds" ? 2 : 1);
 
     const [loading, setLoading] = useState(false);
 
@@ -109,6 +109,7 @@ export default function Checkout() {
     // =====================================
 
     async function handlePayment(method) {
+        if (provider === "hotelbeds") return;
         if (submitting.current) return;
         submitting.current = true;
 
@@ -290,7 +291,7 @@ export default function Checkout() {
                     <p>
 
                         {provider === "hotelbeds"
-                            ? "Проверьте данные туристов и подтвердите Hotelbeds TEST-бронирование. Реальная оплата здесь не выполняется."
+                            ? "Проверьте стоимость выбранного Hotelbeds TEST-предложения. Бронирование и оплата недоступны."
                             : "Проверьте данные туристов, подтвердите заказ и выберите удобный способ оплаты."}
 
                     </p>

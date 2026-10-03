@@ -76,10 +76,16 @@ const getCheckout = async (req, res, next) => {
     if (offer.provider === 'hotelbeds') {
       const environment = require('../config/providers').hotelbeds.environment;
       if (offer.priceEnvironment !== environment) throw Object.assign(new Error('Предложение устарело. Выполните новый поиск.'), { status: 409, code: 'OFFER_ENVIRONMENT_MISMATCH' });
-      if (offerToken) offer = await providerManager.getProvider('hotelbeds').refreshOffer(offer);
+      if (environment !== 'test') throw Object.assign(new Error('Проверка доступна только в TEST.'), { status: 503, code: 'CHECKRATE_TEST_ONLY' });
+      if (!offer.rateKey || !offer.providerHotelId || !['BOOKABLE', 'RECHECK'].includes(offer.rateType)
+        || !Number.isFinite(Number(offer.price)) || Number(offer.price) <= 0 || !/^[A-Z]{3}$/.test(offer.currency || '')) {
+        throw Object.assign(new Error('Выбранное предложение недействительно.'), { status: 409, code: 'OFFER_TOKEN_INVALID' });
+      }
+      // RECHECK already carries the signed selected identity; do not spend another Availability call.
+      if (offerToken && offer.rateType !== 'RECHECK') offer = await providerManager.getProvider('hotelbeds').refreshOffer(offer);
     }
     // Hotelbeds requires CheckRate only when Availability returned RECHECK.
-    if (offer.provider === "hotelbeds" && offer.recheckRequired) {
+    if (offer.provider === "hotelbeds" && offer.rateType === 'RECHECK') {
       const providerImplementation = providerManager.getProvider("hotelbeds");
       offer = await providerImplementation.checkRateOffer(offer);
 
@@ -95,6 +101,11 @@ const getCheckout = async (req, res, next) => {
 
     if (offer.provider === "hotelbeds") {
       hotelbedsBookingService.assertOfferSupported(offer);
+      offer = { ...offer, bookingDisabled: true };
+    }
+
+    if (!Number.isFinite(Number(offer.price)) || Number(offer.price) <= 0 || !/^[A-Z]{3}$/.test(offer.currency || '')) {
+      throw Object.assign(new Error('Не удалось проверить стоимость.'), { status: 503, code: 'CHECKRATE_RETRYABLE_ERROR' });
     }
 
     const adults = Math.max(Number(searchFilters.people) || 1, 1);
@@ -135,6 +146,7 @@ const getCheckout = async (req, res, next) => {
       serviceFee,
       total,
       previousTotal: selectedPriceBeforeCheckRate,
+      checkRateStatus: selectedPriceBeforeCheckRate !== null && Math.round(selectedPriceBeforeCheckRate * 100) !== Math.round(total * 100) ? 'PRICE_CHANGED' : 'CONFIRMED',
       priceChangedAtCheckRate:
         selectedPriceBeforeCheckRate !== null &&
         Math.round(selectedPriceBeforeCheckRate * 100) !== Math.round(total * 100),
@@ -143,6 +155,16 @@ const getCheckout = async (req, res, next) => {
       recheckedAt: new Date().toISOString(),
     });
   } catch (error) {
+    if (req.body?.provider === 'hotelbeds' || req.body?.offerToken) {
+      const unavailable = ['RATE_NOT_AVAILABLE', 'HOTELBEDS_RECHECK_UNAVAILABLE', 'HOTELBEDS_RATE_NOT_BOOKABLE',
+        'HOTELBEDS_AT_HOTEL_UNSUPPORTED', 'OFFER_TOKEN_INVALID', 'OFFER_TOKEN_EXPIRED',
+        'OFFER_HOTEL_MISMATCH', 'OFFER_PROVIDER_MISMATCH', 'OFFER_ENVIRONMENT_MISMATCH'].includes(error.code);
+      if (typeof res.status === 'function') return res.status(unavailable ? 409 : 503).json({
+        checkRateStatus: unavailable ? 'UNAVAILABLE' : 'RETRYABLE_ERROR',
+        code: unavailable ? error.code : 'CHECKRATE_RETRYABLE_ERROR',
+        message: unavailable ? 'Выбранное предложение больше недоступно. Выберите другой тариф.' : 'Не удалось проверить стоимость. Повторите попытку.',
+      });
+    }
     next(error);
   }
 };

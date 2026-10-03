@@ -4,6 +4,7 @@ const hotelbedsClient = require("../integrations/hotelbeds/client");
 const providerCatalogRepository = require("../repositories/providerCatalogRepository");
 
 class HotelbedsProvider {
+  checkRatePending = new Map();
   get name() {
     return "hotelbeds";
   }
@@ -55,7 +56,16 @@ class HotelbedsProvider {
     return hotelbedsClient.checkRates(rateKey);
   }
 
-  async checkRateOffer(offer) {
+  checkRateOffer(offer) {
+    // Only share simultaneous identical selections; never cache completed rates.
+    const key = JSON.stringify(offer);
+    if (this.checkRatePending.has(key)) return this.checkRatePending.get(key);
+    const pending = this.performCheckRateOffer(offer).finally(() => this.checkRatePending.delete(key));
+    this.checkRatePending.set(key, pending);
+    return pending;
+  }
+
+  async performCheckRateOffer(offer) {
     if (!offer?.rateKey) {
       const error = new Error("Hotelbeds rateKey отсутствует");
       error.status = 400;
@@ -67,8 +77,25 @@ class HotelbedsProvider {
       return offer;
     }
 
-    const response = await hotelbedsClient.checkRates(offer.rateKey);
+    let response;
+    try { response = await hotelbedsClient.checkRates(offer.rateKey); }
+    catch (error) {
+      const unavailable = error.code === 'RATE_NOT_AVAILABLE';
+      throw Object.assign(new Error(unavailable ? 'Выбранный тариф недоступен.' : 'Не удалось проверить стоимость. Повторите попытку.'),
+        { status: unavailable ? 409 : 503, code: unavailable ? 'RATE_NOT_AVAILABLE' : 'CHECKRATE_RETRYABLE_ERROR' });
+    }
+    if (Array.isArray(response?.hotels?.hotels) && response.hotels.hotels.length === 0) {
+      throw Object.assign(new Error('Выбранный тариф недоступен.'), { status: 409, code: 'HOTELBEDS_RECHECK_UNAVAILABLE' });
+    }
     const hotel = response?.hotel || response?.hotels?.hotels?.[0] || null;
+    const malformed = () => Object.assign(new Error('Не удалось проверить стоимость. Повторите попытку.'),
+      { status: 503, code: 'CHECKRATE_RETRYABLE_ERROR' });
+    // Empty valid lists mean unavailable; absent or malformed lists mean unknown.
+    if (!hotel || !Array.isArray(hotel.rooms) || hotel.code == null || !/^[A-Z]{3}$/.test(hotel.currency || '')
+      || hotel.rooms.some(room => !room || !room.code || !Array.isArray(room.rates) || room.rates.some(rate => !rate
+        || typeof rate !== 'object' || !rate.rateKey || !rate.rateType || !rate.boardCode || !rate.rateClass
+        || !rate.paymentType || typeof rate.packaging !== 'boolean'
+        || ['rooms', 'adults', 'children'].some(field => !Number.isInteger(Number(rate[field])) || rate[field] == null)))) throw malformed();
     const candidates = [];
 
     for (const room of hotel?.rooms || []) {
@@ -88,8 +115,9 @@ class HotelbedsProvider {
 
     const selected = require('../services/hotelbedsRateIdentity').selectCheckedRate(offer, response);
     if (!selected) throw Object.assign(new Error("Выбранный тариф недоступен"), { status: 409, code: "RATE_NOT_AVAILABLE" });
-    const priceDetails = pricing.extract(selected.rate, hotel?.currency || selected.rate.currency || offer.currency);
-    if (!priceDetails) throw Object.assign(new Error("Цена тарифа недоступна"), { status: 409, code: "RATE_NOT_AVAILABLE" });
+    const priceDetails = pricing.extract(selected.rate, selected.hotel.currency || selected.rate.currency);
+    if (!priceDetails || !selected.rate.rateKey || !['BOOKABLE', 'RECHECK'].includes(selected.rate.rateType)) throw malformed();
+    if (selected.rate.rateType !== 'BOOKABLE') throw Object.assign(new Error('Выбранный тариф недоступен.'), { status: 409, code: 'HOTELBEDS_RATE_NOT_BOOKABLE' });
     const selectedPrice = priceDetails.price;
 
     if (String(selected.rate.paymentType || offer.paymentType || "").toUpperCase() === "AT_HOTEL") {
@@ -113,11 +141,13 @@ class HotelbedsProvider {
       price: selectedPrice,
       basePrice: selectedPrice,
       currency:
-        hotel?.currency || selected.rate.currency || offer.currency || "EUR",
+        selected.hotel.currency || selected.rate.currency,
       roomCode: selected.room.code || offer.roomCode || null,
       roomName: selected.room.name || offer.roomName || selected.room.code || null,
+      roomType: selected.room.name || selected.room.code,
       boardCode: selected.rate.boardCode || offer.boardCode || null,
       boardName: selected.rate.boardName || offer.boardName || null,
+      food: selected.rate.boardName || selected.rate.boardCode,
       paymentType: selected.rate.paymentType || offer.paymentType || null,
       packaging: Boolean(selected.rate.packaging),
       cancellationPolicies: Array.isArray(selected.rate.cancellationPolicies)
@@ -137,12 +167,16 @@ class HotelbedsProvider {
       nights: offer.nights, adults: offer.adults, children: offer.children, childrenAges: offer.childrenAges,
       rooms: offer.occupancy?.rooms || 1,
     }));
+    if (!Array.isArray(response?.hotels?.hotels)) throw Object.assign(new Error('Не удалось проверить стоимость.'), { status: 503, code: 'CHECKRATE_RETRYABLE_ERROR' });
     const hotel = response?.hotels?.hotels?.find(item => String(item.code) === String(offer.providerHotelId));
+    if (hotel && (!Array.isArray(hotel.rooms) || hotel.rooms.some(room => !Array.isArray(room.rates)))) throw Object.assign(new Error('Не удалось проверить стоимость.'), { status: 503, code: 'CHECKRATE_RETRYABLE_ERROR' });
     const room = hotel?.rooms?.find(item => String(item.code) === String(offer.roomCode));
     const rate = room?.rates?.find(item => item.rateKey === offer.rateKey);
     if (!rate || rate.packaging || rate.paymentType === 'AT_HOTEL') throw Object.assign(new Error('Выбранный тариф больше недоступен. Выполните новый поиск.'), { status: 409, code: 'RATE_NOT_AVAILABLE' });
     const money = pricing.extract(rate, hotel.currency || rate.currency);
-    if (!money) throw Object.assign(new Error('Цена тарифа недоступна'), { status: 409, code: 'RATE_NOT_AVAILABLE' });
+    if (!money || !['BOOKABLE', 'RECHECK'].includes(rate.rateType)) throw Object.assign(new Error('Не удалось проверить стоимость.'), { status: 503, code: 'CHECKRATE_RETRYABLE_ERROR' });
+    // Refresh must validate the same product identity, not just a matching opaque key.
+    require('../services/hotelbedsRateIdentity').selectCheckedRate(offer, { hotel });
     return { ...offer, ...money, rateType: rate.rateType, recheckRequired: rate.rateType === 'RECHECK',
       cancellationPolicies: rate.cancellationPolicies || [], rateComments: rate.rateComments || null,
       observedAt: new Date().toISOString() };

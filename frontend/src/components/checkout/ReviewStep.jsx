@@ -1,7 +1,8 @@
-import { reviewFailureMessage } from "../../utils/feedbackPresentation";
+import CheckoutRateStatus from "./CheckoutRateStatus";
+import { createCheckoutReview } from "../../services/checkoutReview";
 import RateConditions from "../RateConditions";
-import { useCallback, useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import { getCheckout } from "../../services/checkoutService";
 import { formatMoney } from "../../utils/money";
@@ -9,7 +10,6 @@ import { formatMoney } from "../../utils/money";
 
 export default function ReviewStep({
     bookingData,
-    checkout,
     setCheckout,
     back,
     next,
@@ -19,181 +19,33 @@ export default function ReviewStep({
 }) {
 
     const location = useLocation();
+    const navigate = useNavigate();
+    const review = useMemo(() => createCheckoutReview(() => {
+        const filters = Object.fromEntries(new URLSearchParams(location.search).entries());
+        const people = Number(bookingData.adults) || Number(filters.people) || 2;
+        return getCheckout({ provider, hotelId: tourId, tourId, offerToken, people,
+            filters: { ...filters, people, nights: Number(filters.nights) || 7, children: Number(filters.children) || 0 } });
+    }), [provider, tourId, offerToken, location.search, bookingData.adults]);
+    const state = useSyncExternalStore(review.subscribe, review.getSnapshot, review.getSnapshot);
+    const acceptedPriceToken = state.acceptedPriceToken;
+    useEffect(() => {
+        const timer = setTimeout(() => { review.load(); }, 0);
+        return () => clearTimeout(timer);
+    }, [review]);
+    useEffect(() => { setCheckout(state.data); }, [state.data, setCheckout]);
+    // Render only this transition's result, never the parent's stale offer.
+    const checkout = state.data;
+    if (state.status === 'CHECKING' || !checkout) return <CheckoutRateStatus
+        status={state.status} retry={() => review.load()}
+        back={() => { if (state.status === 'UNAVAILABLE') navigate(`/results${location.search}`); else back(); }} />;
+    return <CheckoutReviewView checkout={checkout} bookingData={bookingData} acceptedPriceToken={acceptedPriceToken}
+        acceptPrice={review.acceptPrice} back={back}
+        next={() => { const confirmed = review.confirmedCheckout(); if (confirmed) { setCheckout(confirmed); next(); } }} />;
+}
 
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState("");
-
-    const [acceptedPriceToken, setAcceptedPriceToken] = useState(null);
+export function CheckoutReviewView({ checkout, bookingData, acceptedPriceToken, acceptPrice, back, next }) {
     const [agreeTerms, setAgreeTerms] = useState(false);
     const [agreePolicy, setAgreePolicy] = useState(false);
-
-
-    // =====================================
-    // Загрузка Checkout
-    // =====================================
-
-    const loadCheckout = useCallback(async () => {
-
-        try {
-
-            setLoading(true);
-            setError("");
-
-            // ---------------------------------
-            // Получаем параметры исходного поиска
-            // ---------------------------------
-
-            const searchParams =
-                new URLSearchParams(
-                    location.search
-                );
-
-            const filters =
-                Object.fromEntries(
-                    searchParams.entries()
-                );
-
-
-            // ---------------------------------
-            // Количество туристов
-            // ---------------------------------
-
-            const people =
-                Number(bookingData.adults) ||
-                Number(filters.people) ||
-                2;
-
-
-            // ---------------------------------
-            // Запрос к новому Checkout API
-            // ---------------------------------
-
-            const data = await getCheckout({
-
-                provider,
-
-                hotelId: tourId,
-
-                tourId,
-
-                offerToken,
-
-                people,
-
-                filters: {
-
-                    ...filters,
-
-                    people,
-
-                    nights:
-                        Number(filters.nights) || 7,
-
-                    children:
-                        Number(filters.children) || 0,
-
-                },
-
-            });
-
-
-            setCheckout(data);
-
-        } catch {
-            setCheckout(null);
-            setError(reviewFailureMessage);
-
-        } finally {
-
-            setLoading(false);
-
-        }
-
-    }, [provider, tourId, offerToken, location.search, bookingData.adults, setCheckout]);
-
-
-    useEffect(() => {
-
-        const timer = setTimeout(() => {
-            loadCheckout();
-        }, 0);
-
-        return () => clearTimeout(timer);
-
-    }, [loadCheckout]);
-
-
-    // =====================================
-    // Loading
-    // =====================================
-
-    if (loading) {
-
-        return (
-
-            <div className="checkout-card" role="status">
-
-                <h2>
-                    Загрузка заказа...
-                </h2>
-
-                <p className="checkout-subtitle">
-                    Проверяем выбранный тур и рассчитываем стоимость.
-                </p>
-
-            </div>
-
-        );
-
-    }
-
-
-    // =====================================
-    // Error
-    // =====================================
-
-    if (error || !checkout || !checkout.tour) {
-
-        return (
-
-            <div className="checkout-card" role="alert">
-
-                <h2>
-                    Не удалось загрузить информацию о туре
-                </h2>
-
-                {error && (
-                    <p className="checkout-subtitle">
-                        {error}
-                    </p>
-                )}
-
-                <div className="checkout-buttons">
-
-                    <button
-                        type="button"
-                        className="back-btn"
-                        onClick={back}
-                    >
-                        ← Назад
-                    </button>
-
-                    <button
-                        type="button"
-                        className="next-btn"
-                        onClick={loadCheckout}
-                    >
-                        Попробовать снова
-                    </button>
-
-                </div>
-
-            </div>
-
-        );
-
-    }
-
 
     // =====================================
     // Tour
@@ -262,14 +114,13 @@ export default function ReviewStep({
             ================================= */}
 
             <h1>
-                Подтверждение бронирования
+                Подтверждение стоимости
             </h1>
 
             <p className="checkout-subtitle">
 
-                Проверьте информацию перед оплатой.
-                После подтверждения изменить данные
-                будет невозможно.
+                Проверьте подтверждённую стоимость. Проверка тарифа не является подтверждением бронирования.
+                Бронирование и оплата Hotelbeds недоступны.
 
             </p>
 
@@ -325,6 +176,7 @@ export default function ReviewStep({
                     </p>
 
 
+                    {tour.roomName && <p>Номер: {tour.roomName}</p>}
                     {tour.food && (
 
                         <p>
@@ -444,15 +296,15 @@ export default function ReviewStep({
             ================================= */}
 
             <div className="review-block">
-                <h3>{isHotelbeds ? "Стоимость проживания" : "Расчет стоимости"}</h3>
+                <h3>{isHotelbeds ? `Стоимость проживания (${currency})` : "Расчет стоимости"}</h3>
 
                 {isHotelbeds ? (
                     <>
                         {checkout.priceChangedAtCheckRate && (
                             <div className="checkout-provider-warning">
-                                Стоимость предложения изменилась.
+                                Поставщик изменил стоимость предложения.
                                 {" "}{formatMoney(checkout.previousTotal, currency)} → {formatMoney(total, currency)}.
-                                <label><input type="checkbox" checked={acceptedPriceToken === checkout.checkoutToken} onChange={event => setAcceptedPriceToken(event.target.checked ? checkout.checkoutToken : null)} />Подтверждаю новую стоимость проживания</label>
+                                <label><input type="checkbox" checked={acceptedPriceToken === checkout.checkoutToken} onChange={event => acceptPrice(event.target.checked)} />Подтверждаю новую стоимость проживания</label>
                             </div>
                         )}
 
@@ -580,7 +432,7 @@ export default function ReviewStep({
                     disabled={
                         !(agreeTerms && agreePolicy) || (checkout.priceChangedAtCheckRate && acceptedPriceToken !== checkout.checkoutToken)
                     }
-                    onClick={() => { setCheckout({ ...checkout, acceptedPriceToken }); next(); }}
+                    onClick={next}
                 >
                     {isHotelbeds ? "Перейти к подтверждению →" : "Перейти к оплате →"}
                 </button>

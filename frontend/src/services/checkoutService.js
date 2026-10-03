@@ -23,13 +23,11 @@ export async function getCheckout(data) {
 
   if (!response.ok) {
     const error = new Error(
-      result?.message ||
-      result?.error?.message ||
-      `Ошибка получения Checkout (${response.status})`
+      'Не удалось проверить стоимость. Повторите попытку.'
     );
     error.status = response.status;
     error.code = result?.code || result?.error?.code || null;
-    error.data = result;
+    error.checkRateStatus = result?.checkRateStatus === 'UNAVAILABLE' ? 'UNAVAILABLE' : 'RETRYABLE_ERROR';
     throw error;
   }
 

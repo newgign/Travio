@@ -5,6 +5,7 @@ import Footer from '../components/Footer';
 import ConsumerMetadata from '../components/ConsumerMetadata';
 import StayPrice from '../components/StayPrice';
 import DetailsGallery from '../components/DetailsGallery';
+import CheckoutPriceLink from '../components/checkout/CheckoutPriceLink';
 import { useFavorites } from '../context/FavoritesContext';
 import { selectedOfferSnapshot } from '../utils/selectedOfferSnapshot';
 import { visibleProviderOffer } from '../utils/providerEnvironment';
@@ -113,6 +114,7 @@ function DetailsPage({ provider, id, location }) {
         <h2>Стоимость проживания</h2><StayPrice offer={tour} />
         {isTest && <div className="details-test-explanation"><h3>Тестовая цена Hotelbeds</h3><p>Цена получена из тестовой среды. Перед реальным оформлением тариф потребуется проверить повторно.</p></div>}
         <button type="button" className="details-booking" disabled>Бронирование отключено</button>
+        <CheckoutPriceLink tour={tour} search={location.search} />
         <p className="details-booking-note">Бронирование сейчас отключено. Оплата недоступна.</p>
       </aside>
       <div className="details-content">

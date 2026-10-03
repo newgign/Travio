@@ -104,7 +104,15 @@ test('5F consumer feedback offline contracts', async t => {
     await t.test('expired session notice is fixed public text',()=>{login();session.clearSession('offline-fixture','expired');assert.equal(session.validatedSessionSnapshot().notice,'Сессия завершена. Войдите снова.');safe(session.validatedSessionSnapshot().notice);});
     await t.test('bootstrap unknown status and error remain distinct',()=>{assert.match(render(SessionStatus,{status:'unknown'}),/role="status"/);assert.match(render(SessionStatus,{status:'error'}),/role="alert"/);});
     for(const code of [undefined,'UNKNOWN','__proto__','constructor','HOTELBEDS_RATE_EXPIRED','HOTELBEDS_CONFIRMATION_UNKNOWN','HOTELBEDS_AT_HOTEL_UNSUPPORTED']) await t.test(`Checkout fixed copy for ${String(code)}`,()=>{const message=feedback.checkoutFailureMessage(code);assert.equal(typeof message,'string');safe(message);assert.doesNotMatch(message,/\?{3}/);if(code==='HOTELBEDS_CONFIRMATION_UNKNOWN')assert.match(message,/не повторяйте/);});
-    for(const file of ['pages/Checkout.jsx','components/checkout/ReviewStep.jsx','pages/Voucher.jsx']) await t.test(`${file} no raw error UI or payload logging`,async()=>{const text=await source(file);assert.doesNotMatch(text,/err(?:or)?\??\.message|console\.(error|log)|JSON.stringify/);assert.match(text,/feedbackPresentation/);});
+    for(const file of ['pages/Checkout.jsx','components/checkout/ReviewStep.jsx','pages/Voucher.jsx']) await t.test(`${file} no raw error UI or payload logging`,async()=>{
+      const text=await source(file);assert.doesNotMatch(text,/err(?:or)?\??\.message|console\.(error|log)|JSON.stringify/);
+      if(file==='components/checkout/ReviewStep.jsx') {
+        assert.match(text,/<CheckoutRateStatus/);
+        const status=await source('components/checkout/CheckoutRateStatus.jsx');
+        assert.doesNotMatch(status,/err(?:or)?\??\.message|console\.(error|log)|JSON.stringify/);
+        assert.match(status,/Не удалось проверить стоимость/);
+      } else assert.match(text,/feedbackPresentation/);
+    });
     await t.test('Voucher fixed failure and duplicate PDF guard without executing endpoint',async()=>{safe(feedback.voucherFailureMessage);safe(feedback.pdfFailureMessage);const text=await source('pages/Voucher.jsx');assert.match(text,/if \(downloadLock.current\) return/);assert.match(text,/setDownloadError\(pdfFailureMessage\)/);assert.match(text,/role="alert"/);assert.match(text,/aria-busy=\{downloading\}/);});
     await t.test('BookingForm is truthful disabled placeholder with no collected personal data',()=>{const html=render(BookingForm);assert.match(html,/Заявки не отправляются/);assert.match(html,/disabled=""/);assert.doesNotMatch(html,/успешно отправлена|<input|<form/);});
     await t.test('Help and Contacts have no pretend submission or changed contact actions',()=>{const html=render(HelpView)+render(ContactsView);assert.match(html,/href="mailto:/);assert.match(html,/href="tel:/);assert.doesNotMatch(html,/<form|отправлено|сообщение отправлено/i);});
