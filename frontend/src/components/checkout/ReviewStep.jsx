@@ -434,7 +434,7 @@ export function CheckoutReviewView({ checkout, bookingData, acceptedPriceToken, 
                     }
                     onClick={next}
                 >
-                    {isHotelbeds ? "Перейти к подтверждению →" : "Перейти к оплате →"}
+                    {isHotelbeds ? "Перейти к данным гостей →" : "Перейти к оплате →"}
                 </button>
 
             </div>

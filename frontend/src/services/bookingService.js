@@ -1,16 +1,26 @@
 import authFetch from "./authFetch";
 import API_URL from "./api";
 
-export async function createBookingIntent(data) {
+async function requestBookingIntent(data) {
   try {
     const result = await authFetch('/bookings/intent', { method: 'POST', body: JSON.stringify(data) });
     // The intent endpoint must end at the disabled boundary, never a successful booking.
-    if (result?.code === 'BOOKING_DISABLED' && result?.providerState === 'PROVIDER_NOT_CALLED') return { code: result.code, providerState: result.providerState };
+    if (result?.code === 'BOOKING_DISABLED' && result?.providerState === 'PROVIDER_NOT_CALLED') return result;
   } catch (error) {
-    if (error.status === 503 && error.code === 'BOOKING_DISABLED' && error.data?.providerState === 'PROVIDER_NOT_CALLED') return { code: 'BOOKING_DISABLED', providerState: 'PROVIDER_NOT_CALLED' };
+    if (error.status === 503 && error.code === 'BOOKING_DISABLED' && error.data?.providerState === 'PROVIDER_NOT_CALLED') return error.data;
     throw Object.assign(new Error('BOOKING_INTENT_REQUEST_FAILED'), { code: error.code, validationKind: error.data?.validationKind });
   }
   throw Error('INVALID_INTENT_RESPONSE');
+}
+
+export async function createBookingIntent(data) {
+  const result = await requestBookingIntent(data);
+  return { code: result.code, providerState: result.providerState };
+}
+
+export async function createBookingReview(data) {
+  const result = await requestBookingIntent({ ...data, review: true });
+  return { code: result.code, providerState: result.providerState, review: result.review };
 }
 
 export async function createBooking(data) {

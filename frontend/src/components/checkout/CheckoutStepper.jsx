@@ -1,7 +1,7 @@
 export default function CheckoutStepper({ step, provider }) {
     if (provider === 'hotelbeds') {
         const current = step === 2 ? 1 : step === 1 ? 2 : 3;
-        return <div className="checkout-stepper">{['Проверка', 'Туристы', 'Бронирование недоступно'].map((label, index) =>
+        return <div className="checkout-stepper">{['Проверка', 'Туристы', 'Итоговая проверка'].map((label, index) =>
             <div key={label} className={current >= index + 1 ? 'step active' : 'step'}>{index + 1}<span>{label}</span></div>)}</div>;
     }
 

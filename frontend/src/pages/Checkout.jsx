@@ -1,5 +1,5 @@
 import { checkoutFailureMessage } from "../utils/feedbackPresentation";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
     useLocation,
     useNavigate,
@@ -12,11 +12,13 @@ import Footer from "../components/Footer";
 import CheckoutStepper from "../components/checkout/CheckoutStepper";
 import TravelerStep from "../components/checkout/TravelerStep";
 import ReviewStep, { CheckoutReviewView } from "../components/checkout/ReviewStep";
+import FinalReviewStep from "../components/checkout/FinalReviewStep";
 import PaymentStep from "../components/checkout/PaymentStep";
 import SuccessStep from "../components/checkout/SuccessStep";
 
-import { createBooking, createBookingIntent, confirmProviderBooking } from "../services/bookingService";
-import { confirmedOccupancy, createTravellerSubmission } from "../utils/travellerData";
+import { createBooking, createBookingReview, confirmProviderBooking } from "../services/bookingService";
+import { confirmedOccupancy } from "../utils/travellerData";
+import { createFinalReview } from "../services/checkoutReadiness";
 import { createPaymentIntent, payBooking } from "../services/paymentService";
 
 import "../styles/Checkout.css";
@@ -56,14 +58,21 @@ function CheckoutFlow() {
 
     const [checkout, setCheckout] = useState(null);
 
-    const submitTravellers = useMemo(() => createTravellerSubmission(createBookingIntent), []);
+    const finalReview = useMemo(() => createFinalReview(createBookingReview), []);
+    const reviewState = useSyncExternalStore(finalReview.subscribe, finalReview.getSnapshot, finalReview.getSnapshot);
+    const readiness = finalReview.statusFor(checkout, bookingData);
+    useEffect(() => {
+        if (!reviewState.review) return;
+        const timer = setTimeout(() => finalReview.invalidate(), Math.max(0, Date.parse(reviewState.review.expiresAt) - Date.now()));
+        return () => clearTimeout(timer);
+    }, [finalReview, reviewState.review]);
     const occupancy = provider === 'hotelbeds' ? confirmedOccupancy(checkout) : null;
+    function updateBookingData(data) { finalReview.invalidate(); setBookingData(data); }
     async function continueTravellers(data) {
         if (provider !== 'hotelbeds') { setStep(2); return; }
         if (!occupancy) throw Object.assign(Error('INVALID_CONFIRMED_OCCUPANCY'), { code: 'VALIDATION_ERROR' });
-        await submitTravellers({ checkoutToken: checkout.checkoutToken, travelers: data.travelers,
-            ...(checkout.acceptedPriceToken ? { acceptedPriceToken: checkout.acceptedPriceToken } : {}) });
-        setStep(3);
+        const review = await finalReview.prepare(checkout, data);
+        if (review) setStep(3);
     }
 
     const [paymentResult, setPaymentResult] = useState(null);
@@ -346,7 +355,7 @@ function CheckoutFlow() {
                         }
 
                         setBookingData={
-                            setBookingData
+                            updateBookingData
                         }
 
                         next={continueTravellers}
@@ -426,7 +435,11 @@ function CheckoutFlow() {
                     PAYMENT
                 ================================= */}
 
-                {step === 3 && checkout && (
+                {provider === 'hotelbeds' && step >= 3 && (
+                    <FinalReviewStep review={reviewState.review} status={readiness}
+                        back={() => { finalReview.invalidate(); setStep(occupancy ? 1 : 2); }} />
+                )}
+                {step === 3 && checkout && provider !== 'hotelbeds' && (
 
                     <PaymentStep
 
@@ -456,7 +469,7 @@ function CheckoutFlow() {
                     SUCCESS
                 ================================= */}
 
-                {step === 4 && (
+                {step === 4 && provider !== 'hotelbeds' && (
 
                     <SuccessStep
 

@@ -595,7 +595,7 @@ const deleteBooking = async (req, res) => {
 
 const createBookingIntent = async (req, res) => {
   const validationResponse = validationKind => res.status(409).json({ success: false, code: 'VALIDATION_ERROR', state: 'VALIDATION_FAILED',
-    ...(['TRAVELLER_VALIDATION_ERROR', 'OCCUPANCY_MISMATCH'].includes(validationKind) ? { validationKind } : {}),
+    ...(['TRAVELLER_VALIDATION_ERROR', 'OCCUPANCY_MISMATCH', 'CHECKRATE_REQUIRED'].includes(validationKind) ? { validationKind } : {}),
     providerState: 'PROVIDER_NOT_CALLED', message: 'Данные предложения или туристов недействительны. Перепроверьте предложение.' });
   try {
     const body = req.body;
@@ -603,6 +603,12 @@ const createBookingIntent = async (req, res) => {
     const session = await checkoutSessionService.readForIntent(body.checkoutToken);
     const service = require('../services/hotelbedsBookingService');
     const intent = service.prepareIntent(body, session);
+    if (body.review === true) {
+      const boundary = service.intentBoundary(intent);
+      // Authenticated, explicit preview of this submission only; no generic PII/identifier echo.
+      return res.status(503).json({ success: false, code: boundary.code, state: boundary.state,
+        providerState: boundary.providerState, message: boundary.message, review: service.reviewPreview(intent, session) });
+    }
     return res.status(503).json(service.intentBoundary(intent));
   } catch (error) {
     const validationCodes = new Set(['CHECKOUT_SESSION_REQUIRED', 'CHECKOUT_SESSION_NOT_FOUND', 'CHECKOUT_SESSION_USED',
@@ -611,7 +617,8 @@ const createBookingIntent = async (req, res) => {
       'BOOKING_INTENT_ENVIRONMENT_MISMATCH', 'BOOKING_INTENT_IDENTITY_MISMATCH', 'BOOKING_INTENT_MONEY_MISMATCH',
       'BOOKING_INTENT_SELECTION_MISMATCH', 'BOOKING_INTENT_PRICE_MISMATCH', 'BOOKING_INTENT_STAY_INVALID',
       'BOOKING_INTENT_OCCUPANCY_INVALID', 'BOOKING_INTENT_TRAVELERS_INVALID']);
-    if (validationCodes.has(error?.code)) return validationResponse(error.validationKind);
+    if (validationCodes.has(error?.code)) return validationResponse(['CHECKRATE_CONFIRMATION_REQUIRED', 'CHECKRATE_CONFIRMATION_EXPIRED',
+      'CHECKOUT_SESSION_EXPIRED', 'CHECKOUT_SESSION_USED', 'RATE_CHANGED'].includes(error.code) ? 'CHECKRATE_REQUIRED' : error.validationKind);
     return res.status(503).json({ success: false, code: 'RETRYABLE_INTERNAL_ERROR', providerState: 'PROVIDER_NOT_CALLED',
       message: 'Не удалось проверить предложение. Повторите попытку позже.' });
   }

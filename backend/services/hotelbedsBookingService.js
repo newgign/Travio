@@ -45,8 +45,9 @@ class HotelbedsBookingService {
     const integer = (value, minimum) => ['number', 'string'].includes(typeof value) && String(value).trim() !== '' && Number.isSafeInteger(Number(value)) && Number(value) >= minimum;
     const date = value => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
       && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value;
-    const fields = ['checkoutToken', 'provider', 'hotelId', 'rateKey', 'price', 'currency', 'priceEnvironment', 'acceptedPriceToken', 'travelers'];
+    const fields = ['checkoutToken', 'provider', 'hotelId', 'rateKey', 'price', 'currency', 'priceEnvironment', 'acceptedPriceToken', 'travelers', 'review'];
     if (!object(request) || Object.keys(request).some(key => !fields.includes(key)) || !text(request.checkoutToken)
+      || (Object.hasOwn(request, 'review') && request.review !== true)
       || !Array.isArray(request.travelers) || !object(session) || session.token !== request.checkoutToken) invalid('BOOKING_INTENT_INVALID');
     const offer = session.offer_snapshot;
     const now = Date.now(), expiresAt = Date.parse(session.expires_at);
@@ -85,6 +86,24 @@ class HotelbedsBookingService {
       checkIn: offer.checkIn, checkOut: offer.checkOut, nights: Number(offer.nights),
       occupancy: { rooms: 1, adults: Number(occupancy.adults), children: Number(occupancy.children) },
       expectedTravelers: Number(occupancy.adults) + Number(occupancy.children), environment: 'test' };
+  }
+
+  reviewPreview(intent, session) {
+    // Called only after prepareIntent: whitelist display fields, never raw offer/payload/identifiers.
+    const offer = session.offer_snapshot;
+    const label = value => typeof value === 'string' && value.trim() ? value.trim() : null;
+    const hotel = label(offer.name) || label(offer.hotel) || label(offer.title);
+    const expiresAt = Math.min(Date.parse(session.expires_at), Date.parse(offer.checkedRateAt) + require('./checkoutSessionService').getTtlMinutes() * 60000);
+    return { state: 'REVIEW_READY', provider: 'hotelbeds', environment: 'test', expiresAt: new Date(expiresAt).toISOString(),
+      hotel: hotel === `Hotelbeds #${intent.hotelId}` ? null : hotel,
+      stay: { checkIn: intent.checkIn, checkOut: intent.checkOut, nights: intent.nights },
+      offer: { room: offer.roomName === offer.roomCode ? null : label(offer.roomName),
+        board: (label(offer.boardName) || label(offer.food)) === offer.boardCode ? null : label(offer.boardName) || label(offer.food),
+        price: intent.price, currency: intent.currency },
+      occupancy: { ...intent.occupancy }, expectedTravelers: intent.expectedTravelers,
+      travelers: intent.travelers.map(value => ({ type: value.type, firstName: value.firstName, lastName: value.lastName,
+        ...(value.age !== undefined ? { age: value.age } : {}), ...(value.birthDate ? { birthDate: value.birthDate } : {}) })),
+      bookingAvailable: false, paymentAvailable: false };
   }
 
   intentBoundary(intent) {

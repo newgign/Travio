@@ -63,6 +63,9 @@ export function createTravellerSubmission(request) {
 }
 
 export function travellerFailureMessage(error) {
+    if (error?.code === 'CHECKRATE_REQUIRED' || error?.validationKind === 'CHECKRATE_REQUIRED') return 'Стоимость устарела или не подтверждена. Вернитесь к поиску.';
+    if (error?.code === 'TRAVELLER_VALIDATION_ERROR') return 'Проверьте данные гостей.';
+    if (error?.code === 'REVIEW_NOT_READY') return 'Итоговая проверка недоступна. Проверьте данные гостей.';
     if (error?.validationKind === 'OCCUPANCY_MISMATCH') return 'Состав гостей не соответствует предложению. Вернитесь к поиску.';
     if (error?.validationKind === 'TRAVELLER_VALIDATION_ERROR') return 'Проверьте данные гостей.';
     if (error?.code === 'VALIDATION_ERROR') return 'Предложение устарело или недействительно. Вернитесь к поиску.';
