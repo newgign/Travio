@@ -120,8 +120,8 @@ async function prepareCheckoutIntent(request) {
   if (bookingIntent.state !== 'INTENT_READY' || review.state !== 'REVIEW_READY') reject('PAYMENT_PREREQUISITE_MISSING');
   const payment = readiness();
   // Hard stop even if someone requests sandbox/live flags. No row, reference or transaction is created.
-  return { success: false, code: 'PAYMENTS_DISABLED', state: 'PAYMENTS_DISABLED',
-    providerState: 'PROVIDER_NOT_CALLED', paymentState: 'PAYMENT_NOT_STARTED', bookingState: 'BOOKING_DISABLED',
+  return { ...require('./bookingPaymentRecovery').disabledBoundary('payment', bookingIntent.requestId),
+    paymentState: 'PAYMENT_NOT_STARTED', bookingState: 'BOOKING_DISABLED',
     bookingAvailable: false, paymentAvailable: false,
     intent: { state: 'PAYMENT_INTENT_READY', reviewState: review.state, requestId: bookingIntent.requestId,
       provider: bookingIntent.provider, hotelId: bookingIntent.hotelId, environment: bookingIntent.environment,

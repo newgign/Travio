@@ -111,8 +111,7 @@ class HotelbedsBookingService {
     try { this.assertBookingAllowed(); }
     catch (error) { if (error.code !== 'HOTELBEDS_BOOKING_DISABLED') throw error; }
     const { travelers, ...publicIntent } = intent;
-    return { success: false, code: 'BOOKING_DISABLED', state: 'BOOKING_DISABLED',
-      providerState: 'PROVIDER_NOT_CALLED', intent: publicIntent,
+    return { ...require('./bookingPaymentRecovery').disabledBoundary('booking', intent.requestId), intent: publicIntent,
       message: 'Предложение проверено. Бронирование и оплата пока недоступны.' };
   }
 
