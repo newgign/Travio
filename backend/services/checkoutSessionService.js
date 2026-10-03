@@ -75,7 +75,21 @@ class CheckoutSessionService {
       [normalizedToken]
     );
 
-    const session = result.rows[0];
+    return this.validateSession(result.rows[0]);
+  }
+
+  async readForIntent(token) {
+    // Existing opaque session is the authority. Intent reads do not lock, consume or write it.
+    if (typeof token !== 'string' || !/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(token)) {
+      throw Object.assign(new Error('Актуальная checkout-сессия обязательна.'), { status: 400, code: 'CHECKOUT_SESSION_REQUIRED' });
+    }
+    const result = await pool.query('SELECT * FROM checkout_sessions WHERE token = $1', [token]);
+    const session = this.validateSession(result.rows[0]);
+    if (session.token !== token) throw Object.assign(new Error('Checkout-сессия недействительна.'), { status: 409, code: 'CHECKOUT_SESSION_INVALID' });
+    return session;
+  }
+
+  validateSession(session) {
 
     if (!session) {
       const error = new Error("Checkout-сессия не найдена. Перепроверьте предложение.");
@@ -91,7 +105,8 @@ class CheckoutSessionService {
       throw error;
     }
 
-    if (new Date(session.expires_at).getTime() <= Date.now()) {
+    const expiresAt = new Date(session.expires_at).getTime();
+    if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
       const error = new Error("Цена устарела. Вернитесь назад и перепроверьте предложение.");
       error.status = 409;
       error.code = "CHECKOUT_SESSION_EXPIRED";

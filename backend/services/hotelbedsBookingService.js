@@ -2,6 +2,73 @@ const providerConfig = require("../config/providers");
 const hotelbedsProvider = require("../sources/hotelbeds");
 
 class HotelbedsBookingService {
+  prepareIntent(request, session) {
+    // Pure validation of an existing server session, never a search offer from the browser.
+    const invalid = code => { throw Object.assign(new Error('Данные предложения или туристов недействительны. Перепроверьте предложение.'), { status: 409, code }); };
+    const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
+    const text = value => typeof value === 'string' && value.trim().length > 0;
+    const amount = value => ['number', 'string'].includes(typeof value) && text(String(value)) && Number.isFinite(Number(value)) && Number(value) > 0;
+    const integer = (value, minimum) => ['number', 'string'].includes(typeof value) && String(value).trim() !== '' && Number.isSafeInteger(Number(value)) && Number(value) >= minimum;
+    const date = value => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
+      && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value;
+    const fields = ['checkoutToken', 'provider', 'hotelId', 'rateKey', 'price', 'currency', 'priceEnvironment', 'acceptedPriceToken', 'travelers'];
+    if (!object(request) || Object.keys(request).some(key => !fields.includes(key)) || !text(request.checkoutToken)
+      || !Array.isArray(request.travelers) || !object(session) || session.token !== request.checkoutToken) invalid('BOOKING_INTENT_INVALID');
+    const offer = session.offer_snapshot;
+    const now = Date.now(), expiresAt = Date.parse(session.expires_at);
+    if (session.used_at || !Number.isFinite(expiresAt) || expiresAt <= now) invalid('CHECKOUT_SESSION_EXPIRED');
+    if (!object(offer) || offer.checkRatePerformed !== true || !text(offer.checkedRateAt)) invalid('CHECKRATE_CONFIRMATION_REQUIRED');
+    const checkedAt = Date.parse(offer.checkedRateAt);
+    if (!Number.isFinite(checkedAt) || checkedAt > now || checkedAt >= expiresAt
+      || now - checkedAt > require('./checkoutSessionService').getTtlMinutes() * 60000) invalid('CHECKRATE_CONFIRMATION_EXPIRED');
+    if (session.provider !== 'hotelbeds' || offer.provider !== 'hotelbeds' || offer.priceEnvironment !== 'test'
+      || providerConfig.hotelbeds.environment !== 'test') invalid('BOOKING_INTENT_ENVIRONMENT_MISMATCH');
+    if (!text(String(offer.providerHotelId ?? '')) || !text(offer.rateKey) || offer.rateType !== 'BOOKABLE' || offer.recheckRequired !== false
+      || String(session.provider_hotel_id) !== String(offer.providerHotelId) || session.provider_offer_id !== offer.rateKey
+      || offer.offerId !== offer.rateKey || session.rate_type !== 'BOOKABLE') invalid('BOOKING_INTENT_IDENTITY_MISMATCH');
+    if (!amount(offer.price) || !amount(session.total_amount) || !/^[A-Z]{3}$/.test(offer.currency || '')
+      || session.currency !== offer.currency || Math.round(Number(session.total_amount) * 100) !== Math.round(Number(offer.price) * 100)) invalid('BOOKING_INTENT_MONEY_MISMATCH');
+    const expected = { provider: offer.provider, hotelId: offer.providerHotelId, rateKey: offer.rateKey, currency: offer.currency, priceEnvironment: offer.priceEnvironment };
+    for (const [key, value] of Object.entries(expected)) {
+      if (Object.hasOwn(request, key) && (!['string', 'number'].includes(typeof request[key]) || String(request[key]) !== String(value))) invalid('BOOKING_INTENT_SELECTION_MISMATCH');
+    }
+    if (Object.hasOwn(request, 'price') && (!amount(request.price) || Math.round(Number(request.price) * 100) !== Math.round(Number(offer.price) * 100))) invalid('BOOKING_INTENT_PRICE_MISMATCH');
+    if (offer.priceConfirmationRequired && request.acceptedPriceToken !== session.token) invalid('RATE_CHANGED');
+    if (!text(offer.roomCode) || !text(offer.boardCode) || offer.paymentType !== 'AT_WEB' || offer.packaging !== false
+      || !date(offer.checkIn) || !date(offer.checkOut) || !integer(offer.nights, 1)
+      || (Date.parse(offer.checkOut) - Date.parse(offer.checkIn)) / 86400000 !== Number(offer.nights)) invalid('BOOKING_INTENT_STAY_INVALID');
+    const occupancy = offer.occupancy;
+    if (!object(occupancy) || !integer(occupancy.rooms, 1) || Number(occupancy.rooms) !== 1 || !integer(occupancy.adults, 1) || !integer(occupancy.children, 0)
+      || Number(occupancy.adults) !== Number(offer.adults) || Number(occupancy.children) !== Number(offer.children)) invalid('BOOKING_INTENT_OCCUPANCY_INVALID');
+    const childAges = occupancy.children > 0 ? (Array.isArray(offer.childrenAges) ? offer.childrenAges : typeof offer.childrenAges === 'string' ? offer.childrenAges.split(',') : []) : [];
+    if (childAges.length !== Number(occupancy.children) || childAges.some(age => !integer(age, 0) || Number(age) > 17)) invalid('BOOKING_INTENT_OCCUPANCY_INVALID');
+    if (request.travelers.length !== Number(occupancy.adults) + Number(occupancy.children)
+      || request.travelers.some(traveler => !object(traveler) || !['AD', 'CH'].includes(traveler.type)
+        || !text(traveler.firstName) || !text(traveler.lastName) || traveler.firstName.length > 100 || traveler.lastName.length > 100
+        || (traveler.roomId !== undefined && (!integer(traveler.roomId, 1) || Number(traveler.roomId) !== 1)))
+      || request.travelers.filter(traveler => traveler.type === 'AD').length !== Number(occupancy.adults)) invalid('BOOKING_INTENT_TRAVELERS_INVALID');
+    const suppliedAges = request.travelers.filter(traveler => traveler.type === 'CH').map(traveler => traveler.age);
+    if (suppliedAges.some(age => !integer(age, 0) || Number(age) > 17)
+      || JSON.stringify(suppliedAges.map(Number).sort((a, b) => a - b)) !== JSON.stringify(childAges.map(Number).sort((a, b) => a - b))) invalid('BOOKING_INTENT_TRAVELERS_INVALID');
+    // Reuse the checkout identifier; no new durable idempotency infrastructure or PII output.
+    const requestId = require('node:crypto').createHash('sha256').update(session.token).digest('hex').slice(0, 32);
+    return { state: 'INTENT_READY', requestId, provider: offer.provider, hotelId: String(offer.providerHotelId),
+      rateKey: offer.rateKey, price: Number(offer.price), currency: offer.currency,
+      room: { code: offer.roomCode, name: offer.roomName || offer.roomCode }, board: { code: offer.boardCode, name: offer.boardName || offer.boardCode },
+      checkIn: offer.checkIn, checkOut: offer.checkOut, nights: Number(offer.nights),
+      occupancy: { rooms: 1, adults: Number(occupancy.adults), children: Number(occupancy.children) },
+      expectedTravelers: Number(occupancy.adults) + Number(occupancy.children), environment: 'test' };
+  }
+
+  intentBoundary(intent) {
+    // Validate-only foundation: even a future flag change cannot execute booking here.
+    try { this.assertBookingAllowed(); }
+    catch (error) { if (error.code !== 'HOTELBEDS_BOOKING_DISABLED') throw error; }
+    return { success: false, code: 'BOOKING_DISABLED', state: 'BOOKING_DISABLED',
+      providerState: 'PROVIDER_NOT_CALLED', intent,
+      message: 'Предложение проверено. Бронирование и оплата пока недоступны.' };
+  }
+
   assertBookingAllowed() {
     const config = providerConfig.hotelbeds;
 

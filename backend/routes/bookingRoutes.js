@@ -4,6 +4,7 @@ const router = express.Router();
 
 const {
   createBooking,
+  createBookingIntent,
   getBookings,
   getMyBookings,
   getMyBookingDetails,
@@ -24,6 +25,7 @@ const authMiddleware = require("../middleware/authMiddleware");
 const requireRole = require("../middleware/requireRole");
 
 router.post("/", authMiddleware, createBooking);
+router.post("/intent", authMiddleware, createBookingIntent);
 router.get("/me", authMiddleware, getMyBookings);
 router.get("/:id/details", authMiddleware, getMyBookingDetails);
 router.get("/:id/voucher", authMiddleware, getVoucher);

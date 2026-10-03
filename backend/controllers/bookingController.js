@@ -136,6 +136,9 @@ function validateHotelbedsTravelers(travelers, filters = {}) {
 
 const createBooking = async (req, res) => {
   if (require('../config/providers').hotelbeds.stagingTestRequested) return res.status(503).json({ success: false, code: 'HOTELBEDS_READ_ONLY_OPERATION_BLOCKED', message: 'Hotelbeds TEST: бронирование и оплата отключены.' });
+  if (req.body?.provider === 'hotelbeds' && !require('../config/providers').hotelbeds.bookingEnabled) {
+    return res.status(503).json({ success: false, code: 'BOOKING_DISABLED', state: 'BOOKING_DISABLED', providerState: 'PROVIDER_NOT_CALLED', message: 'Бронирование и оплата пока недоступны.' });
+  }
   const client = await pool.connect();
 
   try {
@@ -226,6 +229,7 @@ const createBooking = async (req, res) => {
     });
 
     if (offer.provider === "hotelbeds") {
+      require('../services/hotelbedsBookingService').assertBookingAllowed();
       validateHotelbedsTravelers(travelers, searchFilters);
     } else if (travelers.length === 0 || !travelers[0].firstName || !travelers[0].lastName) {
       await client.query("ROLLBACK");
@@ -589,7 +593,31 @@ const deleteBooking = async (req, res) => {
   }
 };
 
+const createBookingIntent = async (req, res) => {
+  const validationResponse = () => res.status(409).json({ success: false, code: 'VALIDATION_ERROR', state: 'VALIDATION_FAILED',
+    providerState: 'PROVIDER_NOT_CALLED', message: 'Данные предложения или туристов недействительны. Перепроверьте предложение.' });
+  try {
+    const body = req.body;
+    if (!body || typeof body !== 'object' || Array.isArray(body) || typeof body.checkoutToken !== 'string') return validationResponse();
+    const session = await checkoutSessionService.readForIntent(body.checkoutToken);
+    const service = require('../services/hotelbedsBookingService');
+    const intent = service.prepareIntent(body, session);
+    return res.status(503).json(service.intentBoundary(intent));
+  } catch (error) {
+    const validationCodes = new Set(['CHECKOUT_SESSION_REQUIRED', 'CHECKOUT_SESSION_NOT_FOUND', 'CHECKOUT_SESSION_USED',
+      'CHECKOUT_SESSION_EXPIRED', 'CHECKOUT_SESSION_INVALID', 'OFFER_ENVIRONMENT_MISMATCH', 'RATE_CHANGED',
+      'BOOKING_INTENT_INVALID', 'CHECKRATE_CONFIRMATION_REQUIRED', 'CHECKRATE_CONFIRMATION_EXPIRED',
+      'BOOKING_INTENT_ENVIRONMENT_MISMATCH', 'BOOKING_INTENT_IDENTITY_MISMATCH', 'BOOKING_INTENT_MONEY_MISMATCH',
+      'BOOKING_INTENT_SELECTION_MISMATCH', 'BOOKING_INTENT_PRICE_MISMATCH', 'BOOKING_INTENT_STAY_INVALID',
+      'BOOKING_INTENT_OCCUPANCY_INVALID', 'BOOKING_INTENT_TRAVELERS_INVALID']);
+    if (validationCodes.has(error?.code)) return validationResponse();
+    return res.status(503).json({ success: false, code: 'RETRYABLE_INTERNAL_ERROR', providerState: 'PROVIDER_NOT_CALLED',
+      message: 'Не удалось проверить предложение. Повторите попытку позже.' });
+  }
+};
+
 module.exports = {
+  createBookingIntent,
   createBooking,
   getBookings,
   getMyBookings,
