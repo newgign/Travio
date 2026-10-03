@@ -1,0 +1,16 @@
+{
+  "scope": "both",
+  "ownerChecks": {
+    "home": "NOT_RUN",
+    "authSession": "NOT_RUN",
+    "profile": "NOT_RUN",
+    "favorites": "NOT_RUN",
+    "myBookings": "NOT_RUN",
+    "helpLegal": "NOT_RUN",
+    "changedFeature": "NOT_RUN",
+    "health": "NOT_RUN",
+    "readiness": "NOT_RUN",
+    "changedEndpoint": "NOT_RUN"
+  },
+  "notes": "Replace statuses only with explicit owner evidence. Notes are not included in generated output."
+}
