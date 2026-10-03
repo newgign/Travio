@@ -2,15 +2,15 @@
 
 SPRINT 6I — CODE / OFFLINE: **PASS — tested scope**.
 CHECKRATE DIAGNOSTIC: **PASS — tested scope**.
-ROOT-CAUSE CLASSIFICATION: **A. CODE DEFECT FOUND AND FIXED** — offline classification/integrity defects; causal attribution of the three staging attempts remains unproven.
+ROOT-CAUSE CLASSIFICATION: **A. CODE DEFECT FOUND AND FIXED** — offline classification/integrity defects; current correlated request confirms an internal pre-CheckRate branch; causal attribution of the three historical staging attempts remains unproven.
 
 ## 1. Staging evidence
 
-Owner observed three separate TEST attempts, including different destinations/offers: Availability and Hotel Details passed, selected price/room/board displayed, CheckRate normalized to UNAVAILABLE, UI blocked the offer without raw provider errors. Successful staging CheckRate confirmation NOT OBSERVED; staging root cause NOT ESTABLISHED. Start: `develop`, tracked tree clean, HEAD `7b444c1` (Sprint 6H report); 6H committed. Unrelated untracked owner files retained.
+Owner observed three separate TEST attempts, including different destinations/offers: Availability and Hotel Details passed, selected price/room/board displayed, CheckRate normalized to UNAVAILABLE, UI blocked the offer without raw provider errors. Successful staging CheckRate confirmation NOT OBSERVED; the three historical requests remain unattributed. The later correlated owner request is analyzed in section 13. Start: `develop`, tracked tree clean, HEAD `7b444c1` (Sprint 6H report); 6H committed. Unrelated untracked owner files retained.
 
 ## 2. Offer lifecycle
 
-Availability rate → `normalizeHotel` → existing `offerService.generateOffer` → signed compact offer → selected-offer Details snapshot → Checkout token verification → existing CheckRate builder → checked-rate identity/money normalization → existing checkout session. RECHECK uses the signed selection directly; BOOKABLE retains its existing Availability refresh path without forcing CheckRate. Direct navigation resolves a server provider offer rather than trusting browser rate/price fields. Details preserves the selected snapshot and rejects mismatched/stale selection. No frontend/Checkout UX rewrite.
+Availability rate → `normalizeHotel` → existing `offerService.generateOffer` → signed compact offer → selected-offer Details snapshot → Checkout token verification → existing CheckRate builder → checked-rate identity/money normalization → existing checkout session. Checkout uses the signed selection directly and explicitly requests CheckRate confirmation for both BOOKABLE and RECHECK. Other provider callers retain the default RECHECK-only behavior. Availability refresh is no longer a checkout confirmation prerequisite. Direct navigation resolves a server provider offer rather than trusting browser rate/price fields. Details preserves the selected snapshot and rejects mismatched/stale selection. No frontend/Checkout UX rewrite.
 
 ## 3. rateKey integrity
 
@@ -44,7 +44,7 @@ Existing request unchanged: POST `/hotel-api/1.0/checkrates`, JSON `rooms: [{ ra
 | Unknown internal exception | Technical/retryable | RETRYABLE_ERROR / INTERNAL_ERROR |
 | Missing offer-token signing configuration | Wrapped as OFFER_TOKEN_INVALID → UNAVAILABLE (defect) | RETRYABLE_ERROR / INTERNAL_ERROR; original configuration code retained |
 
-No undocumented provider wire error code is assumed to mean expired/unavailable rate. Unknown provider bodies/messages/codes are not copied into logs/UI. Existing 6E tests were not rewritten; no classification contradiction remains in those tests. No Availability price is promoted into CheckRate confirmation, no alternate hotel/key substituted, no errors suppressed and no forced successful result.
+No undocumented provider wire error code is assumed to mean expired/unavailable rate. Unknown provider bodies/messages/codes are not copied into logs/UI. Follow-up updates only the two 6E BOOKABLE checkout expectations: confirmation and malformed-response handling now use CheckRate instead of Availability. Other 6E assertions are retained. No Availability price is promoted into CheckRate confirmation, no alternate hotel/key substituted, no errors suppressed and no forced successful result.
 
 ## 7. Safe diagnostics
 
@@ -54,16 +54,18 @@ Whitelisted metadata only: TEST, numeric hotel identifier, key presence/fingerpr
 
 ## 8. Tests
 
-- Diagnostic focused FINAL: **32/32 PASS**.
-- Existing CheckRate focused: **22/22 PASS**, unchanged assertions; repeated only after token runtime changed. Final full run also includes these suites.
-- Initial diagnostic concurrency fixture accidentally generated two different observedAt snapshots; corrected to one identical selected offer. Later missing-signing-configuration test found diagnostic reason still labelled selection invalid; internal reason corrected and failed diagnostic suite rerun.
-- Full backend FINAL: **545/559**, one run after final runtime, 42 files; **14 known DB-blocked cases**. One earlier intermediate full run also produced 545/559 before the last signing-configuration guard; final run was necessary because source then changed. No full backend PASS claimed.
-- Same 14 blocked cases as 6H: access 1, catalog planner 1, content 3, multi-destination 1, public search 1, staging TEST 6, staging acceptance 1. OS-temp lazy PostgreSQL guard forbids real queries/connections; dedicated `hotelbedsCatalog.integration.test.js` excluded because it requires a real isolated PostgreSQL schema.
-- Frontend runtime unchanged. Full frontend/lint/build: **NOT RUN — not required**.
-- Verifier: PASS, 222 backend syntax files / 485 scanned files, no findings. 6A: PASS. Diff-check: PASS. Final gates each run once; runtime source unchanged after final focused correction. No 6B while tracked source is intentionally dirty.
+- Follow-up diagnostic focused: **37/37 PASS**.
+- Existing CheckRate focused: **22/22 PASS**. Only the two BOOKABLE checkout expectations changed for the corrected confirmation contract.
+- Follow-up full backend: **550/564**, exactly one run on final runtime, 42 files; **14 known DB-blocked cases**, no new failures. No full backend PASS claimed.
+- Same 14 blocked cases: access 1, catalog planner 1, content 3, multi-destination 1, public search 1, staging TEST 6, staging acceptance 1. OS-temp lazy PostgreSQL guard forbids real queries/connections; dedicated `hotelbedsCatalog.integration.test.js` excluded because it requires a real isolated PostgreSQL schema. HTTPS is blocked by the existing offline preload.
+- Prior 6I evidence retained as historical: diagnostic 32/32, CheckRate 22/22, backend 545/559 with the same 14 DB-blocked cases; the previous turn had an intermediate and a final full run. The follow-up has only one full run.
+- Frontend runtime unchanged. Full frontend/lint/build: **NOT RUN -- not required**.
+- Follow-up verifier: PASS. 6A: PASS. Diff-check: PASS. Runtime did not change after focused verification. No 6B while tracked source is intentionally dirty.
 - Real Availability, CheckRate, Hotelbeds Booking, payment calls and real DB mutations: **0**; transport, access gate and sessions mocked, HTTPS and real DB access prohibited.
 
-## 9. Exact files
+## 9. Historical initial 6I files
+
+The following list describes the initial 6I implementation. Current follow-up files are listed in section 13.
 
 Modified:
 
@@ -80,7 +82,7 @@ New:
 
 ## 10. Root-cause classification
 
-**A. CODE DEFECT FOUND AND FIXED.** Offline evidence proves over-broad HTTP 4xx classification, missing-age response classification, blank-age defaulting and missing signing-config classification defects. Exact key/request envelope preservation is proven; no rateKey transport defect found. This classification covers demonstrated code defects, not attribution of the three actual staging failures.
+**A. CODE DEFECT FOUND AND FIXED.** Offline evidence proves over-broad HTTP 4xx classification, missing-age response classification, blank-age defaulting and missing signing-config classification defects. Exact key/request envelope preservation is proven; no rateKey transport defect found. The follow-up also fixes the proven BOOKABLE checkout branch that could fail during Availability refresh before CheckRate. This classification covers demonstrated code defects, not attribution of the three actual staging failures.
 
 ## 11. Remaining uncertainty
 
@@ -90,8 +92,39 @@ Repeated UNAVAILABLE has not been attributed to Hotelbeds or Asedeliya unless ev
 
 **READY after a separately authorized backend deployment.** No deployment or owner call performed by Codex.
 
-1. Use exactly one fresh Hotelbeds TEST search and selected offer requiring CheckRate (RECHECK), then Details → Checkout once. Keep the original selected snapshot; do not edit token/key/occupancy or repeat/retry. Use the intended occupancy/explicit child ages. Stop at the result; do not initiate booking/payment. BOOKABLE may follow existing refresh without CheckRate; if no CheckRate prepared event occurs, record that path without forcing another request.
+1. Use exactly one fresh Hotelbeds TEST search and selected BOOKABLE or RECHECK offer, then Details → Checkout once. Keep the original selected snapshot; do not edit token/key/occupancy or repeat/retry. Use the intended occupancy/explicit child ages. Stop at the result; do not initiate booking/payment. Both eligible rate types must now reach CheckRate preparation. If no prepared event occurs, record the safe validation/configuration reason without retrying.
 2. Browser Network: inspect only General, Payload and Response/Preview for the Checkout request. Record method/status, safe hotel/provider/occupancy fields, normalized checkRateStatus/code and returned requestId. **Do not inspect/share Request Headers. Do not share full Payload/Response**: existing objects contain offer/session tokens and opaque rateKeys. Use selected safe fields only, or redact those values completely; do not share PII.
 3. Owner reads Render backend logs around that returned requestId and filters `checkRateDiagnostic` events. If sharedRequestId appears, include that safe ID's events too. Record ordered stage, decoded/prepared key fingerprint and byte length, occupancy/ages, HTTP status/category, fixed reason, completion stage and normalized outcome. No raw keys/headers/provider bodies needed.
-4. Compare decoded/prepared fingerprints: mismatch identifies pre-provider identity corruption; absence of prepared stage identifies token/selection validation failure. Prepared with no HTTP observation identifies pre-response configuration/access/timeout/network/internal failure. Actual 400/404/422 identifies provider request rejection; 401/403 auth, 429 rate limit, 5xx server error remain technical. 2xx plus malformed reason identifies response contract validation; 2xx plus rate identity mismatch identifies product-matching failure; valid empty lists support unavailable. Do not infer exact provider root cause from the category alone.
+4. Compare decoded/prepared fingerprints: mismatch identifies pre-provider identity corruption; absence of prepared stage requires tracing the recorded validation/configuration reason; it alone does not identify the exact predicate. Prepared with no HTTP observation identifies pre-response configuration/access/timeout/network/internal failure. Actual 400/404/422 identifies provider request rejection; 401/403 auth, 429 rate limit, 5xx server error remain technical. 2xx plus malformed reason identifies response contract validation; 2xx plus rate identity mismatch identifies product-matching failure; valid empty lists support unavailable. Do not infer exact provider root cause from the category alone.
 5. Share only those safe observations once. If outcome remains UNAVAILABLE/RETRYABLE_ERROR, keep successful staging CheckRate NOT OBSERVED and diagnose from the captured single attempt. No automatic retry storm or additional quota consumption. OWNER ONE-CALL DIAGNOSTIC: **READY, NOT RUN**.
+
+## 13. Staging root-cause follow-up
+
+**INTERNAL PRE-PROVIDER CHECKRATE DEFECT CONFIRMED** for the correlated current request, independently of the three historical attempts.
+
+Owner evidence: requestId `07687474-8c7a-4a60-a794-932898c1b416`, POST `/api/checkout/review`, HTTP 409, `UNAVAILABLE`, code `RATE_NOT_AVAILABLE`. Trusted offer: hotel 7654, key present and 144 bytes, room DBL.SU, board RO, EUR 621.32, 1 room / 2 adults / 0 children / ages [], 2026-10-26 to 2026-11-02. Stages were REQUEST_RECEIVED, TRUSTED_OFFER_DECODED, NORMALIZED_OUTCOME; completedAt TRUSTED_OFFER_DECODED, HTTP null / NOT_OBSERVED, reason RATE_UNAVAILABLE. No CheckRate preparation or response was observed. No raw key is recorded.
+
+### Exact code trace before the fix
+
+`backend/controllers/checkoutController.js::getCheckout` verifies the signed token, matches provider/hotel and logs TRUSTED_OFFER_DECODED. It then checks TEST environment, nonempty key, hotel, BOOKABLE/RECHECK type, positive price/currency and trusted occupancy/child ages. Those guards throw environment/token/selection codes, not RATE_NOT_AVAILABLE. The only subsequent pre-CheckRate path producing the captured code is `if (offerToken && offer.rateType !== 'RECHECK') refreshOffer(offer)`; following validation, that means a signed BOOKABLE offer. CheckRate itself was gated by `offer.rateType === 'RECHECK'`.
+
+`backend/sources/hotelbeds.js::refreshOffer` calls Availability, finds hotel and room, then requires `room.rates.find(item => item.rateKey === offer.rateKey)`. It throws RATE_NOT_AVAILABLE on `!rate || rate.packaging || rate.paymentType === 'AT_HOTEL'`; its subsequent `hotelbedsRateIdentity.selectCheckedRate` can also throw that code if no unique matching product exists. The controller catch maps this code to HTTP 409 / UNAVAILABLE; diagnostic.reason maps it to RATE_UNAVAILABLE. Availability is not instrumented as CheckRate, so completion remains TRUSTED_OFFER_DECODED with no CheckRate HTTP observation. Availability could have been called: this evidence does not establish that no provider API of any kind was reached.
+
+**Evidence boundary:** the logs uniquely identify this refresh branch in the inspected code, but do not distinguish the individual `!rate` / packaging / AT_HOTEL / identity predicates or show rateType directly. Claiming a missing key in refreshed Availability, absent optional metadata, or an expired provider key as the exact staging subcause would be speculation. The proven defect is making this Availability-only selection test a prerequisite for CheckRate and allowing BOOKABLE checkout to bypass actual CheckRate confirmation. The three historical requests are not assigned this cause.
+
+### Narrow fix and regression contract
+
+Checkout removes the signed BOOKABLE Availability refresh and calls `checkRateOffer(offer, { confirmBookable: true })` for both eligible types. The provider explicitly supports this checkout confirmation option; default callers retain BOOKABLE skipping and RECHECK behavior. Pending-request identity includes that option, preventing sharing a bypass result with a confirmation request. Unknown types fail with a distinct technical selection reason; missing/empty/non-string keys fail safely. The request envelope, opaque key, identity checks, price normalization, TEST restriction, booking/payment guards and transport remain unchanged.
+
+No Availability price is used as confirmation. Only an actual mocked CheckRate response can create a checked snapshot. Provider rejection/timeout/auth/429/5xx remain technical; valid empty provider lists remain unavailable after response. Optional display labels/comments/cancellation metadata are not eligibility prerequisites. Required product identity is still validated after response; no identity rules were weakened.
+
+Five added diagnostic tests cover staging-shaped BOOKABLE and RECHECK, a synthetic 144-byte key, the exact safe hotel/room/board/currency/amount/occupancy/dates, optional display metadata omitted, exactly one CheckRate call, no Availability call, confirmation from provider response, and provider-derived unavailable only after PREPARED/RESPONSE. Missing/empty/non-string keys are separately blocked. Existing privacy/technical-error tests remain.
+
+Follow-up modified files only:
+- `backend/controllers/checkoutController.js`
+- `backend/sources/hotelbeds.js`
+- `backend/tests/checkRateReadiness.test.cjs`
+- `backend/tests/checkRateStagingDiagnostic.test.cjs`
+- `SPRINT_6I_HOTELBEDS_CHECKRATE_STAGING_DIAGNOSTIC_REPORT.md`
+
+Frontend, token schema, transport, DB/schema, booking and payments unchanged. External Hotelbeds calls and real DB mutations: 0. No deployment, staging retest or git staging/commit/push performed. NEXT OWNER ONE-CALL RETEST: READY after separately authorized backend deployment; successful staging confirmation remains NOT OBSERVED.
