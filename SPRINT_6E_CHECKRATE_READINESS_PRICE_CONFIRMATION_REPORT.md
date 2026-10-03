@@ -82,18 +82,50 @@ New:
 
 ## 10. Known limitations
 
-Overall CODE / OFFLINE: PASS — tested scope. CHECKRATE READINESS: PASS. Final preload suites and full frontend passed with no source fixes needed. Full backend remains 438/454 HISTORICAL SINGLE RUN; its 14 DB-blocked cases remain unverified under the intentional no-real-DB constraint, and no 454/454 is claimed. Provider/browser acceptance remains NOT RUN. Existing checkout session storage requires configured DB in deployed runtime; it was mocked in focused verification. Protected Checkout still requires the existing authenticated session.
+Overall CODE / OFFLINE: PASS — tested scope. CHECKRATE READINESS: PASS. Final preload suites and full frontend passed with no source fixes needed. Full backend remains 438/454 HISTORICAL SINGLE RUN; its 14 DB-blocked cases remain unverified under the intentional no-real-DB constraint, and no 454/454 is claimed. Owner browser acceptance is now PASS — tested scope, based on explicit owner evidence below. Existing checkout session storage requires configured DB in deployed runtime; it was mocked in focused verification. Protected Checkout still requires the existing authenticated session.
 
 Backend deduplication is in-process and pending-only, not cross-process idempotency. BOOKABLE refresh requires the same rate/product; changed opaque keys require a new search unless returned through RECHECK. No default extra provider search or retry loop added.
 
-## 11. Owner browser acceptance plan
+## 11. Owner browser acceptance evidence
 
-After a future staging deploy, with an existing authenticated session:
+Owner browser acceptance has now been performed on deployed staging. This is human-supplied evidence; no browser, Hotelbeds, Render or deployment operation was performed during recording.
 
-1. Select a real TEST search offer, open Hotel Details and choose “Проверить стоимость”.
-2. Verify loading appears and the browser stays responsive.
-3. Verify confirmed price/currency, room and board; no raw error.
-4. Verify booking/payment remain unavailable; confirmation is not a booking.
-5. If a naturally occurring changed price appears, verify old/new amounts and explicit acceptance. Do not force it through repeated provider requests.
+BACKEND STAGING DEPLOY: PASS
 
-PRICE_CHANGED OWNER CASE: NOT OBSERVED. OWNER BROWSER ACCEPTANCE: NOT RUN. PRODUCTION SALES READY: NOT CLAIMED.
+- /health: PASS
+- /api/health/ready: PASS
+- Database reachable through readiness: PASS
+
+FRONTEND STAGING DEPLOY: PASS
+
+- Home: PASS
+- Auth/session: PASS
+- Profile: PASS
+- Favorites: PASS
+- My Bookings: PASS
+- Help/legal: PASS
+- No blank screen: PASS
+
+Hotelbeds TEST search and hotel details worked. CheckRate executed and returned UNAVAILABLE. UI correctly displayed that the selected offer is no longer available, with safe Back/navigation present.
+
+CHECKRATE OWNER FLOW: UNAVAILABLE — PASS
+
+SAME_PRICE OWNER CASE: NOT OBSERVED
+
+PRICE_CHANGED OWNER CASE: NOT OBSERVED
+
+These optional unobserved cases do not make staging acceptance incomplete and are not recorded as PASS.
+
+RAW PROVIDER ERROR: NO
+
+BOOKING ENABLED: NO
+
+PAYMENTS ENABLED: NO
+
+OWNER BROWSER ACCEPTANCE: PASS — tested scope
+
+STAGING ACCEPTANCE: PASS — tested scope
+
+Recorded using the unchanged 6D schema: `STAGING_RELEASE_EVIDENCE_6E.json` → `STAGING_RELEASE_EVIDENCE_6E.md`. Recorder returned STAGING ACCEPTANCE: PASS; 6A PASS, 6B PASS, 6C READY, local branch develop, commit 444266d198e5. Local commit is metadata, not independent proof of deployed commits. CheckRate confirmation is not booking confirmation. Offline test numbers/results above are unchanged.
+
+PRODUCTION SALES READY: NOT CLAIMED.

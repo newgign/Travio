@@ -1,0 +1,16 @@
+{
+  "scope": "both",
+  "ownerChecks": {
+    "home": "PASS",
+    "authSession": "PASS",
+    "profile": "PASS",
+    "favorites": "PASS",
+    "myBookings": "PASS",
+    "helpLegal": "PASS",
+    "changedFeature": "PASS",
+    "health": "PASS",
+    "readiness": "PASS",
+    "changedEndpoint": "PASS"
+  },
+  "notes": "Explicit owner evidence on deployed staging: /health PASS; /api/health/ready PASS; database reachable through readiness PASS. Home, auth/session, Profile, Favorites, My Bookings, Help/legal and no blank screen PASS. Hotelbeds TEST search and hotel details worked. CheckRate executed and returned UNAVAILABLE; selected-offer-unavailable UI and safe Back/navigation were correct. CHECKRATE OWNER FLOW: UNAVAILABLE — PASS. Raw provider error exposed: NO. Booking enabled: NO. Payments enabled: NO. SAME_PRICE OWNER CASE: NOT OBSERVED. PRICE_CHANGED OWNER CASE: NOT OBSERVED. Optional unobserved cases are not required checks. Production sales ready: NOT CLAIMED."
+}
