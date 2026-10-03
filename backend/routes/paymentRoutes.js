@@ -7,6 +7,7 @@ const {
   payBooking,
   getPaymentReadiness,
   createPaymentIntent,
+  createCheckoutPaymentIntent,
 } = require("../controllers/paymentController");
 
 const { requestSandboxRefund, completeSandboxRefund } = require("../controllers/refundController");
@@ -14,6 +15,7 @@ const { requestSandboxRefund, completeSandboxRefund } = require("../controllers/
 const authMiddleware = require("../middleware/authMiddleware");
 
 router.get("/readiness", authMiddleware, getPaymentReadiness);
+router.post("/intent", authMiddleware, createCheckoutPaymentIntent);
 router.post("/:id/intent", authMiddleware, createPaymentIntent);
 router.post("/:id/refund/request", authMiddleware, requestSandboxRefund);
 router.post("/:id/refund/complete-sandbox", authMiddleware, completeSandboxRefund);

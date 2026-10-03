@@ -250,7 +250,21 @@ const createPaymentIntent = async (req, res) => {
   }
 };
 
+const createCheckoutPaymentIntent = async (req, res) => {
+  try {
+    return res.status(503).json(await paymentGatewayService.prepareCheckoutIntent(req.body));
+  } catch (error) {
+    const validation = ['PAYMENT_PREREQUISITE_MISSING', 'PAYMENT_VALIDATION_ERROR'].includes(error?.code);
+    return res.status(validation ? 409 : 503).json({ success: false,
+      code: validation ? error.code : 'INTERNAL_RETRYABLE_ERROR',
+      state: validation ? 'PAYMENT_VALIDATION_ERROR' : 'PAYMENT_NOT_STARTED',
+      providerState: 'PROVIDER_NOT_CALLED', paymentState: 'PAYMENT_NOT_STARTED',
+      message: validation ? 'Перепроверьте предложение и данные гостей.' : 'Не удалось проверить данные. Повторите попытку позже.' });
+  }
+};
+
 module.exports = {
+  createCheckoutPaymentIntent,
   payBooking,
   getPayment,
   getPaymentReadiness,

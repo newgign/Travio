@@ -94,4 +94,40 @@ async function createIntent({ bookingId, userId, isAdmin = false }) {
   return { readiness: state, payment };
 }
 
-module.exports = { readiness, createIntent };
+async function prepareCheckoutIntent(request) {
+  // Validate-only checkout foundation; never delegates to the sandbox/PSP path.
+  const reject = code => { throw Object.assign(new Error('Payment intent validation failed'), { status: 409, code }); };
+  if (!request || typeof request !== 'object' || Array.isArray(request)) reject('PAYMENT_VALIDATION_ERROR');
+  const fields = ['checkoutToken', 'travelers', 'review', 'acceptedPriceToken', 'provider', 'hotelId', 'rateKey', 'price', 'currency', 'priceEnvironment'];
+  // Reject unknown fields, including card credentials, client states and booking references.
+  if (Object.keys(request).some(key => !fields.includes(key))) reject('PAYMENT_VALIDATION_ERROR');
+  if (request.review !== true || typeof request.checkoutToken !== 'string' || !request.checkoutToken) reject('PAYMENT_PREREQUISITE_MISSING');
+  let session, bookingIntent, review;
+  try {
+    session = await require('./checkoutSessionService').readForIntent(request.checkoutToken);
+    const booking = require('./hotelbedsBookingService');
+    bookingIntent = booking.prepareIntent(request, session);
+    // REVIEW_READY is reconstructed server-side, never accepted as a browser assertion.
+    review = booking.reviewPreview(bookingIntent, session);
+  } catch (error) {
+    const prerequisites = new Set(['CHECKOUT_SESSION_REQUIRED', 'CHECKOUT_SESSION_NOT_FOUND', 'CHECKOUT_SESSION_USED',
+      'CHECKOUT_SESSION_EXPIRED', 'CHECKOUT_SESSION_INVALID', 'OFFER_ENVIRONMENT_MISMATCH', 'RATE_CHANGED',
+      'CHECKRATE_CONFIRMATION_REQUIRED', 'CHECKRATE_CONFIRMATION_EXPIRED']);
+    if (prerequisites.has(error.code)) reject('PAYMENT_PREREQUISITE_MISSING');
+    if (/^BOOKING_INTENT_/.test(error.code || '')) reject('PAYMENT_VALIDATION_ERROR');
+    throw error;
+  }
+  if (bookingIntent.state !== 'INTENT_READY' || review.state !== 'REVIEW_READY') reject('PAYMENT_PREREQUISITE_MISSING');
+  const payment = readiness();
+  // Hard stop even if someone requests sandbox/live flags. No row, reference or transaction is created.
+  return { success: false, code: 'PAYMENTS_DISABLED', state: 'PAYMENTS_DISABLED',
+    providerState: 'PROVIDER_NOT_CALLED', paymentState: 'PAYMENT_NOT_STARTED', bookingState: 'BOOKING_DISABLED',
+    bookingAvailable: false, paymentAvailable: false,
+    intent: { state: 'PAYMENT_INTENT_READY', reviewState: review.state, requestId: bookingIntent.requestId,
+      provider: bookingIntent.provider, hotelId: bookingIntent.hotelId, environment: bookingIntent.environment,
+      mode: payment.mode, paymentProvider: payment.provider, amount: bookingIntent.price, currency: bookingIntent.currency,
+      expiresAt: review.expiresAt },
+    message: 'Оплата пока недоступна. Бронь не создана. Списаний нет.' };
+}
+
+module.exports = { readiness, createIntent, prepareCheckoutIntent };
