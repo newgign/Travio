@@ -2,6 +2,7 @@ const displayRates = require('../services/hotelbedsDisplayRates');
 const pricing = require("../services/hotelbedsPriceService");
 const hotelbedsClient = require("../integrations/hotelbeds/client");
 const providerCatalogRepository = require("../repositories/providerCatalogRepository");
+const checkRateDiagnostic = require('../services/checkRateDiagnostic');
 
 class HotelbedsProvider {
   checkRatePending = new Map();
@@ -59,8 +60,13 @@ class HotelbedsProvider {
   checkRateOffer(offer) {
     // Only share simultaneous identical selections; never cache completed rates.
     const key = JSON.stringify(offer);
-    if (this.checkRatePending.has(key)) return this.checkRatePending.get(key);
+    if (this.checkRatePending.has(key)) {
+      const shared = this.checkRatePending.get(key);
+      checkRateDiagnostic.emit('PROVIDER_REQUEST_SHARED', { sharedRequestId: shared.checkRateRequestId });
+      return shared;
+    }
     const pending = this.performCheckRateOffer(offer).finally(() => this.checkRatePending.delete(key));
+    pending.checkRateRequestId = checkRateDiagnostic.requestId();
     this.checkRatePending.set(key, pending);
     return pending;
   }
@@ -82,20 +88,22 @@ class HotelbedsProvider {
     catch (error) {
       const unavailable = error.code === 'RATE_NOT_AVAILABLE';
       throw Object.assign(new Error(unavailable ? 'Выбранный тариф недоступен.' : 'Не удалось проверить стоимость. Повторите попытку.'),
-        { status: unavailable ? 409 : 503, code: unavailable ? 'RATE_NOT_AVAILABLE' : 'CHECKRATE_RETRYABLE_ERROR' });
+        { status: unavailable ? 409 : 503, code: unavailable ? 'RATE_NOT_AVAILABLE' : 'CHECKRATE_RETRYABLE_ERROR',
+          diagnosticReason: checkRateDiagnostic.reason(error), providerHttpStatus: error.providerHttpStatus || null });
     }
     if (Array.isArray(response?.hotels?.hotels) && response.hotels.hotels.length === 0) {
       throw Object.assign(new Error('Выбранный тариф недоступен.'), { status: 409, code: 'HOTELBEDS_RECHECK_UNAVAILABLE' });
     }
     const hotel = response?.hotel || response?.hotels?.hotels?.[0] || null;
     const malformed = () => Object.assign(new Error('Не удалось проверить стоимость. Повторите попытку.'),
-      { status: 503, code: 'CHECKRATE_RETRYABLE_ERROR' });
+      { status: 503, code: 'CHECKRATE_RETRYABLE_ERROR', diagnosticReason: 'MALFORMED_PROVIDER_RESPONSE' });
     // Empty valid lists mean unavailable; absent or malformed lists mean unknown.
     if (!hotel || !Array.isArray(hotel.rooms) || hotel.code == null || !/^[A-Z]{3}$/.test(hotel.currency || '')
       || hotel.rooms.some(room => !room || !room.code || !Array.isArray(room.rates) || room.rates.some(rate => !rate
         || typeof rate !== 'object' || !rate.rateKey || !rate.rateType || !rate.boardCode || !rate.rateClass
         || !rate.paymentType || typeof rate.packaging !== 'boolean'
-        || ['rooms', 'adults', 'children'].some(field => !Number.isInteger(Number(rate[field])) || rate[field] == null)))) throw malformed();
+        || ['rooms', 'adults', 'children'].some(field => !Number.isInteger(Number(rate[field])) || rate[field] == null)
+        || (Number(rate.children) > 0 && checkRateDiagnostic.childAges(rate.childrenAges, rate.children) === null)))) throw malformed();
     const candidates = [];
 
     for (const room of hotel?.rooms || []) {
@@ -113,7 +121,9 @@ class HotelbedsProvider {
       throw error;
     }
 
-    const selected = require('../services/hotelbedsRateIdentity').selectCheckedRate(offer, response);
+    let selected;
+    try { selected = require('../services/hotelbedsRateIdentity').selectCheckedRate(offer, response); }
+    catch (error) { if (error.code === 'RATE_NOT_AVAILABLE') error.diagnosticReason = 'RATE_IDENTITY_MISMATCH'; throw error; }
     if (!selected) throw Object.assign(new Error("Выбранный тариф недоступен"), { status: 409, code: "RATE_NOT_AVAILABLE" });
     const priceDetails = pricing.extract(selected.rate, selected.hotel.currency || selected.rate.currency);
     if (!priceDetails || !selected.rate.rateKey || !['BOOKABLE', 'RECHECK'].includes(selected.rate.rateType)) throw malformed();
@@ -278,12 +288,9 @@ class HotelbedsProvider {
     };
 
     if (children > 0) {
-      const ages = String(filters.childrenAges)
-        .split(",")
-        .map((value) => Number(value.trim()))
-        .filter((value) => Number.isFinite(value) && value >= 0 && value <= 17);
+      const ages = checkRateDiagnostic.childAges(filters.childrenAges, children);
 
-      if (ages.length !== children) {
+      if (ages === null) {
         const error = new Error(
           "Количество childrenAges должно совпадать с children."
         );

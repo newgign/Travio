@@ -97,6 +97,7 @@ class OfferTokenService {
 
       return payload.offer;
     } catch (error) {
+      if (error.code === 'OFFER_TOKEN_SECRET_MISSING') throw error;
       const wrapped = new Error(
         error.name === "TokenExpiredError"
           ? "Выбранное предложение устарело. Выполните новый поиск."

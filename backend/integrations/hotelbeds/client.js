@@ -192,6 +192,7 @@ class HotelbedsClient {
       attempted = true;
       const response = await http.request(requestConfig);
       observedHttpStatus = response.status;
+      if (category === 'checkrate' && !response.data?.error) require('../../services/checkRateDiagnostic').emit('PROVIDER_RESPONSE_RECEIVED', { httpStatus: response.status });
       if (response.data?.error) throw { response: { status: 502 } };
       observation = {success:true,httpStatus:response.status};
       this.health = { providerReachable: true, lastSuccessfulRequest: new Date().toISOString(), lastErrorCategory: null, httpStatus: response.status };
@@ -202,12 +203,18 @@ class HotelbedsClient {
       const status = Number(error.response?.status || error.status) || 502;
       const code = [401, 403].includes(status) ? 'AUTH_ERROR' : status === 429 ? 'RATE_LIMIT' :
         ['ECONNABORTED', 'ETIMEDOUT'].includes(error.code) ? 'TIMEOUT' : status >= 500 ? 'PROVIDER_UNAVAILABLE' :
-        category === 'checkrate' ? 'RATE_NOT_AVAILABLE' : category === 'booking' && method === 'DELETE' ? 'CANCELLATION_FAILED' :
+        category === 'checkrate' ? 'CHECKRATE_PROVIDER_REJECTED' : category === 'booking' && method === 'DELETE' ? 'CANCELLATION_FAILED' :
         category === 'booking' && method === 'POST' ? 'BOOKING_REJECTED' : 'INVALID_REQUEST';
       observation = {success:false,httpStatus:observedHttpStatus || Number(error.response?.status) || null,errorCategory:code};
       this.health = { ...this.health, providerReachable: false, lastErrorCategory: code, httpStatus: Number(error.response?.status) || null };
       logger.warn('Hotelbeds request failed', { environment: this.config.environment, category, status, duration: Date.now() - started, errorCategory: code });
       const wrapped = Object.assign(new Error('Предложение временно недоступно. Повторите поиск позже.'), { status: status >= 500 ? 503 : status === 429 ? 503 : 409, code, provider: 'hotelbeds' });
+      if (category === 'checkrate') {
+        const diagnostic = require('../../services/checkRateDiagnostic');
+        wrapped.providerHttpStatus = observedHttpStatus || Number(error.response?.status) || null;
+        wrapped.diagnosticReason = observedHttpStatus && observedHttpStatus < 400 ? 'UNKNOWN_PROVIDER_ERROR' : diagnostic.reason(error);
+        diagnostic.emit('PROVIDER_RESPONSE_RECEIVED', { httpStatus: wrapped.providerHttpStatus, reason: wrapped.diagnosticReason });
+      }
       const retryAfter = error.response?.headers?.['retry-after'];
       if (this.config.environment === 'test') wrapped.accessDiagnostics = require('./accessDiagnostics').normalizeAccessError(error.response);
       wrapped.retryAfterMs = Math.min(30000, Math.max(0, Number(retryAfter) * 1000 || Date.parse(retryAfter) - Date.now() || 0));
@@ -242,6 +249,7 @@ class HotelbedsClient {
 
   checkRates(rateKeys) {
     const keys = Array.isArray(rateKeys) ? rateKeys : [rateKeys];
+    require('../../services/checkRateDiagnostic').prepared(keys[0]);
 
     return this.request({
       channel: "booking",

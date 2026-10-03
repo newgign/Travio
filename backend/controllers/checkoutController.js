@@ -4,8 +4,11 @@ const checkoutSessionService = require("../services/checkoutSessionService");
 const providerManager = require("../providers/providerManager");
 const logger = require("../utils/logger");
 const hotelbedsBookingService = require("../services/hotelbedsBookingService");
+const checkRateDiagnostic = require('../services/checkRateDiagnostic');
 
-const getCheckout = async (req, res, next) => {
+const getCheckout = (req, res, next) => checkRateDiagnostic.run(req.requestId, async () => {
+  const diagnosticAttempt = req.body?.provider === 'hotelbeds' || Boolean(req.body?.offerToken);
+  if (diagnosticAttempt) checkRateDiagnostic.emit('REQUEST_RECEIVED');
   try {
     const {
       provider = "mock",
@@ -57,7 +60,7 @@ const getCheckout = async (req, res, next) => {
         people: Math.max(Number(offer.adults) || 1, 1),
         adults: Math.max(Number(offer.adults) || 1, 1),
         children: Math.max(Number(offer.children) || 0, 0),
-        childrenAges: offer.childrenAges || filters.childrenAges || null,
+        childrenAges: offer.childrenAges ?? null,
         nights: Math.max(Number(offer.nights) || 1, 1),
         departureDate: offer.departureDate || offer.checkIn || filters.departureDate,
       };
@@ -74,12 +77,17 @@ const getCheckout = async (req, res, next) => {
 
     providerManager.getProvider(offer.provider);
     if (offer.provider === 'hotelbeds') {
+      checkRateDiagnostic.trustedOffer(offer);
       const environment = require('../config/providers').hotelbeds.environment;
       if (offer.priceEnvironment !== environment) throw Object.assign(new Error('Предложение устарело. Выполните новый поиск.'), { status: 409, code: 'OFFER_ENVIRONMENT_MISMATCH' });
       if (environment !== 'test') throw Object.assign(new Error('Проверка доступна только в TEST.'), { status: 503, code: 'CHECKRATE_TEST_ONLY' });
       if (!offer.rateKey || !offer.providerHotelId || !['BOOKABLE', 'RECHECK'].includes(offer.rateType)
         || !Number.isFinite(Number(offer.price)) || Number(offer.price) <= 0 || !/^[A-Z]{3}$/.test(offer.currency || '')) {
         throw Object.assign(new Error('Выбранное предложение недействительно.'), { status: 409, code: 'OFFER_TOKEN_INVALID' });
+      }
+      if (Number(offer.occupancy?.adults) !== Number(offer.adults) || Number(offer.occupancy?.children) !== Number(offer.children)
+        || checkRateDiagnostic.childAges(offer.childrenAges, offer.occupancy?.children) === null) {
+        throw Object.assign(new Error('Не удалось проверить состав гостей.'), { status: 503, code: 'CHECKRATE_SELECTION_INVALID', diagnosticReason: 'SELECTION_INVALID' });
       }
       // RECHECK already carries the signed selected identity; do not spend another Availability call.
       if (offerToken && offer.rateType !== 'RECHECK') offer = await providerManager.getProvider('hotelbeds').refreshOffer(offer);
@@ -134,7 +142,10 @@ const getCheckout = async (req, res, next) => {
       `CHECKOUT READY | ${tour.provider}:${tour.providerHotelId} | rateType=${tour.rateType || "-"} | ${total} ${tour.currency}`
     );
 
+    const checkRateStatus = selectedPriceBeforeCheckRate !== null && Math.round(selectedPriceBeforeCheckRate * 100) !== Math.round(total * 100) ? 'PRICE_CHANGED' : 'CONFIRMED';
+    if (offer.provider === 'hotelbeds') checkRateDiagnostic.emit('NORMALIZED_OUTCOME', { outcome: checkRateStatus, returnedRateKeyFingerprint: checkRateDiagnostic.fingerprint(offer.rateKey) });
     return res.json({
+      ...(offer.provider === 'hotelbeds' ? { requestId: checkRateDiagnostic.requestId() } : {}),
       tour,
       adults,
       children,
@@ -159,7 +170,9 @@ const getCheckout = async (req, res, next) => {
       const unavailable = ['RATE_NOT_AVAILABLE', 'HOTELBEDS_RECHECK_UNAVAILABLE', 'HOTELBEDS_RATE_NOT_BOOKABLE',
         'HOTELBEDS_AT_HOTEL_UNSUPPORTED', 'OFFER_TOKEN_INVALID', 'OFFER_TOKEN_EXPIRED',
         'OFFER_HOTEL_MISMATCH', 'OFFER_PROVIDER_MISMATCH', 'OFFER_ENVIRONMENT_MISMATCH'].includes(error.code);
+      checkRateDiagnostic.emit('NORMALIZED_OUTCOME', { outcome: unavailable ? 'UNAVAILABLE' : 'RETRYABLE_ERROR', reason: checkRateDiagnostic.reason(error), httpStatus: error.providerHttpStatus });
       if (typeof res.status === 'function') return res.status(unavailable ? 409 : 503).json({
+        requestId: checkRateDiagnostic.requestId(),
         checkRateStatus: unavailable ? 'UNAVAILABLE' : 'RETRYABLE_ERROR',
         code: unavailable ? error.code : 'CHECKRATE_RETRYABLE_ERROR',
         message: unavailable ? 'Выбранное предложение больше недоступно. Выберите другой тариф.' : 'Не удалось проверить стоимость. Повторите попытку.',
@@ -167,7 +180,7 @@ const getCheckout = async (req, res, next) => {
     }
     next(error);
   }
-};
+});
 
 module.exports = {
   getCheckout,
