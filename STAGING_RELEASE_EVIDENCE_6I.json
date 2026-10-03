@@ -1,0 +1,16 @@
+{
+  "scope": "both",
+  "ownerChecks": {
+    "home": "PASS",
+    "authSession": "PASS",
+    "profile": "PASS",
+    "favorites": "PASS",
+    "myBookings": "PASS",
+    "helpLegal": "PASS",
+    "health": "PASS",
+    "readiness": "PASS",
+    "changedFeature": "PASS",
+    "changedEndpoint": "PASS"
+  },
+  "notes": "Explicit owner staging evidence: Home, auth/session, Profile, Favorites, My Bookings, Help/legal, changed feature, no blank screen/raw error, /health, /api/health/ready and changed CheckRate behavior PASS. Backend/frontend deployed successfully. Hotelbeds TEST Search, Details, CheckRate PASS; checkout/review HTTP 200; Sultan Gardens Resort / Premium Jacuzzi Suite Pool View / BED AND BREAKFAST / 2075.98 EUR. Traveller flow and Final Review PASS, expected/displayed 2 adults, no auto-generated names/DOB. Booking intent safety boundary PASS: BOOKING_DISABLED, PROVIDER_NOT_CALLED, REVIEW_READY, bookingAvailable=false, paymentAvailable=false. No Hotelbeds Booking API call, real booking, payment, charge or fake confirmation. Historical UNAVAILABLE attempts are not assigned a common cause."
+}

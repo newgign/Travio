@@ -141,8 +141,25 @@ Downstream POST booking intent stopped at deliberate **HTTP 503 BOOKING_DISABLED
 
 This update records supplied owner evidence only. No runtime changes or fresh test/build/lint/verifier commands, provider calls, deployment or git staging/commit/push performed. Existing offline counts remain unchanged. The 6D recorder is invoked separately using its existing schema; unreported general frontend/health/readiness checks remain NOT_RUN rather than inferred PASS. Production sales readiness remains NOT CLAIMED.
 
-## Release evidence recorder outcome
+## Historical release evidence recorder outcome (superseded below)
 
 Input: `STAGING_RELEASE_EVIDENCE_6I.json`; generated output: `STAGING_RELEASE_EVIDENCE_6I.md`, using the unchanged 6D schema and recorder.
 
 **STAGING ACCEPTANCE: FAIL**. Recorder's embedded prerequisites reported 6A PASS, 6B manifest FAIL and 6C smoke plan FAIL. Required owner fields not explicitly observed in this supplied evidence remain NOT_RUN: home, authSession, profile, favorites, myBookings, helpLegal, health, readiness. Only changedFeature and changedEndpoint are PASS. Successful deploy alone is not substituted for these checks. No recorder rules or prerequisite metadata were weakened; no additional standalone verifier/gate command was run. The owner feature acceptance recorded above remains PASS ? tested scope, independently of aggregate release acceptance.
+
+## Final staging evidence closure
+
+STAGING ACCEPTANCE: **PASS ? tested scope**.
+6G OWNER BROWSER ACCEPTANCE: **PASS ? tested scope**.
+6H OWNER BROWSER ACCEPTANCE: **PASS ? tested scope**.
+6I OWNER ONE-CALL STAGING RETEST: **PASS**.
+
+Owner explicitly confirmed all existing 6D required fields: Home, auth/session, Profile, Favorites, My Bookings, Help/legal, changed feature, /health, /api/health/ready and changed endpoint behavior PASS. No blank screen/raw error observed. This supersedes the earlier incomplete owner evidence and failed aggregate recorder result; no checks were inferred from deployment alone.
+
+Final prerequisites before report edits: 6A PASS, 6B PASS (tracked tree clean), 6C READY. Unchanged 6D recorder regenerated `STAGING_RELEASE_EVIDENCE_6I.md` from `STAGING_RELEASE_EVIDENCE_6I.json`, scope both, all ten ownerChecks PASS. Recorder result: **STAGING ACCEPTANCE: PASS**; its embedded prerequisites also passed. Local recorded commit `002a98445ff1` is not independent proof of the deployed commit.
+
+Hotelbeds TEST Search, Details and CheckRate PASS; POST `/api/checkout/review` HTTP 200. Confirmed Sultan Gardens Resort / Premium Jacuzzi Suite Pool View / BED AND BREAKFAST at **2075.98 EUR**. Traveller flow and Final Review PASS; expected and displayed occupancy 2 adults; names/DOB not auto-generated. Premature pre-provider UNAVAILABLE no longer reproduced in this observed flow. Historical UNAVAILABLE attempts are not assigned a common cause.
+
+Booking intent safety boundary PASS: code/state BOOKING_DISABLED, providerState PROVIDER_NOT_CALLED, review.state REVIEW_READY, bookingAvailable false, paymentAvailable false. No provider booking, real booking, payment, charge or fake confirmation. Intentional HTTP 503 semantics remain unchanged.
+
+Evidence-only closure: no runtime edits, full tests/build/lint, external Hotelbeds calls, deployment or git staging/commit/push. Historical test counts unchanged. Report/evidence edits after recording remain unstaged; the recorded prerequisite result describes the clean tree at recorder execution. PRODUCTION SALES READY: **NOT CLAIMED**.
