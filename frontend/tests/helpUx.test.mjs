@@ -69,7 +69,9 @@ test('3V help, contacts, factual notices and complete navigation offline',async 
         assert.ok(full.includes(`aria-controls="faq-answer-${index}"`));assert.ok(full.includes(`id="faq-answer-${index}"`));assert.ok(full.includes(`aria-labelledby="faq-question-${index}"`));
       }
       assert.equal((full.match(/hidden=""/g)||[]).length,6);assert.equal((full.match(/type="button"/g)||[]).length,6);
-      assert.match(full,/Как работают избранное и аккаунт/);assert.match(home,/href="\/help"/);
+      assert.match(full,/Как работают избранное и аккаунт/);assert.match(home,/Часто задаваемые вопросы/);
+      assert.doesNotMatch(home,/Все вопросы и помощь|href="\/help"/);assert.match(render(Footer),/href="\/help"/);
+      assert.equal(matchRoutes(routes,'/help')[0].route.path,'/help');
     });
     await t.test('unknown routes/topics have an explicit consumer 404 without redirect',()=>{
       assert.equal(matchRoutes(routes,'/unknown/path')[0].route.path,'*');

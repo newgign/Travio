@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { buildInitialTravelers, validateTravelerForm, normalizeTravelerForm, travellerFailureMessage } from "../../utils/travellerData";
 import { Link } from "react-router-dom";
 import { getProfile, getTravelerProfiles } from "../../services/profileService";
 
@@ -17,42 +18,11 @@ function dateOnlyValue(value) {
     return `${year}-${month}-${day}`;
 }
 
-function buildInitialTravelers({ bookingData, adults, children, childAges }) {
-    if (Array.isArray(bookingData.travelers) && bookingData.travelers.length === adults + children) {
-        return bookingData.travelers;
-    }
-
-    const result = [];
-
-    for (let index = 0; index < adults; index += 1) {
-        result.push({
-            type: "AD",
-            firstName: index === 0 ? bookingData.firstName || "" : "",
-            lastName: index === 0 ? bookingData.lastName || "" : "",
-            birthDate: index === 0 ? bookingData.birthDate || "" : "",
-            age: null,
-            roomId: 1,
-        });
-    }
-
-    for (let index = 0; index < children; index += 1) {
-        result.push({
-            type: "CH",
-            firstName: "",
-            lastName: "",
-            birthDate: "",
-            age: Number(childAges[index] ?? 0),
-            roomId: 1,
-        });
-    }
-
-    return result;
-}
-
 export default function TravelerStep({
     bookingData,
     setBookingData,
     next,
+    back,
     adults = 2,
     children = 0,
     childAges = [],
@@ -71,6 +41,9 @@ export default function TravelerStep({
 
     const [savedTravelers, setSavedTravelers] = useState([]);
     const [errors, setErrors] = useState({});
+    const [submitting, setSubmitting] = useState(false);
+    const submittingRef = useRef(false);
+    const [submitError, setSubmitError] = useState("");
 
     useEffect(() => {
         let active = true;
@@ -117,7 +90,7 @@ export default function TravelerStep({
         if (!savedId) return;
 
         const saved = savedTravelers.find((item) => Number(item.id) === Number(savedId));
-        if (!saved) return;
+        if (!saved || String(saved.traveler_type || "AD") !== form.travelers[index].type) return;
 
         setForm((current) => ({
             ...current,
@@ -134,49 +107,29 @@ export default function TravelerStep({
         }));
     }
 
-    function validate() {
-        const newErrors = {};
-
-        if (!form.phone.trim()) newErrors.phone = "Введите телефон";
-
-        if (!form.email.trim()) {
-            newErrors.email = "Введите Email";
-        } else if (!/\S+@\S+\.\S+/.test(form.email)) {
-            newErrors.email = "Некорректный Email";
-        }
-
-        form.travelers.forEach((traveler, index) => {
-            if (!traveler.firstName.trim()) {
-                newErrors[`traveler_${index}_firstName`] = "Введите имя";
-            }
-
-            if (!traveler.lastName.trim()) {
-                newErrors[`traveler_${index}_lastName`] = "Введите фамилию";
-            }
-        });
-
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
+    async function handleNext() {
+        if (submittingRef.current) return;
+        const validation = validateTravelerForm(form);
+        setErrors(validation);
+        if (Object.keys(validation).length) return;
+        const data = normalizeTravelerForm(form, adults, children);
+        setBookingData(data);
+        submittingRef.current = true;
+        setSubmitting(true);
+        setSubmitError("");
+        try { await next(data); }
+        catch (error) { setSubmitError(travellerFailureMessage(error)); }
+        finally { submittingRef.current = false; setSubmitting(false); }
     }
 
-    function handleNext() {
-        if (!validate()) return;
+    return <TravelerFormView form={form} adults={adults} children={children} savedTravelers={savedTravelers}
+        errors={errors} submitting={submitting} submitError={submitError} updateContact={updateContact}
+        updateTraveler={updateTraveler} applySavedTraveler={applySavedTraveler} handleNext={handleNext}
+        back={back ? () => { setBookingData({ ...form, adults, children }); back(); } : undefined} />;
+}
 
-        const holder = form.travelers.find((traveler) => traveler.type === "AD") || form.travelers[0];
-
-        setBookingData({
-            ...form,
-            firstName: holder?.firstName || "",
-            lastName: holder?.lastName || "",
-            birthDate: holder?.birthDate || "",
-            adults,
-            children,
-            people: adults + children,
-        });
-
-        next();
-    }
-
+export function TravelerFormView({ form, adults, children, savedTravelers = [], errors = {}, submitting = false,
+    submitError = '', updateContact, updateTraveler, applySavedTraveler, handleNext, back }) {
     return (
         <div className="checkout-card">
             <h1>Данные туристов</h1>
@@ -195,6 +148,7 @@ export default function TravelerStep({
                 )}
             </div>
 
+            <fieldset disabled={submitting} style={{ border: 0, padding: 0 }}>
             <div className="traveler-list">
                 {form.travelers.map((traveler, index) => {
                     const options = savedTravelers.filter(
@@ -210,7 +164,7 @@ export default function TravelerStep({
                                         : `Взрослый ${index + 1}`}
                                 </strong>
 
-                                {traveler.type === "CH" && Number.isFinite(Number(traveler.age)) && (
+                                {traveler.type === "CH" && Number.isInteger(traveler.age) && (
                                     <span>{traveler.age} лет</span>
                                 )}
                             </div>
@@ -232,6 +186,8 @@ export default function TravelerStep({
                             <div className="checkout-grid traveler-grid">
                                 <div>
                                     <input
+                                        aria-label={`Имя гостя ${index + 1}`}
+                                        maxLength={100}
                                         value={traveler.firstName}
                                         placeholder="Имя латиницей или как в документе"
                                         onChange={(event) => updateTraveler(index, "firstName", event.target.value)}
@@ -243,6 +199,8 @@ export default function TravelerStep({
 
                                 <div>
                                     <input
+                                        aria-label={`Фамилия гостя ${index + 1}`}
+                                        maxLength={100}
                                         value={traveler.lastName}
                                         placeholder="Фамилия"
                                         onChange={(event) => updateTraveler(index, "lastName", event.target.value)}
@@ -253,12 +211,15 @@ export default function TravelerStep({
                                 </div>
 
                                 <div>
-                                    <label>Дата рождения</label>
+                                    <label>Дата рождения (необязательно)</label>
                                     <input
                                         type="date"
+                                        aria-label={`Дата рождения гостя ${index + 1}`}
                                         value={traveler.birthDate || ""}
                                         onChange={(event) => updateTraveler(index, "birthDate", event.target.value)}
                                     />
+                                    {errors[`traveler_${index}_birthDate`] && <small className="input-error">{errors[`traveler_${index}_birthDate`]}</small>}
+                                    {errors[`traveler_${index}_age`] && <small className="input-error">{errors[`traveler_${index}_age`]}</small>}
                                 </div>
                             </div>
                         </div>
@@ -308,9 +269,12 @@ export default function TravelerStep({
                 />
             </div>
 
+            {submitError && <p className="input-error" role="alert">{submitError}</p>}
             <div className="checkout-buttons">
-                <button className="next-btn" onClick={handleNext}>Продолжить →</button>
+                {back && <button type="button" className="back-btn" onClick={back}>← Назад</button>}
+                <button disabled={submitting} className="next-btn" onClick={handleNext}>Продолжить →</button>
             </div>
+            </fieldset>
         </div>
     );
 }

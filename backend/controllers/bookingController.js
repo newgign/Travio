@@ -594,7 +594,8 @@ const deleteBooking = async (req, res) => {
 };
 
 const createBookingIntent = async (req, res) => {
-  const validationResponse = () => res.status(409).json({ success: false, code: 'VALIDATION_ERROR', state: 'VALIDATION_FAILED',
+  const validationResponse = validationKind => res.status(409).json({ success: false, code: 'VALIDATION_ERROR', state: 'VALIDATION_FAILED',
+    ...(['TRAVELLER_VALIDATION_ERROR', 'OCCUPANCY_MISMATCH'].includes(validationKind) ? { validationKind } : {}),
     providerState: 'PROVIDER_NOT_CALLED', message: 'Данные предложения или туристов недействительны. Перепроверьте предложение.' });
   try {
     const body = req.body;
@@ -610,7 +611,7 @@ const createBookingIntent = async (req, res) => {
       'BOOKING_INTENT_ENVIRONMENT_MISMATCH', 'BOOKING_INTENT_IDENTITY_MISMATCH', 'BOOKING_INTENT_MONEY_MISMATCH',
       'BOOKING_INTENT_SELECTION_MISMATCH', 'BOOKING_INTENT_PRICE_MISMATCH', 'BOOKING_INTENT_STAY_INVALID',
       'BOOKING_INTENT_OCCUPANCY_INVALID', 'BOOKING_INTENT_TRAVELERS_INVALID']);
-    if (validationCodes.has(error?.code)) return validationResponse();
+    if (validationCodes.has(error?.code)) return validationResponse(error.validationKind);
     return res.status(503).json({ success: false, code: 'RETRYABLE_INTERNAL_ERROR', providerState: 'PROVIDER_NOT_CALLED',
       message: 'Не удалось проверить предложение. Повторите попытку позже.' });
   }

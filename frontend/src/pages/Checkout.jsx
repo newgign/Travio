@@ -1,5 +1,5 @@
 import { checkoutFailureMessage } from "../utils/feedbackPresentation";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
     useLocation,
     useNavigate,
@@ -11,17 +11,23 @@ import Footer from "../components/Footer";
 
 import CheckoutStepper from "../components/checkout/CheckoutStepper";
 import TravelerStep from "../components/checkout/TravelerStep";
-import ReviewStep from "../components/checkout/ReviewStep";
+import ReviewStep, { CheckoutReviewView } from "../components/checkout/ReviewStep";
 import PaymentStep from "../components/checkout/PaymentStep";
 import SuccessStep from "../components/checkout/SuccessStep";
 
-import { createBooking, confirmProviderBooking } from "../services/bookingService";
+import { createBooking, createBookingIntent, confirmProviderBooking } from "../services/bookingService";
+import { confirmedOccupancy, createTravellerSubmission } from "../utils/travellerData";
 import { createPaymentIntent, payBooking } from "../services/paymentService";
 
 import "../styles/Checkout.css";
 
 
 export default function Checkout() {
+    const location = useLocation();
+    return <CheckoutFlow key={`${location.pathname}${location.search}:${location.state?.selectedOffer?.offerToken || ''}`} />;
+}
+
+function CheckoutFlow() {
 
     // =====================================
     // ROUTER
@@ -50,6 +56,16 @@ export default function Checkout() {
 
     const [checkout, setCheckout] = useState(null);
 
+    const submitTravellers = useMemo(() => createTravellerSubmission(createBookingIntent), []);
+    const occupancy = provider === 'hotelbeds' ? confirmedOccupancy(checkout) : null;
+    async function continueTravellers(data) {
+        if (provider !== 'hotelbeds') { setStep(2); return; }
+        if (!occupancy) throw Object.assign(Error('INVALID_CONFIRMED_OCCUPANCY'), { code: 'VALIDATION_ERROR' });
+        await submitTravellers({ checkoutToken: checkout.checkoutToken, travelers: data.travelers,
+            ...(checkout.acceptedPriceToken ? { acceptedPriceToken: checkout.acceptedPriceToken } : {}) });
+        setStep(3);
+    }
+
     const [paymentResult, setPaymentResult] = useState(null);
 
     const initialSearchParams = new URLSearchParams(location.search);
@@ -60,6 +76,7 @@ export default function Checkout() {
 
     const childAges = String(initialSearchParams.get("childrenAges") || "")
         .split(",")
+        .filter((value) => value.trim() !== '')
         .map((value) => Number(value.trim()))
         .filter((value) => Number.isFinite(value));
 
@@ -299,7 +316,7 @@ export default function Checkout() {
                 </div>
 
                 <div className="checkout-trust-row">
-                    <span>✓ 4 понятных шага</span>
+                    <span>✓ {provider === 'hotelbeds' ? '3 понятных шага' : '4 понятных шага'}</span>
                     <span>✓ Данные гостей проверяются перед отправкой</span>
                     <span>🔒 LIVE-платежи выключены</span>
                 </div>
@@ -311,6 +328,7 @@ export default function Checkout() {
 
                 <CheckoutStepper
                     step={step}
+                    provider={provider}
                 />
 
 
@@ -319,7 +337,7 @@ export default function Checkout() {
                     TOURISTS
                 ================================= */}
 
-                {step === 1 && (
+                {step === 1 && (provider !== 'hotelbeds' || occupancy) && (
 
                     <TravelerStep
 
@@ -331,20 +349,19 @@ export default function Checkout() {
                             setBookingData
                         }
 
-                        next={() =>
-                            setStep(2)
-                        }
+                        next={continueTravellers}
+                        back={provider === 'hotelbeds' ? () => setStep(2) : undefined}
 
                         adults={
-                            expectedAdults
+                            occupancy?.adults ?? expectedAdults
                         }
 
                         children={
-                            expectedChildren
+                            occupancy?.children ?? expectedChildren
                         }
 
                         childAges={
-                            childAges
+                            occupancy?.childAges ?? childAges
                         }
 
                     />
@@ -357,7 +374,15 @@ export default function Checkout() {
                     REVIEW
                 ================================= */}
 
-                {step === 2 && (
+                {step === 1 && provider === 'hotelbeds' && !occupancy && <div className="checkout-card">
+                    <p role="alert">Состав гостей не подтверждён. Вернитесь к поиску.</p>
+                    <button className="back-btn" onClick={() => navigate(`/results${location.search}`)}>← Назад к поиску</button>
+                </div>}
+                {step === 2 && provider === 'hotelbeds' && checkout?.checkoutToken && checkout?.tour?.checkRatePerformed === true ? (
+                    <CheckoutReviewView checkout={checkout} bookingData={bookingData}
+                        acceptedPriceToken={checkout.acceptedPriceToken} acceptPrice={value => setCheckout(current => ({ ...current, acceptedPriceToken: value ? current.checkoutToken : null }))}
+                        back={() => navigate(`/results${location.search}`)} next={() => setStep(1)} />
+                ) : step === 2 && (
 
                     <ReviewStep
 
@@ -373,12 +398,10 @@ export default function Checkout() {
                             setCheckout
                         }
 
-                        back={() =>
-                            setStep(1)
-                        }
+                        back={() => provider === 'hotelbeds' ? navigate(`/results${location.search}`) : setStep(1)}
 
                         next={() =>
-                            setStep(3)
+                            setStep(provider === 'hotelbeds' ? 1 : 3)
                         }
 
                         provider={
@@ -412,7 +435,7 @@ export default function Checkout() {
                         }
 
                         back={() =>
-                            setStep(2)
+                            setStep(provider === 'hotelbeds' ? 1 : 2)
                         }
 
                         onPay={

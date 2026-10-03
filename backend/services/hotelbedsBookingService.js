@@ -2,6 +2,40 @@ const providerConfig = require("../config/providers");
 const hotelbedsProvider = require("../sources/hotelbeds");
 
 class HotelbedsBookingService {
+  normalizeIntentTravelers(travelers, occupancy, childAges) {
+    const invalid = validationKind => { throw Object.assign(new Error('Проверьте данные гостей.'), {
+      code: 'BOOKING_INTENT_TRAVELERS_INVALID', validationKind, status: 409,
+    }); };
+    if (!Array.isArray(travelers) || travelers.some(value => !value || typeof value !== 'object' || Array.isArray(value))) invalid('TRAVELLER_VALIDATION_ERROR');
+    if (travelers.length !== Number(occupancy.adults) + Number(occupancy.children)
+      || travelers.filter(value => value.type === 'AD').length !== Number(occupancy.adults)
+      || travelers.filter(value => value.type === 'CH').length !== Number(occupancy.children)) invalid('OCCUPANCY_MISMATCH');
+    const fields = ['type', 'firstName', 'lastName', 'roomId', 'age', 'birthDate'];
+    const normalized = travelers.map(value => {
+      if (Object.keys(value).some(key => !fields.includes(key))
+        || ['firstName', 'lastName'].some(key => typeof value[key] !== 'string' || !value[key].trim() || value[key].trim().length > 100)
+        || (value.roomId !== undefined && value.roomId !== 1)
+        || (value.type === 'AD' && value.age !== undefined && value.age !== null)) invalid('TRAVELLER_VALIDATION_ERROR');
+      const traveler = { type: value.type, firstName: value.firstName.trim(), lastName: value.lastName.trim(), roomId: 1 };
+      // DOB is optional in the current provider payload. Validate explicit input, never manufacture it.
+      if (value.birthDate !== undefined && value.birthDate !== '') {
+        if (typeof value.birthDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value.birthDate)
+          || !Number.isFinite(Date.parse(value.birthDate)) || new Date(value.birthDate).toISOString().slice(0, 10) !== value.birthDate
+          || value.birthDate > new Date().toISOString().slice(0, 10)) invalid('TRAVELLER_VALIDATION_ERROR');
+        traveler.birthDate = value.birthDate;
+      }
+      if (value.type === 'CH') {
+        if (!Number.isInteger(value.age) || value.age < 0 || value.age > 17) invalid('TRAVELLER_VALIDATION_ERROR');
+        traveler.age = value.age;
+      }
+      return traveler;
+    });
+    const suppliedAges = normalized.filter(value => value.type === 'CH').map(value => value.age).sort((a, b) => a - b);
+    if (JSON.stringify(suppliedAges) !== JSON.stringify(childAges.map(Number).sort((a, b) => a - b))) invalid('OCCUPANCY_MISMATCH');
+    // Existing lead convention: the first adult is the holder. No independent lead identity/flags.
+    return normalized;
+  }
+
   prepareIntent(request, session) {
     // Pure validation of an existing server session, never a search offer from the browser.
     const invalid = code => { throw Object.assign(new Error('Данные предложения или туристов недействительны. Перепроверьте предложение.'), { status: 409, code }); };
@@ -42,17 +76,10 @@ class HotelbedsBookingService {
       || Number(occupancy.adults) !== Number(offer.adults) || Number(occupancy.children) !== Number(offer.children)) invalid('BOOKING_INTENT_OCCUPANCY_INVALID');
     const childAges = occupancy.children > 0 ? (Array.isArray(offer.childrenAges) ? offer.childrenAges : typeof offer.childrenAges === 'string' ? offer.childrenAges.split(',') : []) : [];
     if (childAges.length !== Number(occupancy.children) || childAges.some(age => !integer(age, 0) || Number(age) > 17)) invalid('BOOKING_INTENT_OCCUPANCY_INVALID');
-    if (request.travelers.length !== Number(occupancy.adults) + Number(occupancy.children)
-      || request.travelers.some(traveler => !object(traveler) || !['AD', 'CH'].includes(traveler.type)
-        || !text(traveler.firstName) || !text(traveler.lastName) || traveler.firstName.length > 100 || traveler.lastName.length > 100
-        || (traveler.roomId !== undefined && (!integer(traveler.roomId, 1) || Number(traveler.roomId) !== 1)))
-      || request.travelers.filter(traveler => traveler.type === 'AD').length !== Number(occupancy.adults)) invalid('BOOKING_INTENT_TRAVELERS_INVALID');
-    const suppliedAges = request.travelers.filter(traveler => traveler.type === 'CH').map(traveler => traveler.age);
-    if (suppliedAges.some(age => !integer(age, 0) || Number(age) > 17)
-      || JSON.stringify(suppliedAges.map(Number).sort((a, b) => a - b)) !== JSON.stringify(childAges.map(Number).sort((a, b) => a - b))) invalid('BOOKING_INTENT_TRAVELERS_INVALID');
+    const travelers = this.normalizeIntentTravelers(request.travelers, occupancy, childAges);
     // Reuse the checkout identifier; no new durable idempotency infrastructure or PII output.
     const requestId = require('node:crypto').createHash('sha256').update(session.token).digest('hex').slice(0, 32);
-    return { state: 'INTENT_READY', requestId, provider: offer.provider, hotelId: String(offer.providerHotelId),
+    return { state: 'INTENT_READY', travelers, requestId, provider: offer.provider, hotelId: String(offer.providerHotelId),
       rateKey: offer.rateKey, price: Number(offer.price), currency: offer.currency,
       room: { code: offer.roomCode, name: offer.roomName || offer.roomCode }, board: { code: offer.boardCode, name: offer.boardName || offer.boardCode },
       checkIn: offer.checkIn, checkOut: offer.checkOut, nights: Number(offer.nights),
@@ -64,8 +91,9 @@ class HotelbedsBookingService {
     // Validate-only foundation: even a future flag change cannot execute booking here.
     try { this.assertBookingAllowed(); }
     catch (error) { if (error.code !== 'HOTELBEDS_BOOKING_DISABLED') throw error; }
+    const { travelers, ...publicIntent } = intent;
     return { success: false, code: 'BOOKING_DISABLED', state: 'BOOKING_DISABLED',
-      providerState: 'PROVIDER_NOT_CALLED', intent,
+      providerState: 'PROVIDER_NOT_CALLED', intent: publicIntent,
       message: 'Предложение проверено. Бронирование и оплата пока недоступны.' };
   }
 
