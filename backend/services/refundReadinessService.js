@@ -121,6 +121,7 @@ function prepareRefundIntent(request, booking, payment, access) {
       environment: 'test' }, message: 'Возврат оплаты пока недоступен.' };
 }
 function unavailableCompensation(requestId) {
+  require('./bookingLifecycle').assertLifecycleState({ cancellation: 'CANCELLATION_UNAVAILABLE', refund: 'REFUND_UNAVAILABLE' });
   return require('./bookingPaymentRecovery').compensationPlan({ requestId,
     booking: { state: 'BOOKING_DISABLED' }, payment: { state: 'PAYMENTS_DISABLED' },
     cancellation: { state: 'CANCELLATION_UNAVAILABLE' }, refund: { state: 'REFUND_UNAVAILABLE' } });

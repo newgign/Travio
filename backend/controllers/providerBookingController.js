@@ -165,6 +165,9 @@ async function reconcileUncertainBooking(booking) {
   const updated = await persistProviderState(booking, reconciliation, {
     reconciled: true,
   });
+  if (!require('../services/bookingLifecycle').providerConfirmationConsistent(updated)) {
+    throw Object.assign(new Error('Provider confirmation requires reconciliation'), { status: 503, code: 'LIFECYCLE_INCONSISTENT' });
+  }
 
   if (["CONFIRMED", "MODIFIED"].includes(String(updated.provider_status || "").toUpperCase())) {
     await bookingEventService.safeRecordEvent({
@@ -202,6 +205,10 @@ async function confirmProviderBooking(req, res, next) {
     hotelbedsBookingService.assertBookingAllowed();
 
     if (booking.provider_booking_id) {
+      if (!require('../services/bookingLifecycle').providerConfirmationConsistent(booking)) {
+        return res.status(503).json({ success: false, code: 'LIFECYCLE_INCONSISTENT',
+          message: 'Состояние записи требует сверки. Повторное бронирование недоступно.' });
+      }
       return res.json({
         success: true,
         alreadyConfirmed: true,
@@ -272,6 +279,9 @@ async function confirmProviderBooking(req, res, next) {
 
     try {
       const confirmation = await hotelbedsBookingService.confirm(claimedBooking);
+      if (!require('../services/bookingLifecycle').providerConfirmationConsistent({
+        provider_booking_id: confirmation.reference, provider_status: confirmation.status, provider_response: confirmation.raw,
+      })) throw Object.assign(new Error('Provider confirmation requires reconciliation'), { status: 503, code: 'LIFECYCLE_INCONSISTENT' });
       const updated = await persistProviderState(claimedBooking, confirmation);
 
       logger.info(

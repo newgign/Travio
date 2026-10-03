@@ -91,6 +91,8 @@ class HotelbedsBookingService {
   reviewPreview(intent, session) {
     // Called only after prepareIntent: whitelist display fields, never raw offer/payload/identifiers.
     const offer = session.offer_snapshot;
+    require('./bookingLifecycle').assertLifecycleState({ checkRate: offer.checkRatePerformed === true ? 'CONFIRMED' : 'NOT_CONFIRMED',
+      travelers: intent.state === 'INTENT_READY' ? 'VALID' : 'INVALID', review: 'REVIEW_READY' });
     const label = value => typeof value === 'string' && value.trim() ? value.trim() : null;
     const hotel = label(offer.name) || label(offer.hotel) || label(offer.title);
     const expiresAt = Math.min(Date.parse(session.expires_at), Date.parse(offer.checkedRateAt) + require('./checkoutSessionService').getTtlMinutes() * 60000);

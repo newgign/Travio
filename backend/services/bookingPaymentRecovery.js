@@ -57,6 +57,7 @@ function disabledBoundary(operation, requestId) {
   if (!['booking', 'payment'].includes(operation)) throw Object.assign(new Error('Invalid recovery operation'), { code: 'RECOVERY_INPUT_INVALID' });
   // Derive current policy internally; no hypothetical states or recovery actions are exposed to the UI.
   const recovery = plan({ requestId, booking: { state: 'BOOKING_DISABLED' }, payment: { state: 'PAYMENTS_DISABLED' } });
+  require('./bookingLifecycle').assertLifecycleState({ booking: 'BOOKING_DISABLED', payment: 'PAYMENTS_DISABLED' });
   return { success: recovery.success, code: operation === 'booking' ? 'BOOKING_DISABLED' : 'PAYMENTS_DISABLED',
     state: operation === 'booking' ? 'BOOKING_DISABLED' : 'PAYMENTS_DISABLED', providerState: 'PROVIDER_NOT_CALLED' };
 }
