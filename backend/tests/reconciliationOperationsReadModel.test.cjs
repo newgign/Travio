@@ -1,0 +1,73 @@
+const { test, beforeEach, afterEach } = require('node:test');
+const assert = require('node:assert/strict');
+require('./offlineNetwork.cjs');
+Object.assign(process.env, { NODE_ENV: 'test', PAYMENTS_MODE: 'disabled', PAYMENTS_PROVIDER: 'none',
+  REAL_CHARGES_ENABLED: 'false', REAL_REFUNDS_ENABLED: 'false', PRODUCTION_SALES_ENABLED: 'false',
+  HOTELBEDS_ENV: 'test', HOTELBEDS_BOOKING_ENABLED: 'false', HOTELBEDS_LIVE_BOOKING_ENABLED: 'false' });
+const model = require('../services/reconciliationOperationsReadModel');
+const { evaluate } = require('../services/paymentReconciliation');
+const { normalizeEvent } = require('../services/paymentProviderContract');
+const event = (type = 'payment.pending', extra = {}) => normalizeEvent({ eventId: 'synthetic_event', provider: 'synthetic_mock',
+  paymentId: 'synthetic_payment', requestId: 'a'.repeat(32), type, amount: '110.25', currency: 'EUR', ...extra });
+const decision = extra => evaluate({ intent: { state: 'PAYMENT_INTENT_READY', reviewState: 'REVIEW_READY', requestId: 'a'.repeat(32), amount: '110.25', currency: 'EUR' },
+  provider: 'synthetic_mock', providerPaymentId: 'synthetic_payment', paymentState: 'PAYMENT_PENDING',
+  booking: { state: 'BOOKING_CONFIRMED', providerResultObserved: true }, ...extra });
+const unknown = extra => decision({ paymentState: 'PAYMENT_OUTCOME_UNKNOWN', ...extra });
+const capture = extra => decision({ paymentState: 'PAYMENT_CAPTURED', previousEvidence: [event('payment.captured')], ...extra });
+const refund = () => capture({ booking: { state: 'BOOKING_FAILED_FINAL', providerResultObserved: false } });
+const cancellation = () => decision({ paymentState: 'PAYMENT_FAILED_FINAL' });
+const conflict = () => capture({ event: event('payment.failed', { eventId: 'later' }) });
+const row = value => model.projectCase(value);
+const separate = (value, digit) => ({ ...value, caseId: digit.repeat(64), diagnostic: { ...value.diagnostic, requestId: digit.repeat(32) } });
+const dataset = () => [separate(unknown(), 'b'), separate(refund(), 'c'), separate(decision(), 'd')];
+let calls;
+beforeEach(t => {
+  calls = 0;
+  const forbidden = () => { calls++; assert.fail('Read model attempted an operation'); };
+  const pool = require('../db'); t.mock.method(pool, 'query', forbidden); t.mock.method(pool, 'connect', forbidden);
+  for (const name of ['availability', 'checkRates', 'createBooking', 'cancelBooking', 'getBooking', 'listBookings']) t.mock.method(require('../integrations/hotelbeds/client'), name, forbidden);
+  for (const name of ['confirm', 'cancel', 'simulateCancellation', 'reconcile']) t.mock.method(require('../services/hotelbedsBookingService'), name, forbidden);
+  t.mock.method(require('../services/paymentGatewayService'), 'createIntent', forbidden);
+  for (const name of ['requestSandboxRefund', 'completeSandboxRefund']) t.mock.method(require('../controllers/refundController'), name, forbidden);
+  for (const name of ['recordAction', 'safeRecordAction']) t.mock.method(require('../services/adminAuditService'), name, forbidden);
+  for (const name of ['info', 'warn', 'error']) t.mock.method(require('../utils/logger'), name, forbidden);
+});
+afterEach(() => assert.equal(calls, 0));
+test('unknown payment produces an unresolved operator case', () => { const r = row(unknown()); assert.equal(r.category, 'PAYMENT_OUTCOME_UNKNOWN'); assert.equal(r.status, 'RECONCILIATION_REQUIRED'); });
+test('payment state conflict produces safe manual-review case', () => { const r = row(conflict()); assert.equal(r.category, 'PAYMENT_STATE_CONFLICT'); assert.equal(r.status, 'MANUAL_REVIEW_REQUIRED'); });
+test('amount mismatch remains visible without success', () => { const r = row(decision({ event: event('payment.pending', { amount: '1.00' }) })); assert.equal(r.category, 'PAYMENT_AMOUNT_MISMATCH'); assert.equal(r.amountMatch, false); assert.equal(r.commercialSuccess, false); });
+test('currency mismatch remains visible', () => assert.equal(row(decision({ event: event('payment.pending', { currency: 'USD' }) })).category, 'PAYMENT_CURRENCY_MISMATCH'));
+test('refund review is critical compensation', () => { const r = row(refund()); assert.equal(r.priority, 'CRITICAL'); assert.equal(r.status, 'COMPENSATION_REQUIRED'); assert.equal(r.category, 'REFUND_REVIEW_REQUIRED'); });
+test('consistent no-action pair is not an incident', () => { assert.equal(row(capture()), null); assert.deepEqual(model.list([capture()]), { items: [] }); });
+test('unknown money outcome is high priority', () => assert.equal(row(unknown()).priority, 'HIGH'));
+test('reconciliation priority deterministic', () => assert.deepEqual(row(unknown({ recoveryState: 'RECOVERY_PENDING' })), row(unknown({ recoveryState: 'RECOVERY_PENDING' }))));
+test('nonfinal stale/conflicting observation gets medium priority', () => { const r = row(decision({ paymentState: 'PAYMENT_AUTHORIZED', previousEvidence: [event('payment.authorized')], event: event('payment.pending', { eventId: 'stale' }) })); assert.equal(r.priority, 'MEDIUM'); assert.equal(r.category, 'PAYMENT_STATE_CONFLICT'); });
+test('awaiting missing webhook remains low informational evidence wait', () => { const r = row(decision()); assert.equal(r.priority, 'LOW'); assert.equal(r.status, 'AWAITING_EVIDENCE'); assert.equal(r.manualReviewRequired, false); });
+test('confirmed booking and final failed payment get high cancellation review', () => { const r = row(cancellation()); assert.equal(r.priority, 'HIGH'); assert.equal(r.recommendedNextAction, 'REVIEW_CANCELLATION'); });
+test('captured contradictory evidence gets critical priority', () => assert.equal(row(conflict()).priority, 'CRITICAL'));
+test('list row has exact safe field allowlist', () => assert.deepEqual(Object.keys(row(unknown())).sort(), ['caseId', 'caseFamilyId', 'category', 'priority', 'status', 'reasonCode', 'requestId', 'providerFingerprint', 'paymentState', 'bookingState', 'amountMatch', 'currencyMatch', 'manualReviewRequired', 'reconciliationRequired', 'compensationRequired', 'recommendedNextAction', 'contractOnly', 'commercialSuccess', 'applicationPaymentState', 'operatorActionsExecutable'].sort()));
+test('list ordering deterministic by priority then case id', () => { const data = dataset(); const a = model.list(data); assert.deepEqual(a, model.list([...data].reverse())); assert.deepEqual(a.items.map(r => r.priority), ['CRITICAL', 'HIGH', 'LOW']); });
+test('priority filter selects critical cases', () => assert.equal(model.list(dataset(), { priority: 'CRITICAL' }).items.length, 1));
+test('category filter selects unknown cases', () => assert.equal(model.list(dataset(), { category: 'PAYMENT_OUTCOME_UNKNOWN' }).items.length, 1));
+test('status filter selects compensation cases', () => assert.equal(model.list(dataset(), { status: 'COMPENSATION_REQUIRED' }).items.length, 1));
+test('provider fingerprint filter uses validated safe identity', () => { const data = dataset(); assert.equal(model.list(data, { providerFingerprint: data[0].diagnostic.providerFingerprint }).items.length, 3); assert.equal(model.list(data, { providerFingerprint: 'f'.repeat(64) }).items.length, 0); });
+test('manual and compensation filters retain booleans', () => { assert.equal(model.list(dataset(), { manualReviewRequired: false }).items.length, 1); assert.equal(model.list(dataset(), { compensationRequired: true }).items.length, 1); });
+test('identical repeated evidence collapses to one case and observation', () => { const r = unknown(); assert.equal(model.list([r, r, r]).items.length, 1); assert.equal(model.detail([r, r], r.caseId).timeline.length, 1); });
+test('duplicate webhook does not create another logical case', () => { const pending = event(); const a = decision({ previousEvidence: [pending] }), b = decision({ previousEvidence: [pending], event: pending }); assert.equal(model.list([a, b, b]).items.length, 1); assert.equal(model.detail([a, b], a.caseId).relatedCaseIds.length, 2); });
+test('detail timeline contains exact normalized observation fields only', () => { const r = conflict(), d = model.detail([r], r.caseId); assert.deepEqual(Object.keys(d.timeline[0]).sort(), ['eventFingerprint', 'eventType', 'internalPaymentState', 'observedPaymentState', 'bookingState', 'reconciliationStatus', 'reasonCode', 'amountMatch', 'currencyMatch', 'recommendedNextAction', 'incomingEvidenceFingerprint', 'previousEvidenceFingerprints'].sort()); assert.equal(d.timeline[0].eventType, 'payment.failed'); assert.equal(d.timeline[0].observedPaymentState, 'PAYMENT_CAPTURED'); });
+test('detail displays safe reason and recommended review action', () => { const r = refund(), d = model.detail([r], r.caseId); assert.equal(d.reasonCode, 'REFUND_REQUIRED'); assert.equal(d.recommendedNextAction, 'REVIEW_REFUND'); });
+test('raw webhook signature secrets auth and PII additions omitted everywhere', () => { const r = unknown(), marker = 'private-sensitive-marker'; const poisoned = { ...r, rawWebhook: marker, signature: marker, secret: marker, Authorization: marker, card: marker, traveler: { email: marker, passport: marker }, manualReview: { message: marker }, diagnostic: { ...r.diagnostic, raw: marker, apiKey: marker } }; assert.doesNotMatch(JSON.stringify([row(poisoned), model.list([poisoned]), model.detail([poisoned], poisoned.caseId)]), /private-sensitive-marker|rawWebhook|signature|Authorization|passport|apiKey/); });
+test('unsupported sensitive strings and coerced objects in core fields fail closed', () => { const r = unknown(); for (const change of [{ reasonCode: 'private-secret' }, { recommendedNextAction: 'REFUNDED' }, { diagnostic: { ...r.diagnostic, providerFingerprint: 'private-key' } }, { diagnostic: { ...r.diagnostic, eventType: { toString: () => 'payment.pending', secret: 'private-secret' } } }]) assert.throws(() => row({ ...r, ...change }), { code: 'OPERATIONS_READ_MODEL_INPUT_INVALID' }); });
+test('same trusted result preserves exact 7C case id', () => { const r = unknown(); assert.equal(row(r).caseId, r.caseId); assert.deepEqual(row(r), row(r)); });
+test('conflicting evidence linked to same correlation family', () => { const a = refund(), b = conflict(); assert.equal(row(a).caseFamilyId, row(b).caseFamilyId); assert.notEqual(a.caseId, b.caseId); const queue = model.list([a, b]); assert.equal(queue.items.length, 1); assert.equal(queue.items[0].recommendedNextAction, 'ESCALATE_RECONCILIATION'); assert.deepEqual(model.detail([a, b], a.caseId).relatedCaseIds, [a.caseId, b.caseId].sort()); });
+test('family detail lookup and unknown lookup are safe', () => { const r = unknown(), family = row(r).caseFamilyId; assert.deepEqual(model.detail([r], family), model.detail([r], r.caseId)); assert.equal(model.detail([r], 'f'.repeat(64)), null); });
+test('aggregation preserves highest risk and unresolved flags across snapshots', () => { const data = [refund(), decision({ paymentState: 'PAYMENT_AUTHORIZED', previousEvidence: [event('payment.authorized')], event: event('payment.pending', { eventId: 'stale' }) })]; const r = model.list(data).items[0]; assert.equal(r.priority, 'CRITICAL'); assert.equal(r.status, 'MANUAL_REVIEW_REQUIRED'); assert.equal(r.compensationRequired, true); assert.equal(r.reconciliationRequired, true); });
+test('aggregation does not mutate caller data and output is detached', () => { const r = unknown({ previousEvidence: [event('payment.unknown')] }), original = structuredClone(r); const d = model.detail([r], r.caseId); d.timeline[0].previousEvidenceFingerprints.push('f'.repeat(64)); assert.deepEqual(r, original); });
+test('input ordering never changes selected case or timeline', () => { const data = [unknown(), refund(), conflict()]; assert.deepEqual(model.list(data), model.list([...data].reverse())); assert.deepEqual(model.detail(data, data[0].caseId), model.detail([...data].reverse(), data[0].caseId)); });
+test('later consistent snapshot does not mark supplied case resolved', () => { const a = refund(), b = capture(); const r = model.list([a, b]).items[0]; assert.equal(r.status, 'COMPENSATION_REQUIRED'); assert.equal(r.operatorActionsExecutable, false); });
+test('review refund and cancellation are recommendations never completion', () => { for (const value of [refund(), cancellation(), unknown()]) { const r = row(value); assert.equal(r.operatorActionsExecutable, false); assert.equal(r.applicationPaymentState, 'PAYMENTS_DISABLED'); assert.equal(r.commercialSuccess, false); assert.doesNotMatch(JSON.stringify(r), /"(?:PAID|REFUNDED|RESOLVED|COMPENSATED|CANCELLED)"/); } });
+test('invalid workflow flags cannot enable actions or fake success', () => { const r = unknown(); for (const change of [{ commercialSuccess: true }, { refundAttemptAllowed: true }, { effectApplied: true }, { applicationPaymentState: 'PAID' }]) assert.throws(() => row({ ...r, ...change }), { code: 'OPERATIONS_READ_MODEL_INPUT_INVALID' }); });
+test('unsupported filters and bad identities rejected without echoes', () => { for (const filters of [{ priority: 'URGENT' }, { status: 'RESOLVED' }, { category: 'private-secret' }, { provider: 'private-secret' }, { manualReviewRequired: 'true' }, { timestamp: 99 }]) assert.throws(() => model.list([unknown()], filters), { code: 'OPERATIONS_READ_MODEL_INPUT_INVALID' }); assert.throws(() => model.detail([], 'private-secret'), { code: 'OPERATIONS_READ_MODEL_INPUT_INVALID' }); });
+test('malformed or excessive batches fail closed', () => { for (const input of [null, {}, Array(1001).fill(unknown()), [{ caseId: 'bad' }]]) assert.throws(() => model.list(input), { code: 'OPERATIONS_READ_MODEL_INPUT_INVALID' }); });
+test('same case id with conflicting supplied projections rejected', () => { const a = unknown(), b = { ...cancellation(), caseId: a.caseId }; assert.throws(() => model.list([a, b]), { code: 'OPERATIONS_READ_MODEL_INPUT_INVALID' }); });
+test('real-evaluator booking uncertainty and mismatches stay unresolved in detail', () => { const r = capture({ booking: { state: 'BOOKING_OUTCOME_UNKNOWN', providerResultObserved: false } }); const d = model.detail([r], r.caseId); assert.equal(d.category, 'BOOKING_PAYMENT_INCONSISTENCY'); assert.equal(d.reconciliationRequired, true); assert.equal(d.operatorActionsExecutable, false); assert.equal(calls, 0); });
