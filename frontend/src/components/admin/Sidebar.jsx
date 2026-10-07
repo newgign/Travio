@@ -1,5 +1,6 @@
 export default function Sidebar({ tab, setTab }) {
   const menu = [
+    { key: "reconciliation", title: "Сверка платежей", icon: "≡" },
     { key: "operations", title: "Операционный центр", icon: "🛡️" },
     { key: "bookings", title: "Бронирования", icon: "📅" },
     { key: "refunds", title: "Возвраты", icon: "↩️" },

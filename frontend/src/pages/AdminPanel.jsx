@@ -12,10 +12,12 @@ import NotificationsTable from "../components/admin/NotificationsTable";
 import SystemCenter from "../components/admin/SystemCenter";
 import IncidentsCenter from "../components/admin/IncidentsCenter";
 import TourModal from "../components/admin/TourModal";
+import ReconciliationCenter from "../components/admin/ReconciliationCenter";
 
 import "../styles/admin.css";
 
 const titles = {
+  reconciliation: "Сверка платежей",
   operations: "Asedeliya Operations Center",
   bookings: "Бронирования",
   refunds: "Возвраты",
@@ -33,6 +35,7 @@ export default function AdminPanel({ initialTab = "operations" }) {
   const [editingTour, setEditingTour] = useState(null);
 
   function renderContent() {
+    if (tab === "reconciliation") return <ReconciliationCenter />;
     if (tab === "operations") return <OperationsCenter onSelectTab={setTab} />;
     if (tab === "bookings") return <BookingsTable search={search} />;
     if (tab === "refunds") return <RefundsTable search={search} />;

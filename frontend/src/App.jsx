@@ -25,6 +25,7 @@ import "./styles/BookingDetails.css";
 import "./styles/Profile.css";
 import "./styles/Voucher.css";
 import "./styles/admin.css";
+import "./styles/ReconciliationCenter.css";
 import "./styles/Consumer.css";
 
 import NotFound from './pages/NotFound';
