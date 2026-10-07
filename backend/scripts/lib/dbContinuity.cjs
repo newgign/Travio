@@ -71,6 +71,11 @@ function migrationInventory() {
     const [,table,body] = match; tables.push(table);
     for (const m of body.matchAll(/\b(\w+)\s+(?:BIG)?SERIAL\b/gi)) serials.push({table,column:m[1]});
     for (const m of body.matchAll(/\b(\w+)\s+(?:INTEGER|BIGINT)[^,\n]*?REFERENCES\s+(\w+)\s*\((\w+)\)/gi)) foreignKeys.push({table,column:m[1],parent:m[2],parentColumn:m[3]});
+    for (const m of body.matchAll(/CONSTRAINT\s+(\w+)\s+FOREIGN KEY\s*\(([^)]+)\)\s*REFERENCES\s+(\w+)\s*\(([^)]+)\)/gi)) {
+      const columns = m[2].split(',').map(s => s.trim()), parentColumns = m[4].split(',').map(s => s.trim());
+      if (columns.length !== parentColumns.length) fail('MIGRATION_INVENTORY_UNSUPPORTED');
+      foreignKeys.push({ table, column: columns[0], parent: m[3], parentColumn: parentColumns[0], columns, parentColumns, constraintName: m[1] });
+    }
     const composite = body.match(/PRIMARY KEY\s*\(([^)]+)\)/i);
     const inline = body.match(/\b(\w+)\s+\w+(?:\(\d+\))?\s+PRIMARY KEY/i);
     if (!composite && !inline) fail('MIGRATION_INVENTORY_UNSUPPORTED');
@@ -205,7 +210,7 @@ function verify(file, { env = process.env, run = spawnSync, schema = 'public', a
   for (const table of inventory.tables) for (const kind of ['TABLE','TABLE DATA']) if(!has(kind,table))missing.push(`${kind}:${table}`);
   for (const {table,column} of inventory.serials) for(const kind of ['SEQUENCE','SEQUENCE SET'])if(!has(kind,`${table}_${column}_seq`))missing.push(`${kind}:${table}`);
   for (const {table} of inventory.primary) if(!has('CONSTRAINT',`${table} ${table}_pkey`))missing.push(`PK:${table}`);
-  for (const {table,column} of inventory.foreignKeys) if(!has('FK CONSTRAINT',`${table} ${table}_${column}_fkey`))missing.push(`FK:${table}`);
+  for (const {table,column,constraintName} of inventory.foreignKeys) if(!has('FK CONSTRAINT',`${table} ${constraintName || `${table}_${column}_fkey`}`))missing.push(`FK:${table}`);
   for (const {name} of inventory.indexes) if(!has('INDEX',name))missing.push(`INDEX:${name}`);
   for (const {table,columns} of inventory.unique) if(!has('CONSTRAINT',`${table} ${table}_${columns.join('_')}_key`))missing.push(`UNIQUE:${table}`);
   if (missing.length) fail('ARCHIVE_OBJECTS_MISSING');
@@ -317,7 +322,7 @@ function validate(state) {
   for(const table of expected.tables)if(!names.includes(table))missing.push(`table:${table}`);
   for(const [type,items] of [['p',expected.primary],['u',expected.unique]])for(const item of items)
     if(!constraints.some(c=>c.table_name===item.table && c.type===type && c.validated && same(c.columns,item.columns)))missing.push(`constraint:${type}:${item.table}`);
-  for(const item of expected.foreignKeys)if(!constraints.some(c=>c.table_name===item.table && c.type==='f' && c.validated && same(c.columns,[item.column]) && c.parent===item.parent && c.parent_schema==='public' && same(c.parent_columns,[item.parentColumn])))missing.push(`fk:${item.table}:${item.column}`);
+  for(const item of expected.foreignKeys)if(!constraints.some(c=>c.table_name===item.table && c.type==='f' && c.validated && same(c.columns,item.columns || [item.column]) && c.parent===item.parent && c.parent_schema==='public' && same(c.parent_columns,item.parentColumns || [item.parentColumn])))missing.push(`fk:${item.table}:${item.column}`);
   for(const item of expected.indexes)if(!indexes.some(i=>i.name===item.name && i.table_name===item.table && i.valid && i.unique===item.unique))missing.push(`index:${item.name}`);
   for(const item of expected.serials)if(!serials.some(s=>s.table===item.table && s.column===item.column && s.ok))missing.push(`sequence-default:${item.table}`);
   for(const name of expected.migrations)if(!migrationRows.includes(name))missing.push(`migration:${name}`);

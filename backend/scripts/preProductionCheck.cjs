@@ -90,7 +90,7 @@ function sourceChecks() {
   const add = (id, ok) => checks.push({ id, status: ok ? 'PASS' : 'BLOCKED', code: ok ? 'SOURCE_CONTRACT_PRESENT' : 'SOURCE_CONTRACT_CHANGED' });
   const inventory = migrationInventory();
   const files = fs.readdirSync(path.join(root, 'database/migrations')).filter(file => file.endsWith('.sql')).sort();
-  add('MIGRATION_INVENTORY', files.length === 20 && files.every((file, i) => file === inventory.migrations[i] && file.startsWith(String(i + 1).padStart(3, '0') + '_')) && new Set(files).size === 20 && inventory.tables.length === 23 && inventory.indexes.length === 72);
+  add('MIGRATION_INVENTORY', files.length === 21 && files.every((file, i) => file === inventory.migrations[i] && file.startsWith(String(i + 1).padStart(3, '0') + '_')) && new Set(files).size === 21 && inventory.tables.length === 25 && inventory.indexes.length === 76);
   const server = read('backend/server.js'), pkg = JSON.parse(read('backend/package.json'));
   add('STARTUP', pkg.scripts.start === 'node server.js' && !pkg.scripts.prestart && !pkg.scripts.poststart && !/scripts\/|\b(?:TRUNCATE|DROP\s+(?:TABLE|DATABASE)|migrate\s*\(|seed\s*\()/i.test(server));
   const runtimeFiles = ['backend/server.js', ...['routes', 'controllers', 'services', 'middleware', 'providers', 'integrations'].flatMap(dir => walk(path.join(root, 'backend', dir)).filter(f => /\.(js|cjs)$/.test(f)).map(f => path.relative(root, f)))];

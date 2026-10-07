@@ -13,7 +13,7 @@ function listing() {
   for(const table of inventory.tables)for(const kind of ['TABLE','TABLE DATA'])entries.push(`${kind} public ${table} owner`);
   for(const {table,column} of inventory.serials)for(const kind of ['SEQUENCE','SEQUENCE SET'])entries.push(`${kind} public ${table}_${column}_seq owner`);
   for(const {table} of inventory.primary)entries.push(`CONSTRAINT public ${table} ${table}_pkey owner`);
-  for(const {table,column} of inventory.foreignKeys)entries.push(`FK CONSTRAINT public ${table} ${table}_${column}_fkey owner`);
+  for(const {table,column,constraintName} of inventory.foreignKeys)entries.push(`FK CONSTRAINT public ${table} ${constraintName || `${table}_${column}_fkey`} owner`);
   for(const {table,columns} of inventory.unique)entries.push(`CONSTRAINT public ${table} ${table}_${columns.join('_')}_key owner`);
   for(const {name} of inventory.indexes)entries.push(`INDEX public ${name} owner`);
   return entries.map((entry,i)=>`${i+1}; 1259 100 ${entry}`).join('\n');
@@ -22,7 +22,7 @@ const listRun = () => ({status:0,stdout:listing()});
 function healthyState() {
   return {expected:inventory,info:{database:'fixture_target',schema:'public',version:'180004',size:'12345'},known:new Set(inventory.tables),
     tables:inventory.tables.map(name=>({name,rows:'0'})),names:inventory.tables,migrationRows:inventory.migrations,lastBackup:null,
-    constraints:[...inventory.primary.map(i=>({table_name:i.table,type:'p',validated:true,columns:i.columns})),...inventory.unique.map(i=>({table_name:i.table,type:'u',validated:true,columns:i.columns})),...inventory.foreignKeys.map(i=>({table_name:i.table,type:'f',validated:true,columns:[i.column],parent:i.parent,parent_schema:'public',parent_columns:[i.parentColumn]}))],
+    constraints:[...inventory.primary.map(i=>({table_name:i.table,type:'p',validated:true,columns:i.columns})),...inventory.unique.map(i=>({table_name:i.table,type:'u',validated:true,columns:i.columns})),...inventory.foreignKeys.map(i=>({table_name:i.table,type:'f',validated:true,columns:i.columns || [i.column],parent:i.parent,parent_schema:'public',parent_columns:i.parentColumns || [i.parentColumn]}))],
     indexes:inventory.indexes.map(i=>({...i,table_name:i.table,valid:true})),serials:inventory.serials.map(i=>({...i,ok:true}))};
 }
 
@@ -37,9 +37,9 @@ test('3Y focused offline guards/command construction/privacy (no network)',async
   fs.writeFileSync(manifestPath,JSON.stringify(fixtureManifest));
   await t.test('manual-only entrypoints and deterministic complete repo inventory',()=>{
     assert.deepEqual(db.migrationInventory(),inventory);
-    assert.equal(inventory.tables.length,23);assert.equal(inventory.migrations.length,20);assert.equal(inventory.indexes.length,72);
-    assert.equal(inventory.foreignKeys.length,16);assert.equal(inventory.serials.length,19);
-    assert.equal(inventory.migrations.at(-1),'020_catalog_environment_identity.sql');
+    assert.equal(inventory.tables.length,25);assert.equal(inventory.migrations.length,21);assert.equal(inventory.indexes.length,76);
+    assert.equal(inventory.foreignKeys.length,17);assert.equal(inventory.serials.length,19);
+    assert.equal(inventory.migrations.at(-1),'021_reconciliation_storage.sql');
     assert.ok(inventory.tables.includes('_migrations'));
     for(const file of ['dbBackup.cjs','dbBackupVerify.cjs','dbRestore.cjs','dbInventory.cjs','dbSchemaCheck.cjs'])assert.match(fs.readFileSync(path.join(__dirname,'../scripts',file),'utf8'),/require.main === module/);
     const source=fs.readFileSync(path.join(__dirname,'../scripts/lib/dbContinuity.cjs'),'utf8');
@@ -200,6 +200,7 @@ test('3Y focused offline guards/command construction/privacy (no network)',async
     for(const patch of [{names:[]},{constraints:[]},{indexes:[]},{serials:[]},{migrationRows:[]}])assert.equal(db.validate({...healthyState(),...patch}).valid,false);
     const state=healthyState();state.indexes=state.indexes.map(i=>i.name==='provider_hotels_environment_identity'?{...i,unique:false}:i);assert.equal(db.validate(state).valid,false);
     const fk=healthyState();fk.constraints=fk.constraints.map(c=>c.type==='f'?{...c,parent_schema:'wrong'}:c);assert.equal(db.validate(fk).valid,false);
+    const composite=healthyState();composite.constraints=composite.constraints.map(c=>c.table_name==='reconciliation_observations' && c.type==='f'?{...c,columns:c.columns.slice(0,1),parent_columns:c.parent_columns.slice(0,1)}:c);assert.equal(db.validate(composite).valid,false);
   });
   await t.test('exact-count diagnostics bounded to 100 MiB and read-only rollback on refusal',async()=>{
     const queries=[];
