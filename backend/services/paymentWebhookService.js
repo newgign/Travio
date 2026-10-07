@@ -11,12 +11,6 @@ function createProcessor({ adapter, intent, providerPaymentId } = {}) {
   if (process.env.NODE_ENV !== 'test') throw Object.assign(new Error('Offline payment contract only'), { code: 'PAYMENTS_DISABLED' });
   const provider = contract.adapterContract(adapter), trusted = contract.trustedIntent(intent, providerPaymentId);
   const seen = new Map(); let state = 'PAYMENT_NOT_STARTED', tail = Promise.resolve();
-  const edges = {
-    PAYMENT_NOT_STARTED: ['PAYMENT_PENDING', 'PAYMENT_FAILED_FINAL', 'PAYMENT_CANCELLED', 'PAYMENT_OUTCOME_UNKNOWN'],
-    PAYMENT_PENDING: ['PAYMENT_PENDING', 'PAYMENT_AUTHORIZED', 'PAYMENT_CAPTURED', 'PAYMENT_FAILED_FINAL', 'PAYMENT_CANCELLED', 'PAYMENT_OUTCOME_UNKNOWN'],
-    PAYMENT_AUTHORIZED: ['PAYMENT_AUTHORIZED', 'PAYMENT_CAPTURED', 'PAYMENT_CANCELLED', 'PAYMENT_OUTCOME_UNKNOWN'],
-    PAYMENT_CAPTURED: ['PAYMENT_CAPTURED'], PAYMENT_FAILED_FINAL: ['PAYMENT_FAILED_FINAL'], PAYMENT_CANCELLED: ['PAYMENT_CANCELLED'],
-  };
   async function accept(rawBody, authentication) {
     // Preserve exact raw bytes; bounded Buffer only, no parsed browser JSON or logging.
     if (!Buffer.isBuffer(rawBody) || rawBody.length === 0 || rawBody.length > 65536) return reply('MALFORMED_WEBHOOK');
@@ -33,9 +27,8 @@ function createProcessor({ adapter, intent, providerPaymentId } = {}) {
     const digest = crypto.createHash('sha256').update(JSON.stringify(event)).digest('hex');
     if (seen.has(event.eventId)) return reply(seen.get(event.eventId) === digest ? 'DUPLICATE_WEBHOOK_EVENT' : 'PAYMENT_STATE_CONFLICT');
     if (seen.size >= 1000) return reply('PAYMENT_STATE_CONFLICT'); // Fail closed; never evict replay protection silently.
-    const resolving = state === 'PAYMENT_OUTCOME_UNKNOWN';
-    if (resolving ? !event.reconciled || event.state === 'PAYMENT_OUTCOME_UNKNOWN' : !edges[state]?.includes(event.state))
-      return reply(resolving ? 'PAYMENT_OUTCOME_UNKNOWN' : 'PAYMENT_STATE_CONFLICT');
+    const ordering = contract.observationDecision(state, event);
+    if (ordering !== 'ACCEPT') return reply(ordering === 'UNKNOWN' ? 'PAYMENT_OUTCOME_UNKNOWN' : 'PAYMENT_STATE_CONFLICT');
     // Authorization is not capture. Validate a hypothetical server-evidenced booking projection only;
     // no booking record or payment state is written, and the real application stays disabled.
     const projection = { checkRate: 'CONFIRMED', travelers: 'VALID', review: 'REVIEW_READY', booking: 'BOOKING_CONFIRMED',

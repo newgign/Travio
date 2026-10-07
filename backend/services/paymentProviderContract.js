@@ -4,6 +4,17 @@ const STATES = Object.freeze({
   'payment.captured': 'PAYMENT_CAPTURED', 'payment.failed': 'PAYMENT_FAILED_FINAL',
   'payment.cancelled': 'PAYMENT_CANCELLED', 'payment.unknown': 'PAYMENT_OUTCOME_UNKNOWN',
 });
+// Shared observation ordering; reconciliation is adapter evidence, never browser permission.
+function observationDecision(from, event) {
+  if (from === 'PAYMENT_OUTCOME_UNKNOWN') return event.reconciled && event.state !== from ? 'ACCEPT' : 'UNKNOWN';
+  const edges = {
+    PAYMENT_NOT_STARTED: ['PAYMENT_PENDING', 'PAYMENT_FAILED_FINAL', 'PAYMENT_CANCELLED', 'PAYMENT_OUTCOME_UNKNOWN'],
+    PAYMENT_PENDING: ['PAYMENT_PENDING', 'PAYMENT_AUTHORIZED', 'PAYMENT_CAPTURED', 'PAYMENT_FAILED_FINAL', 'PAYMENT_CANCELLED', 'PAYMENT_OUTCOME_UNKNOWN'],
+    PAYMENT_AUTHORIZED: ['PAYMENT_AUTHORIZED', 'PAYMENT_CAPTURED', 'PAYMENT_CANCELLED', 'PAYMENT_OUTCOME_UNKNOWN'],
+    PAYMENT_CAPTURED: ['PAYMENT_CAPTURED'], PAYMENT_FAILED_FINAL: ['PAYMENT_FAILED_FINAL'], PAYMENT_CANCELLED: ['PAYMENT_CANCELLED'],
+  };
+  return edges[from]?.includes(event.state) ? 'ACCEPT' : 'CONFLICT';
+}
 const fail = code => { throw Object.assign(new Error('Payment contract rejected'), { code }); };
 const object = value => value && typeof value === 'object' && !Array.isArray(value);
 const id = value => typeof value === 'string' && /^[A-Za-z0-9_-]{1,100}$/.test(value);
@@ -36,4 +47,4 @@ function normalizeEvent(value) {
     requestId: value.requestId, type: value.type, state: STATES[value.type], amountMinor: cents(value.amount),
     currency: value.currency, reconciled: value.reconciled === true });
 }
-module.exports = { STATES, trustedIntent, adapterContract, normalizeEvent };
+module.exports = { STATES, trustedIntent, adapterContract, normalizeEvent, observationDecision };
