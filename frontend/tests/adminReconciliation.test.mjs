@@ -23,7 +23,13 @@ test('7E read-only admin reconciliation offline', async t => {
   globalThis.localStorage = { getItem: key => memory.get(key) ?? null, setItem: (key, value) => memory.set(key, value), removeItem: key => memory.delete(key) };
   globalThis.window = new EventTarget(); window.location = { href: '/' };
   let networkCalls = 0;
-  t.mock.method(globalThis, 'fetch', () => { networkCalls++; throw Error('NO_NETWORK_ALLOWED'); });
+  t.mock.method(globalThis, 'fetch', async (url, options) => {
+    networkCalls++;
+    assert.equal(options.method, 'GET');
+    assert.match(url, /\/api\/admin\/reconciliation(?:\?|\/[a-f0-9]{64}$)/);
+    const detailRequest = /\/reconciliation\/[a-f0-9]{64}$/.test(url);
+    return { ok: !detailRequest, status: detailRequest ? 404 : 200, text: async () => JSON.stringify(detailRequest ? { code: 'RECONCILIATION_CASE_NOT_FOUND' } : { source: 'unavailable', items: [] }) };
+  });
   try {
     const service = await server.ssrLoadModule('/src/services/reconciliationService.js');
     const stores = await server.ssrLoadModule('/src/services/reconciliationStore.js');
@@ -69,7 +75,7 @@ test('7E read-only admin reconciliation offline', async t => {
     await t.test('detail must match requested case family', () => assert.throws(() => presentation.safeDetail(detail, 'f'.repeat(64))));
     await t.test('compensation is recommendation without refund cancel retry resolve controls', async () => { const evidence = decision({ paymentState: 'PAYMENT_CAPTURED', previousEvidence: [event('payment.captured')], booking: { state: 'BOOKING_FAILED_FINAL', providerResultObserved: false } }); const data = operations.list([evidence]); const s = store({ loadList: async () => ({ source: 'available', ...data }), loadDetail: async () => operations.detail([evidence], data.items[0].caseId) }); await s.load(); await s.open(data.items[0].caseId); const out = html(s); assert.match(out, /Проверить необходимость возврата/); const buttons = out.match(/<button[^>]*>[\s\S]*?<\/button>/g).join(' '); assert.doesNotMatch(buttons, /Возврат|Отменить|Повторить|Завершить|Refund|Cancel|Retry|Resolved/); });
     await t.test('navigation stays inside guarded Admin and responsive focus styles exist', async () => { const source = path => readFile(new URL('../src/' + path, import.meta.url), 'utf8'); assert.match(await source('components/admin/Sidebar.jsx'), /reconciliation.*Сверка платежей/); assert.match(await source('pages/AdminPanel.jsx'), /tab === "reconciliation"/); assert.match(await source('App.jsx'), /ProtectedRoute adminOnly/); assert.match(await source('styles/ReconciliationCenter.css'), /:focus-visible/); assert.match(await source('styles/ReconciliationCenter.css'), /@media/); });
-    await t.test('runtime source has no request or mutation transport and calls remain zero', async () => { const source = await readFile(new URL('../src/services/reconciliationService.js', import.meta.url), 'utf8'); assert.doesNotMatch(source, /fetch\(|authFetch|axios|POST|PUT|DELETE/); assert.equal(networkCalls, 0); });
+    await t.test('runtime transport is authenticated GET only with four intercepted reads', async () => { const source = await readFile(new URL('../src/services/reconciliationService.js', import.meta.url), 'utf8'); assert.match(source, /authFetch/); assert.doesNotMatch(source, /POST|PUT|PATCH|DELETE/); assert.equal(networkCalls, 4); });
   } finally {
     await server.close(); globalThis.localStorage = previous.storage; globalThis.window = previous.window;
   }

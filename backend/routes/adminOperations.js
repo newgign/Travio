@@ -22,6 +22,8 @@ const {
   runSystemSelfTest,
 } = require("../controllers/adminOperationsController");
 
+// Reconciliation router owns the same auth/role/permission checks and terminates its namespace.
+router.use('/reconciliation', require('./adminReconciliation').createRouter());
 router.use(authMiddleware, requireRole("admin"));
 router.use(requirePermission("admin.operations.read"));
 
