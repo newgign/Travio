@@ -133,4 +133,8 @@ async function prepareCheckoutIntent(request) {
 function prepareRefundIntent(request, booking, payment, access) {
   return require('./refundReadinessService').prepareRefundIntent(request, booking, payment, access);
 }
-module.exports = { readiness, createIntent, prepareCheckoutIntent, prepareRefundIntent };
+// Internal offline seam only; no route/provider activation and no persistent payment effects.
+function createWebhookProcessor(options) {
+  return require('./paymentWebhookService').createProcessor(options);
+}
+module.exports = { readiness, createIntent, prepareCheckoutIntent, prepareRefundIntent, createWebhookProcessor };
