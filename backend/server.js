@@ -39,9 +39,10 @@ if (trustProxy === "true") app.set("trust proxy", 1);
 else if (/^\d+$/.test(trustProxy) && Number(trustProxy) > 0) app.set("trust proxy", Number(trustProxy));
 
 app.disable("x-powered-by");
-app.use(requestTelemetry);
 app.use(securityHeaders);
-app.get('/health', require('./routes/stagingHealth').healthHandler(pool));
+// Render process probe must not enter telemetry's DB-backed slow/error event path.
+app.get('/health', require('./routes/stagingHealth').healthHandler());
+app.use(requestTelemetry);
 app.use(cors({
   origin(origin, callback) {
     if (!origin || allowedOrigins.includes(origin)) return callback(null, true);

@@ -205,10 +205,10 @@ test('ordinary production errors hide raw message/stack/code and query from logs
     assert.ok(!JSON.stringify({ body, logs }).includes('private-'));
   } finally { logger.error = original; if (previous === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = previous; }
 });
-test('health output is bounded and secret-free on DB failure', async () => {
+test('process health output is bounded and does not access DB', async () => {
   let body, status;
-  await require('../routes/stagingHealth').healthHandler({ query: async q => { assert.equal(q.query_timeout, 3000); throw new Error('private-db-password'); } })({}, { status(s) { status = s; return this; }, json(b) { body = b; } });
-  assert.equal(status, 503); assert.ok(!JSON.stringify(body).includes('private-'));
+  await require('../routes/stagingHealth').healthHandler({ query() { assert.fail('Process health accessed DB'); } })({}, { status(s) { status = s; return this; }, json(b) { body = b; } });
+  assert.equal(status, undefined); assert.deepEqual(body, { status: 'ok' });
 });
 test('controllers use safe production internal messages and codes, preserving validation errors', () => {
   const api = require('../utils/apiResponse');

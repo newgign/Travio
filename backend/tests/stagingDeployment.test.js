@@ -21,14 +21,10 @@ test('CORS accepts exact configured origins, rejects wildcard and URL paths', ()
   assert.deepEqual(allowedOrigins({CORS_ORIGINS:'https://web.example, https://other.example', CORS_ORIGIN:'http://localhost:5173'}),['https://web.example','https://other.example']);
   for (const origin of ['*','https://web.example/path','https://user:pass@web.example']) assert.throws(()=>allowedOrigins({CORS_ORIGINS:origin}));
 });
-test('health uses bounded SELECT 1 and does not disclose database errors', async () => {
-  for (const ok of [true,false]) {
-    let status=200,body;
-    const res={status(value){status=value;return this;},json(value){body=value;return this;}};
-    await healthHandler({query:async query=>{assert.equal(query.text,'SELECT 1');assert.equal(query.query_timeout,3000);if(!ok)throw new Error('secret-fixture');}})({},res);
-    assert.equal(status,ok?200:503); assert.deepEqual(body.database,{ok});
-    assert.ok(!JSON.stringify(body).includes('secret-fixture'));
-  }
+test('process health is independent of database availability', () => {
+  let body;
+  healthHandler({ query() { assert.fail('Liveness must not query DB'); } })({}, { json(value) { body = value; } });
+  assert.deepEqual(body, { status: 'ok' });
 });
 test('memory cache behavior is preserved outside ignored runtime directory', () => {
   const cache=require('../services/memoryCache');cache.clear();cache.set('fixture',42);
