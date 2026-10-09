@@ -6,7 +6,9 @@ class ApiResponse {
     }
 
     static publicCode(error) {
-        if (process.env.NODE_ENV === 'production' && (!error.status || Number(error.status) === 500)) return 'INTERNAL_ERROR';
+        // Preserve the existing public search unavailable contract, never arbitrary 5xx codes.
+        if (Number(error.status) === 503 && error.code === 'HOTELBEDS_UNAVAILABLE') return error.code;
+        if (process.env.NODE_ENV === 'production' && (!error.status || Number(error.status) >= 500)) return 'INTERNAL_ERROR';
         return error.code || undefined;
     }
 

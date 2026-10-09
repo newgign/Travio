@@ -46,7 +46,7 @@ test('3N planner, HTTP authorization and persisted UI refresh: offline PostgreSQ
   await fixture.query("INSERT INTO provider_destinations(provider,code,country_code,name,content_environment) VALUES('hotelbeds','CEN','PT','Centre Portugal','test'),('hotelbeds','DXB','AE','Dubai','test'),('hotelbeds','AYT','TR','Antalya','test')");
   const express=require('express'),jwt=require('jsonwebtoken');
   process.env.JWT_SECRET=require('crypto').randomBytes(32).toString('hex');
-  const headers=role=>({'Content-Type':'application/json',Authorization:'Bearer '+jwt.sign({id:1,role},process.env.JWT_SECRET)});
+  const headers=role=>({'Content-Type':'application/json',Authorization:'Bearer '+jwt.sign({id:1,role},process.env.JWT_SECRET,{expiresIn:'1h'})});
   const app=express();app.use(express.json());app.use('/admin',require('../routes/adminOperations'));
   const server=await new Promise(resolve=>{const s=app.listen(0,'127.0.0.1',()=>resolve(s));});
   t.after(()=>new Promise(resolve=>server.close(resolve)));

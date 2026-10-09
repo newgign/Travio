@@ -28,7 +28,12 @@ module.exports = (req, res, next) => {
       });
     }
 
-    req.user = jwt.verify(token, getJwtSecret());
+    const session = jwt.verify(token, getJwtSecret(), { algorithms: ['HS256'] });
+    // Offer JWTs may share the legacy secret, but are never authentication sessions.
+    if (!session || typeof session !== 'object' || session.type !== undefined
+      || !Number.isSafeInteger(session.id) || session.id < 1 || !['user', 'admin'].includes(session.role)
+      || !Number.isFinite(session.exp)) throw new Error('Invalid session claims');
+    req.user = session;
 
     return next();
   } catch (err) {

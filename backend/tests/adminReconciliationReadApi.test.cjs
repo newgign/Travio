@@ -9,8 +9,8 @@ const { createTestRepository } = require('./helpers/inMemoryReconciliationReposi
 const { evaluate } = require('../services/paymentReconciliation');
 const operations = require('../services/reconciliationOperationsReadModel');
 let repo, server, base, calls, writes;
-const admin = jwt.sign({ id: 1, role: 'admin' }, process.env.JWT_SECRET);
-const user = jwt.sign({ id: 2, role: 'user' }, process.env.JWT_SECRET);
+const admin = jwt.sign({ id: 1, role: 'admin' }, process.env.JWT_SECRET, { expiresIn: '1h' });
+const user = jwt.sign({ id: 2, role: 'user' }, process.env.JWT_SECRET, { expiresIn: '1h' });
 const decision = (requestId = 'a'.repeat(32)) => evaluate({ intent: { state: 'PAYMENT_INTENT_READY', reviewState: 'REVIEW_READY', requestId, amount: '10.00', currency: 'EUR' }, provider: 'synthetic_mock', providerPaymentId: 'synthetic_payment', paymentState: 'PAYMENT_OUTCOME_UNKNOWN', booking: { state: 'BOOKING_CONFIRMED', providerResultObserved: true } });
 const seed = async id => { const result = decision(id); await repo.upsertCase({ result, evidence: null, expectedVersion: 0, observedAt: '2026-10-08T10:00:00.000Z' }); return operations.projectCase(result); };
 const request = async (path = '', token = admin, method = 'GET', namespace = '/fixture/reconciliation') => {

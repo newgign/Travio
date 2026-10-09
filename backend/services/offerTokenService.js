@@ -89,9 +89,10 @@ class OfferTokenService {
 
   verify(token) {
     try {
-      const payload = jwt.verify(String(token || ""), this.getSecret());
+      if (typeof token !== 'string') throw new Error('Invalid offer token');
+      const payload = jwt.verify(token, this.getSecret(), { algorithms: ['HS256'] });
 
-      if (payload?.type !== "travio_provider_offer" || !payload?.offer) {
+      if (payload?.type !== "travio_provider_offer" || !payload?.offer || !Number.isFinite(payload.exp)) {
         throw new Error("Некорректный тип offer token");
       }
 

@@ -14,7 +14,8 @@ function accessLogEnabled() {
 
 module.exports = function requestTelemetry(req, res, next) {
   const incoming = String(req.get("x-request-id") || "").trim();
-  const requestId = incoming && incoming.length <= 80 ? incoming : crypto.randomUUID();
+  // Header is caller-controlled: only existing opaque correlation formats may be echoed/stored.
+  const requestId = /^(?:[a-f0-9]{32}|[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})$/i.test(incoming) ? incoming : crypto.randomUUID();
   const started = process.hrtime.bigint();
   const finishInFlight = metricsService.beginRequest();
 

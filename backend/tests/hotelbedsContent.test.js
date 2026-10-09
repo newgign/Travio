@@ -126,7 +126,7 @@ test('local HTTP catalog is DB-only; admin import requires auth/role and rejects
   try {
     const options=await (await fetch(base+'/catalog/test-options')).json();assert.equal(options.destinations[0].code,'AVE');assert.equal(JSON.stringify(options).includes('hidden'),false);
     for(const role of [null,'user','admin']) {
-      const headers={'Content-Type':'application/json'};if(role)headers.Authorization='Bearer '+jwt.sign({id:1,role},process.env.JWT_SECRET);
+      const headers={'Content-Type':'application/json'};if(role)headers.Authorization='Bearer '+jwt.sign({id:1,role},process.env.JWT_SECRET,{expiresIn:'1h'});
       const response=await fetch(base+'/admin/providers/hotelbeds/content',{method:'POST',headers,body:JSON.stringify({url:'https://invalid',destinationCode:'OTHER'})});
       assert.equal(response.status,role===null?401:role==='user'?403:400);
     }

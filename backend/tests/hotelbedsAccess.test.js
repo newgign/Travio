@@ -212,7 +212,7 @@ test('3M / 3M.1 persistent PostgreSQL gates and offline transport',async t=>{
     const server=await new Promise(resolve=>{const s=app.listen(0,'127.0.0.1',()=>resolve(s));});
     try {
       const url=`http://127.0.0.1:${server.address().port}/admin/providers/hotelbeds/access`;
-      const headers=role=>({'Content-Type':'application/json',Authorization:'Bearer '+jwt.sign({id:1,role},process.env.JWT_SECRET)});
+      const headers=role=>({'Content-Type':'application/json',Authorization:'Bearer '+jwt.sign({id:1,role},process.env.JWT_SECRET,{expiresIn:'1h'})});
       assert.equal((await fetch(url)).status,401);assert.equal((await fetch(url,{headers:headers('user')})).status,403);
       for(const action of ['arm','control']){
         assert.equal((await fetch(url+'/'+action,{method:'POST',headers:headers('user'),body:JSON.stringify({operation:'AVAILABILITY_3424'})})).status,403);

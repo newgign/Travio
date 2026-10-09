@@ -192,7 +192,7 @@ test('payment checkout route requires existing authentication and has no browser
   });
   const unauthorized = await send();
   assert.equal(unauthorized.status, 401); assert.equal(reads, 0);
-  const jwt = require('jsonwebtoken').sign({ id: 1, role: 'user' }, process.env.JWT_SECRET);
+  const jwt = require('jsonwebtoken').sign({ id: 1, role: 'user' }, process.env.JWT_SECRET, { expiresIn: '1h' });
   const response = await send(`Bearer ${jwt}`);
   assert.equal(response.status, 503); assert.equal(response.body.code, 'PAYMENTS_DISABLED'); assert.equal(providerCalls, 0);
 });

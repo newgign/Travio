@@ -12,6 +12,14 @@ function normalizeEmail(email = "") {
   return String(email).trim().toLowerCase();
 }
 
+function credentialInput(body, registration = false) {
+  if (!body || typeof body !== 'object' || Array.isArray(body)
+    || typeof body.email !== 'string' || body.email.length > 254
+    || typeof body.password !== 'string' || Buffer.byteLength(body.password, 'utf8') > (registration ? 72 : 1024)) return false;
+  return !registration || (typeof body.full_name === 'string' && body.full_name.length <= 255
+    && (body.phone == null || typeof body.phone === 'string' && body.phone.length <= 50));
+}
+
 function buildPublicUser(row) {
   return {
     id: row.id,
@@ -54,6 +62,7 @@ async function bookingStats(userId) {
 
 const register = async (req, res) => {
   try {
+    if (!credentialInput(req.body, true)) return res.status(400).json({ code: 'AUTH_INPUT_INVALID' });
     const fullName = String(req.body.full_name || "").trim();
     const email = normalizeEmail(req.body.email);
     const password = String(req.body.password || "");
@@ -105,6 +114,7 @@ const register = async (req, res) => {
 
 const login = async (req, res) => {
   try {
+    if (!credentialInput(req.body)) return res.status(400).json({ code: 'AUTH_INPUT_INVALID' });
     const email = normalizeEmail(req.body.email);
     const password = String(req.body.password || "");
 
@@ -231,6 +241,9 @@ const updateProfile = async (req, res) => {
 
 const changePassword = async (req, res) => {
   try {
+    if (!req.body || typeof req.body.currentPassword !== 'string' || typeof req.body.newPassword !== 'string'
+      || Buffer.byteLength(req.body.currentPassword, 'utf8') > 1024 || Buffer.byteLength(req.body.newPassword, 'utf8') > 72)
+      return res.status(400).json({ code: 'AUTH_INPUT_INVALID' });
     const currentPassword = String(req.body.currentPassword || "");
     const newPassword = String(req.body.newPassword || "");
 
