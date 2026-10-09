@@ -44,7 +44,7 @@ test('migration runner locks before inspecting schema and unlocks on failure', a
   const { migrate } = require('../scripts/migrate');
   const calls=[];
   const fake={connect:async()=>({query:async sql=>{calls.push(sql);if(sql.includes('CREATE TABLE'))throw new Error('fixture');},release(){calls.push('release');}}),end:async()=>calls.push('end')};
-  await assert.rejects(migrate(fake));
+  await assert.rejects(migrate(fake, require('./helpers/reconciliationMigrationEnv.cjs')()));
   assert.equal(calls[0],'SELECT pg_advisory_lock(319003)');
   assert.deepEqual(calls.slice(-3),['SELECT pg_advisory_unlock(319003)','release','end']);
 });

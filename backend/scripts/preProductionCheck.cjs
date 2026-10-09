@@ -25,6 +25,8 @@ function publicHttps(value) {
 }
 async function configuration(env) {
   const checks = [];
+  const reconciliation = require('./lib/reconciliationMigrationGuard.cjs').preflight(env);
+  checks.push({ id: 'RECONCILIATION_STORAGE', status: reconciliation.status === 'PASS' ? 'PASS' : 'BLOCKED', code: reconciliation.status === 'PASS' ? 'DISABLED — SAFE' : 'RECONCILIATION_ACTIVATION_BLOCKED' });
   const add = (id, ok, reason = 'INVALID_CONFIGURATION') => checks.push({ id, status: ok ? 'PASS' : 'BLOCKED', code: ok ? 'VALID' : reason });
   for (const [key, value] of Object.entries(schema.MUST_EQUAL)) {
     // NODE_ENV/provider selector and boolean flags are case-sensitive at runtime.

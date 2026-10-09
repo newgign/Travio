@@ -90,4 +90,8 @@ function createDisabledRepository() {
     async listCases() { return { source: 'unavailable', records: [] }; },
   });
 }
-module.exports = { repository: createDisabledRepository(), createDisabledRepository, assertRepository, prepareWrite, failure };
+function createRuntimeRepository(env = process.env) {
+  require('../config/reconciliationStorage').storageMode(env);
+  return createDisabledRepository();
+}
+module.exports = { repository: createRuntimeRepository(), createRuntimeRepository, createDisabledRepository, assertRepository, prepareWrite, failure };
