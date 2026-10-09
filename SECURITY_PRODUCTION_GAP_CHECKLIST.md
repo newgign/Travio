@@ -1,0 +1,42 @@
+# Security production gap checklist — Sprint 7K
+
+2026-10-09. Repository/application audit only. Open requirement counts: **P0:1, P1:6, P2:3**. Resolved hardening items below are not included in these counts. A requirement is not a demonstrated exploit. Unknown infrastructure/operational evidence is identified explicitly.
+
+P0: before any commercial transaction. P1: before public production. P2: follow-up hardening. Current money/booking/storage/migration gates remain disabled. No penetration test, certification or PCI claim.
+
+## Open P0
+
+| ID | Finding/evidence | Current mitigation | Required next action | Owner |
+| --- | --- | --- | --- | --- |
+| S-P0-01 | Live payment trust boundary is incomplete. paymentWebhookService.createProcessor is offline/test-only with injected adapter and in-memory dedupe; no production PSP-specific HTTP authentication/replay/account binding or durable accepted-event boundary. Reconciliation storage inactive. | Real charges/refunds hard-disabled; no production webhook route or selected live PSP. | Before transactions, implement/review selected PSP signature verification over exact bounded raw bytes, merchant/account/environment binding, replay/idempotency and durable event/intent correlation; independent acceptance and payment-data scope review. Do not attach callbacks to the global JSON parser. | Engineering + owner + external PSP/security reviewer |
+
+## Open P1
+
+| ID | Finding/evidence | Current mitigation | Required next action | Owner |
+| --- | --- | --- | --- | --- |
+| S-P1-01 | Bearer roles/identity remain JWT snapshots; authMiddleware does not recheck DB account existence/role/status. Frontend logout removes storage only; password change has no token revocation. No inactive-user enforcement found in inspected auth flow. Default session lifetime7d. | Signature/HS256/claims/expiry now checked; session restoration fetches profile and clears deleted users locally. | Design server-enforced revocation/role-change/deletion semantics and bounded admin sessions; validate stolen-token/password-change cases. No schema redesign performed here. | Engineering + owner |
+| S-P1-02 | In-memory rate limiter is per process and resets on restart; TRUST_PROXY=1 is deployment-dependent. Login/register share an IP bucket; distributed credential abuse not covered. | Auth30/15min and API600/min defaults; release gate disallows RATE_LIMIT_ENABLED=false. Health bypasses limiter. | Verify proxy/IP provenance on real topology and establish edge/multi-instance abuse controls and acceptance; avoid adding Redis without design. | Infrastructure + engineering |
+| S-P1-03 | Auth token/user remain in localStorage, readable by same-origin script. Backend CSP protects API responses; checked-in static frontend blueprint has no equivalent app CSP rollout. | React escaping; raw HTML insertion search found none; authFetch confines bearer attachment to API-relative paths and rejects redirects; profile validation before UI trust. | Review XSS threat model, static-site CSP/third-party script policy and browser acceptance. Decide token persistence/session policy deliberately; no cookie migration in this sprint. | Engineering + infrastructure |
+| S-P1-04 | Strong secrets/TLS/CORS/body bounds are enforced by operator preproduction validators, not a mandatory complete server-startup validator. Runtime secret helpers primarily check presence; validators do not prove actual deployed values. | No hardcoded JWT fallback; absent secret fails auth; strong-secret/TLS/source/build gates exist. Production blueprints keep private env values unsynced. | Make validated release configuration mandatory in deployment procedure/automation; owner supplies/rotates strong distinct secrets and verifies TLS/proxy/origins privately. Evidence of actual deployment configuration still required. | Owner + infrastructure + engineering |
+| S-P1-05 | Legacy bcrypt passwords may exceed72 UTF8 bytes and therefore share a truncated hash prefix. Previously unbounded register/password-change code could create them. This audit cannot identify affected accounts without DB access. | New register/new-password inputs reject >72 bytes; login/current-password retain bounded legacy compatibility (1024 bytes). bcrypt cost12. | Establish owner-approved migration/reset policy for potentially affected accounts; test long/unicode passwords. Do not silently invalidate existing accounts or claim historical hashes repaired. | Engineering + owner |
+| S-P1-06 | Sensitive profile/traveller and audit/incident data exists; travelerProfileController stores names/DOB, adminAudit can record email, incident/system-event metadata accepts arbitrary structured input. Retention, deployed DB/log access, backups and deletion controls not established by this source audit. | Server ownership/admin guards; selected controller errors reduced; new signals use strict projection. | Document/minimize retained PII and verify least-privilege DB/log/backup access, retention/deletion and incident support access before public production. No claim of absent encryption or a confirmed public PII breach. | Owner + infrastructure + engineering |
+
+## Open P2
+
+| ID | Finding/evidence | Current mitigation | Required next action | Owner |
+| --- | --- | --- | --- | --- |
+| S-P2-01 | Saved traveler profile endpoint normalizes names/type with String coercion and mostly validates nonempty names; stricter intent-traveller validation exists separately. Profile field bounds/boolean semantics are also less strict than booking intent. | User-scoped parameterized SQL;12 saved-traveller cap; global JSON limit; strict6G intent validation. | Align saved-profile field type/date/length validation with existing presentation/intent contracts in a separate focused change. | Engineering |
+| S-P2-02 | requestTelemetry strips query but retains raw path in events/optional logs; event/incident metadata truncation is not comprehensive PII redaction. Generic logger is not a full raw-webhook/card/passport sanitizer. | Unsafe caller request IDs fixed; secrets/auth/URLs/Error objects redacted; auth/intent code does not intentionally log credential bodies. | Prefer route-template/fixed-code telemetry and review metadata allowlists/retention; do not send raw provider/traveller payloads to generic logger. | Engineering + operations |
+| S-P2-03 | offerTokenService intentionally falls back to JWT_SECRET, coupling compromise/rotation blast radius. Issuer/audience absent across these single-app tokens. | Separate offer secret supported; domain-specific payload checks and HS256 pinning; auth rejects offer purpose; both token types now require expiry. | Provision separate strong keys, document rotation, and evaluate issuer/audience only when actual multi-service/token-consumer threat model requires them. | Owner + engineering |
+
+## Resolved in 7K
+
+- Session verifier now pins HS256, requires finite expiry, positive integer server identity and known role; rejects offer-purpose tokens even with shared secret.
+- Offer verifier pins HS256 and requires string input/purpose/expiry.
+- Login/register/password-change reject credential type confusion and excessive inputs before SQL/hash work; new password writes bounded to bcrypt72 bytes.
+- Caller x-request-id accepts only UUID/32hex before response/event/log projection; arbitrary secret/PII-like text is replaced.
+- Production publicCode hides arbitrary5xx codes while preserving explicit existing HOTELBEDS_UNAVAILABLE503 contract.
+
+Dependency advisory status: **UNKNOWN / NOT RUN**, runtime and dev-only vulnerabilities not assessed by a registry audit. No version changes or npm audit fix. Online dependency review/SCA remains required release evidence; not counted as a proven vulnerability finding.
+
+Security invariants: server authenticates/authorizes; client role/user/price never authoritative; ownership checked before resource response/actions; offer/checkout money derives from verified server state; SQL values parameterized and sort identifiers allowlisted; raw credentials/provider bodies never belong in diagnostics; financial/booking gates stay closed; migration requires explicit approved target; normal users cannot inspect reconciliation; observability failure cannot change financial outcome.
