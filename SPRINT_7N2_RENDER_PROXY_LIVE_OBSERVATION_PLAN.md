@@ -2,6 +2,34 @@
 
 2026-10-10, Asia/Qyzylorda. LIVE OBSERVATION PLAN: PASS. LIVE TOPOLOGY ACCEPTANCE: OPEN. TRUST_PROXY recommendation: NONE YET. No live acceptance request executed by this task.
 
+## Sprint 7N.3 update — current observation procedure
+
+Owner evidence supplied on 2026-10-10: live TRUST_PROXY=1, live revision `22c9f75`, ancestry check against `94de420` exit0, /health200, backend LIVE. These are owner observations, not new agent live checks. The historical UNKNOWN statements below describe the original 7N.2 baseline.
+
+7N.3 adds privacy-safe fields to the existing optional HTTP access log: `networkIdentitySource`, `trustedProxy`, `forwardedChainLength`, `socketPeerMatchesCanonical`. No endpoint or proxy/limiter/auth authority change. See SPRINT_7N3_SAFE_PROXY_TELEMETRY_REPORT.md for exact semantics and offline evidence. This supersedes the historical missing-telemetry prerequisite below after the owner separately deploys 7N.3.
+
+Use **GET /api/health/live** for the telemetry observation. It already passes requestTelemetry and its handler reads no DB/provider/private data. `/health` remains outside telemetry; `/api/health/ready` performs a DB readiness check and is not the observation route. Existing HTTP_ACCESS_LOG must be enabled for access logs; if absent/false, report observation unavailable. No Render/env/deploy change performed by this task.
+
+After a separately authorized normal deployment, owner confirms backend LIVE, /health200 and normal readiness, then sends exactly one unauthenticated request:
+
+```powershell
+$normalObservationId = [guid]::NewGuid().ToString()
+curl.exe --silent --show-error --max-time 10 --max-redirs 0 --output NUL --write-out "HTTP %{http_code}\n" --header "x-request-id: $normalObservationId" --url "https://<STAGING_HOST>/api/health/live"
+$normalObservationId
+```
+
+Inspect the matching HTTP request log privately. Share only requestId/method/route/statusCode/durationMs and the four classification fields. Do not export other log metadata or headers. Expected successful normal observation is HTTP200; forwarded/true/1/false is consistent with one accepted forwarded address under TRUST_PROXY=1, not proof of exactly one physical proxy.
+
+Only if Phase A yields the fields, owner may send exactly one optional synthetic spoof request, without credentials, cookies, body, redirects or retries:
+
+```powershell
+$spoofObservationId = [guid]::NewGuid().ToString()
+curl.exe --silent --show-error --max-time 10 --max-redirs 0 --output NUL --write-out "HTTP %{http_code}\n" --header "x-request-id: $spoofObservationId" --header "X-Forwarded-For: 198.51.100.10" --url "https://<STAGING_HOST>/api/health/live"
+$spoofObservationId
+```
+
+Report only the same safe fields. If ingress appends the genuine nearest client address, the safe classifications may remain forwarded/true/1/false. Equal classifications do not establish that canonical identity is unchanged or that the synthetic value was ignored; this four-field projection deliberately contains no cross-request address equality/fingerprint. Unexpected changes require review, not automatic trust promotion. Direct/shorter ingress-path impossibility remains NOT PROVEN. Topology acceptance OPEN; TRUST_PROXY recommendation NONE YET. No spoof request executed here.
+
 ## Baseline
 
 develop; tracked tree clean at start. HEAD `db315ed docs: record Sprint 7N.1 Render proxy acceptance plan`; preceding `eb54567 docs: record Sprint 7N proxy and abuse hardening`, `94de420 feat: harden trusted proxy and abuse protection`. 7N.1 committed. Unrelated untracked owner files preserved. Inspected requested runtime/config/telemetry and 7N/7N.1 reports only. Log evidence is the inspected emission schema, not private live Render logs; no actual Render log export supplied or accessed.
