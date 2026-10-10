@@ -1,3 +1,4 @@
+const diagnostics = require('./lib/backupDiagnostics.cjs');
 require("dotenv").config();
 const pool = require("../db");
 const backupService = require("../services/databaseBackupService");
@@ -6,17 +7,12 @@ const backupService = require("../services/databaseBackupService");
   try {
     const result = await backupService.createBackup();
     console.log("✓ Travio backup created");
-    console.table([{
-      file: result.file,
-      encrypted: result.encrypted,
-      tables: result.tableCount,
-      checksum: result.checksum.slice(0, 16),
-    }]);
+    console.table([diagnostics.summary(result)]);
     if (!result.encrypted) {
       console.warn("! Backup is NOT encrypted. It can contain password hashes and personal booking data.");
     }
   } catch (error) {
-    console.error("BACKUP ERROR:", error.message);
+    console.error(JSON.stringify(diagnostics.failure('create')));
     process.exitCode = 1;
   } finally {
     await pool.end().catch(() => {});
