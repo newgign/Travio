@@ -2,6 +2,10 @@
 
 2026-10-10, Asia/Qyzylorda. CODE/OFFLINE: PASS in tested scope. Mandatory configuration foundation READY. P1 MANDATORY CONFIG / SECRET: FOUNDATION READY; operational evidence OPEN. COMMERCIAL PRODUCTION READY: NO.
 
+## Owner staging acceptance — Sprint 7P update
+
+Owner confirms mandatory startup guard deployed and ACTIVE, backend LIVE, JWT_SECRET and OFFER_TOKEN_SECRET PRESENT and different, DATABASE_URL PRESENT, /health and /api/health/ready PASS, fresh login PASS, /admin PASS, no startup secret/config error observed. 7O STAGING RUNTIME ACCEPTANCE PASS; P1 MANDATORY CONFIG / SECRET STAGING RUNTIME ACCEPTED. No secret values supplied or inspected. Operational rotation/access-control evidence remains OPEN; no secret-management certification. Historical UNKNOWN rollout statements below describe the earlier offline sprint state.
+
 ## Baseline and scope
 
 develop, tracked tree clean; HEAD `6626613 docs: finalize Sprint 7N trusted proxy staging acceptance`. Sprint7N.4 committed; unrelated untracked files preserved. Inspected relevant config/startup, JWT and offer signing, DB/Render TLS, provider activation, production gate, preproduction schemas/checks, release/verifier boundaries, Render blueprint, relevant tests and security checklist/report evidence. No real env file/value inspection or live secret/config validation performed. Supplied owner staging state retained: backend LIVE, session enforcement enabled,001..022 applied, migration flags OFF, approved Render internal require TLS, reconciliation disabled, sales/payments/Hotelbeds LIVE/Booking disabled, TRUST_PROXY1 and HTTP_ACCESS_LOG=true. This task does not reverify those live facts.
