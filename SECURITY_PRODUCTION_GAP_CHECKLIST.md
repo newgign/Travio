@@ -1,5 +1,13 @@
 # Security production gap checklist — Sprint 7K
 
+## Sprint 7T — saved profile and response boundary update
+
+CODE/OFFLINE acceptance only; staging deployment NOT RUN. [7T report](SPRINT_7T_SAVED_PROFILE_RESPONSE_BOUNDARY_REPORT.md) records current rules, tests and limitations. Saved profile validation, mass-assignment resistance, profile/traveller response allowlists, owner-scoped authorization and frontend persisted-user minimization READY in tested scope. Unknown input fields IGNORED through explicit column/payload mappings; protected fields cannot change account authority. Email remains read-only on profile update. Strict Unicode string bounds, boolean/language/type validation and calendar-only DOB validation added; no schema change or real DB operation.
+
+**Q2-01 / S-P2-01 SAVED PROFILE VALIDATION: RESOLVED in code/offline scope.** Current inventory after7T: **P0 4 / P1 8 / P2 5 / OWNER 7 / EXTERNAL 2**. The7S counts below are the historical audit baseline. R1-03 API/PII minimization remains PARTIAL overall; this sprint closes only profile/user/traveller projections, not every API or free-text risk. No PII logging regression identified in tested boundaries. Retention/access/rotation/legal requirements remain open; commercial production ready NO.
+
+SessionStorage user is now limited to id/full_name/email/role; detailed profile remains page/validated-session memory, token storage unchanged. Current 7P acceptance predates this reduction; new owner profile/traveller acceptance is pending. No Render/deploy/migration/provider/money action performed.
+
 ## Sprint 7S — authoritative current reconciliation
 
 2026-10-10. This section supersedes historical counts and open/closed labels below; historical evidence is preserved. Full current inventory, every 7A/7K original requirement mapping, source evidence, remaining actions and launch impact: [Sprint 7S re-audit](SPRINT_7S_PRODUCTION_READINESS_REAUDIT_REPORT.md).

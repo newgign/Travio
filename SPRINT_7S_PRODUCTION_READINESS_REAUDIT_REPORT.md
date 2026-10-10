@@ -2,6 +2,10 @@
 
 2026-10-10, Asia/Qyzylorda. **AUDIT PASS — repository and supplied owner-evidence scope. COMMERCIAL PRODUCTION READY: NO.** Documentation only; no independent live verification or implementation.
 
+## Subsequent Sprint 7T update
+
+7T closes Q2-01/S-P2-01 saved profile validation in tested code/offline scope and narrows profile/user/traveller response and browser persistence boundaries. Current counts after7T: **P0 4 / P1 8 / P2 5 / OWNER 7 / EXTERNAL 2**. All7S counts/tables below remain the audit-time historical record, superseded for Q2-01 by [7T report](SPRINT_7T_SAVED_PROFILE_RESPONSE_BOUNDARY_REPORT.md). R1-03 remains PARTIAL overall; no unrelated P0/P1 reclassification, staging acceptance or commercial readiness inferred. No schema change.
+
 ## 1. Executive summary and counting rule
 
 Current actionable inventory: **P0 4; P1 8; P2 6; OWNER 7; EXTERNAL 2**. These are mutually exclusive primary work-package categories, not vulnerability counts. OWNER/EXTERNAL packages can still block launch; moving a prerequisite there does not waive it. Cross-references do not add counts. The old 7A ten commercial P0 packages and 7K security counts are superseded by this reconciled inventory, not declared closed.
