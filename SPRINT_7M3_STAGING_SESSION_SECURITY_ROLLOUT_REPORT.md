@@ -2,6 +2,8 @@
 
 PRE-ROLLOUT: BLOCKED (FAIL prerequisites). CODE/OFFLINE: PASS in inspected/tested scope. STAGING MIGRATION: NOT RUN. STAGING DEPLOY: NOT RUN. OWNER ACCEPTANCE: NOT RUN. Sprint 7M.3 PASS is not claimed.
 
+Latest update — Sprint 7M.3B.1: backup target binding READY; backup execution NOT RUN; fresh staging backup NOT YET CREATED/VERIFIED. Owner reports previously verified staging identity and ledger 001..021 applied/022 pending. No remote recheck performed here. Backup-only require now checks expected configured staging fingerprint before subprocess/output creation while retaining explicit acknowledgement; this is not certificate identity verification. General verify-full invariant preserved. Phase A BLOCKED UNTIL BACKUP VERIFIED; no staging acceptance promotion. Older BLOCKED inventory statements below describe earlier runs, not a contradiction of subsequent owner-supplied evidence.
+
 Sprint 7M.3B update (2026-10-10, HEAD f661c3e): STAGING TARGET IDENTITY BLOCKED; MIGRATION INVENTORY BLOCKED; FRESH BACKUP BLOCKED. Current local operator process has no DATABASE_URL, no RECONCILIATION_EXPECTED_DB_IDENTITY and no explicit staging operator configuration. Stopped before any remote connection or backup as required. OWNER ACTION REQUIRED — STAGING DATABASE CONNECTION NOT AVAILABLE. No claim about 021/022 applied/pending state, schema consistency or live enforcement settings. Migration executions 0. See SPRINT_7M3B_STAGING_BACKUP_PREREQUISITES_REPORT.md.
 
 ## Baseline and stop condition

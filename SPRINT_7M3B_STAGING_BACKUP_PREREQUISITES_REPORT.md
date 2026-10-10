@@ -2,6 +2,8 @@
 
 STAGING PREREQUISITES: FAIL / BLOCKED, not a failed migration. OWNER ACTION REQUIRED — STAGING DATABASE CONNECTION NOT AVAILABLE.
 
+Latest update — Sprint 7M.3B.1: backup target binding READY in offline tested scope. Owner subsequently reports strict verify-full staging identity verified (expectedTargetMatch=true), 001..021 applied, 022 pending; these are owner-supplied facts, not a remote recheck in this hardening sprint. The historical missing-connection result below remains the original 7M.3B run record. Fresh staging backup NOT YET CREATED/VERIFIED; backup execution in 7M.3B.1 NOT RUN. Existing backup-only require exception now independently checks exact staging classification and expected source fingerprint before subprocess/output creation; TLS encryption YES, certificate identity verification NO, configured target binding YES. General staging identity/inventory and restore remain verify-full. Phase A stays BLOCKED UNTIL BACKUP VERIFIED. See SPRINT_7M3B1_BACKUP_TARGET_BINDING_HARDENING_REPORT.md.
+
 ## Baseline and evidence
 
 2026-10-10, Asia/Qyzylorda; develop. HEAD `f661c3e docs: record Sprint 7M.3A backup identity foundation`; previous `d52a1ca feat: make backup verification migration aware`, `817cc55 docs: record Sprint 7M.2 local integration verification`. Tracked tree clean at start; 7M.3A committed. Known unrelated untracked owner files preserved.
