@@ -36,6 +36,14 @@ function assertExecutionAllowed(env = process.env) {
   const reject = () => { throw Object.assign(new Error('Reconciliation migration blocked'), { code: 'RECONCILIATION_MIGRATION_BLOCKED' }); };
   try {
     if (!inventoryCheck() || env.RECONCILIATION_STORAGE_MIGRATION_ENABLED !== 'true' || !disabledChecks(env).every(([, ok]) => ok)) return reject();
+    // Disposable local integration only; remote/staging/production policy below is unchanged.
+    if (env.LOCAL_SESSION_INTEGRATION_APPROVAL === 'I_APPROVE_DISPOSABLE_LOCAL_021_022') {
+      const target = connection(env);
+      if (env.NODE_ENV !== 'test' || env.APP_ENV !== 'test' || env.EXPECTED_APP_ENV !== 'test'
+        || !target.local || target.database !== 'asedeliya_session_security_test'
+        || env.RECONCILIATION_EXPECTED_DB_IDENTITY !== sourceIdentity(target)) return reject();
+      return;
+    }
     if (!['staging', 'production'].includes(env.APP_ENV) || env.APP_ENV !== env.EXPECTED_APP_ENV) return reject();
     if (env.RECONCILIATION_MIGRATION_APPROVAL !== 'I_APPROVE_021_FOR_VERIFIED_TARGET' || env.BACKUP_RESTORE_READY_ATTESTED !== 'I_VERIFIED_BACKUP_AND_RESTORE_EVIDENCE_FOR_TARGET') return reject();
     const identity = sourceIdentity(connection(env));
