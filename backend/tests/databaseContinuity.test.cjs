@@ -227,7 +227,8 @@ test('3Y focused offline guards/command construction/privacy (no network)',async
       assert.equal(JSON.parse(output[0]).status,'BLOCKED');
       assert.doesNotMatch(output.join(''),/PRIVATE|external\.example|fixture_owner|postgresql:/);
     }
-    const allowed={...remote,DB_SSL_MODE:'require',DB_ALLOW_TLS_REQUIRE:ack};
+    const allowed={...remote,DB_SSL_MODE:'require',DB_ALLOW_TLS_REQUIRE:ack,APP_ENV:'staging',EXPECTED_APP_ENV:'staging',
+      RECONCILIATION_EXPECTED_DB_IDENTITY:db.sourceIdentity(db.connection(remote))};
     assert.throws(()=>db.connection(allowed),code('VERIFIED_TLS_REQUIRED'));
     await assert.rejects(()=>db.inspect({env:allowed,factory:()=>assert.fail('must not connect')}),code('VERIFIED_TLS_REQUIRED'));
     const restoreEnv={...targetEnv,RESTORE_DATABASE_URL:'postgresql://u:p@target.example.invalid/fixture_target',RESTORE_DB_SSL_MODE:'require',DB_ALLOW_TLS_REQUIRE:ack,RESTORE_ALLOW_REMOTE:'I_ACKNOWLEDGE_NEW_EMPTY_TARGET'};

@@ -158,7 +158,10 @@ function backup({ env = process.env, now = new Date(), run = spawnSync, log = ()
   if (env.DB_SSL_MODE === 'require') {
     if (env.DB_ALLOW_TLS_REQUIRE !== 'I_ACKNOWLEDGE_ENCRYPTED_WITHOUT_CERTIFICATE_IDENTITY_VERIFICATION') fail('SOURCE_TLS_REQUIRE_BLOCKED');
     conn = connection({...env,DB_SSL_MODE:'verify-full'});
-    if (conn.local) fail('SOURCE_TLS_REQUIRE_BLOCKED');
+    // Configured target binding, not TLS certificate identity verification.
+    if (conn.local || env.APP_ENV !== 'staging' || env.EXPECTED_APP_ENV !== 'staging'
+      || !/^[a-f0-9]{64}$/.test(env.RECONCILIATION_EXPECTED_DB_IDENTITY || '')
+      || sourceIdentity(conn) !== env.RECONCILIATION_EXPECTED_DB_IDENTITY) fail('SOURCE_TLS_REQUIRE_BLOCKED');
     conn = {...conn,sslMode:'require'};
   } else conn = connection(env);
   // Detect missing clients before reserving any output.
