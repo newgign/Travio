@@ -93,13 +93,17 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 const server = app.listen(PORT, "0.0.0.0", () => {
-  logger.info(`🚀 Server started on port ${PORT} | Sprint 3A`, { port: Number(PORT), environment: process.env.NODE_ENV || "development" });
+  const socket = server.address();
+  logger.info(`🚀 Server started on port ${socket.port} | Sprint 3A`);
+  logger.info('startup_socket_bound', { address: socket.address, family: socket.family, port: socket.port });
+  require('./services/startupSocketDiagnostic').probeHealth(socket.port)
+    .then(result => logger.info('startup_self_probe', result));
   healthMonitorService.start();
   backupSchedulerService.start();
   reliabilityMonitorService.start();
   require("./services/hotelbedsMonitorService").start();
 });
-server.on("error", (error) => logger.error("Server lifecycle error", { error: error }));
+server.on("error", (error) => logger.error('server_socket_error', require('./services/startupSocketDiagnostic').serverError(error)));
 
 let shutdownPromise = null;
 function shutdownGraceMs() {
