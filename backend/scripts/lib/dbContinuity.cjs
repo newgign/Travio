@@ -59,10 +59,12 @@ function runTool(name, args, { env = process.env, conn, stdout = 'pipe', run = s
   if (result.error || result.status !== 0) fail(name === 'pg_dump' ? 'PG_DUMP_FAILED' : 'PG_RESTORE_FAILED');
   return result.stdout || '';
 }
-function migrationInventory() {
+function migrationInventory(applied) {
   const dir = path.join(root,'database/migrations');
   const migrations = fs.readdirSync(dir).filter(name => /^\d{3}_[a-z0-9_]+\.sql$/.test(name)).sort();
-  const text = migrations.map(name => fs.readFileSync(path.join(dir,name),'utf8')).join('\n');
+  if (applied !== undefined) require('./backupMigrationState.cjs').assertHistory(applied, migrations);
+  const selected = applied === undefined ? migrations : applied;
+  const text = selected.map(name => fs.readFileSync(path.join(dir,name),'utf8')).join('\n');
   const tables = ['_migrations'], serials = [{table:'_migrations',column:'id'}], foreignKeys = [], indexes = [];
   const unique = [{table:'_migrations',columns:['name']}];
   const primary = [{table:'_migrations',columns:['id']}];
@@ -81,14 +83,14 @@ function migrationInventory() {
     if (!composite && !inline) fail('MIGRATION_INVENTORY_UNSUPPORTED');
     primary.push({table,columns:composite ? composite[1].split(',').map(s=>s.trim()) : [inline[1]]});
     for (const m of body.matchAll(/\bUNIQUE\s*\(([^)]+)\)/gi)) {
-      if (['provider_hotels','provider_destinations'].includes(table)) continue; // 020 replaces these with environment indexes.
+      if (selected.includes('020_catalog_environment_identity.sql') && ['provider_hotels','provider_destinations'].includes(table)) continue; // 020 replaces these with environment indexes.
       unique.push({table,columns:m[1].split(',').map(s=>s.trim())});
     }
     for (const m of body.matchAll(/\b(\w+)\s+VARCHAR\(\d+\)\s+UNIQUE/gi)) unique.push({table,columns:[m[1]]});
   }
   for (const m of text.matchAll(/CREATE (UNIQUE )?INDEX IF NOT EXISTS (\w+)\s+ON (\w+)/gi)) indexes.push({name:m[2],table:m[3],unique:Boolean(m[1])});
   if (new Set(tables).size !== tables.length || tables.length !== (text.match(/CREATE TABLE IF NOT EXISTS/gi)||[]).length + 1) fail('MIGRATION_INVENTORY_UNSUPPORTED');
-  return { migrations, tables:tables.sort(), serials, primary, foreignKeys, unique, indexes };
+  return { migrations: selected, tables:tables.sort(), serials, primary, foreignKeys, unique, indexes };
 }
 function dumpName(now = new Date()) {
   if (!(now instanceof Date) || !Number.isFinite(now.getTime())) fail('INVALID_TIMESTAMP');
@@ -205,7 +207,20 @@ function verify(file, { env = process.env, run = spawnSync, schema = 'public', a
   const listing = runTool('pg_restore',['--format=custom','--list',absolute],{env,run});
   const objects = listing.split(/\r?\n/).filter(line=>/^\d+;/.test(line)).map(line=>line.replace(/^\d+;\s+\d+\s+\d+\s+/,''));
   const has = (kind,name) => objects.some(line=>line.startsWith(`${kind} ${schema} ${name} `));
-  const inventory = migrationInventory();
+  const all = migrationInventory();
+  const archiveState = require('./backupMigrationState.cjs');
+  // Extract only SQL text; never execute archive SQL or connect during verification.
+  const ledger = runTool('pg_restore',['--format=custom','--data-only','--table=_migrations','--file=-',absolute],{env,run});
+  const applied = archiveState.readHistory(ledger, all.migrations, schema);
+  const inventory = migrationInventory(applied);
+  const definition = runTool('pg_restore',['--format=custom','--schema-only','--file=-',absolute],{env,run});
+  archiveState.checkSessionSchema(definition, applied, schema);
+  for (const table of all.tables.filter(name => !inventory.tables.includes(name))) {
+    if (has('TABLE',table) || has('TABLE DATA',table)) fail('ARCHIVE_MIGRATION_SCHEMA_MISMATCH');
+  }
+  for (const index of all.indexes.filter(item => !inventory.indexes.some(expected => expected.name === item.name))) {
+    if (has('INDEX',index.name)) fail('ARCHIVE_MIGRATION_SCHEMA_MISMATCH');
+  }
   const missing = [];
   for (const table of inventory.tables) for (const kind of ['TABLE','TABLE DATA']) if(!has(kind,table))missing.push(`${kind}:${table}`);
   for (const {table,column} of inventory.serials) for(const kind of ['SEQUENCE','SEQUENCE SET'])if(!has(kind,`${table}_${column}_seq`))missing.push(`${kind}:${table}`);
@@ -215,7 +230,7 @@ function verify(file, { env = process.env, run = spawnSync, schema = 'public', a
   for (const {table,columns} of inventory.unique) if(!has('CONSTRAINT',`${table} ${table}_${columns.join('_')}_key`))missing.push(`UNIQUE:${table}`);
   if (missing.length) fail('ARCHIVE_OBJECTS_MISSING');
   return {status:archiveOnly ? 'archive-list-readable' : 'BACKUP_VERIFIED',...(manifest ? {sha256:manifest.sha256} : {}),sizeBytes:stat.size,expectedTables:inventory.tables.length,expectedIndexes:inventory.indexes.length,
-    dataBlocksRestored:false}; // TOC readability alone is not a full data-block restore/integrity proof.
+    appliedMigrations:applied, dataBlocksRestored:false}; // Text extraction is not a full data-block restore/integrity proof.
 }
 function restoreGuard(env, apply) {
   const target = connection(env,true);

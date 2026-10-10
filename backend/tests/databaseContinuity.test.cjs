@@ -18,7 +18,8 @@ function listing() {
   for(const {name} of inventory.indexes)entries.push(`INDEX public ${name} owner`);
   return entries.map((entry,i)=>`${i+1}; 1259 100 ${entry}`).join('\n');
 }
-const listRun = () => ({status:0,stdout:listing()});
+const archiveFixture = require('./helpers/backupArchiveFixture.cjs');
+const listRun = (_binary, args = ['--list']) => archiveFixture.runFor()(_binary, args);
 function healthyState() {
   return {expected:inventory,info:{database:'fixture_target',schema:'public',version:'180004',size:'12345'},known:new Set(inventory.tables),
     tables:inventory.tables.map(name=>({name,rows:'0'})),names:inventory.tables,migrationRows:inventory.migrations,lastBackup:null,
@@ -64,7 +65,7 @@ test('3Y focused offline guards/command construction/privacy (no network)',async
       calls.push({binary,args,options});assert.equal(options.shell,false);assert.equal(options.windowsHide,true);
       assert.doesNotMatch(args.join(' '),/postgresql:|OFFLINE_PRIVATE_PASSWORD/);
       assert.ok(!args.includes('owner'));
-      if(args.includes('--list'))return listRun();
+      if(args.includes('--list') || args.includes('--data-only') || args.includes('--schema-only'))return listRun(binary,args);
       if(!args.includes('--version'))fs.writeSync(options.stdio[1],Buffer.from('PGDMP-local-stub'));
       return {status:0,stdout:'',stderr:'PRIVATE_DB_ERROR'};
     };
@@ -93,9 +94,9 @@ test('3Y focused offline guards/command construction/privacy (no network)',async
     assert.throws(()=>db.verify(archive,{run:()=>({status:1,stderr:'PRIVATE'})}),code('PG_RESTORE_FAILED'));
     assert.throws(()=>db.verify(archive,{run:()=>({error:{code:'ENOENT'}})}),code('PG_RESTORE_MISSING'));
     const result=db.verify(archive,{env:sourceEnv,run:(_binary,args,options)=>{
-      assert.deepEqual(args.slice(0,2),['--format=custom','--list']);assert.equal(options.env.PGHOST,undefined);assert.equal(options.env.PGPASSWORD,undefined);return listRun();
+      assert.equal(args[0],'--format=custom');assert.ok(args.includes('--list') || args.includes('--data-only') || args.includes('--schema-only'));assert.equal(options.env.PGHOST,undefined);assert.equal(options.env.PGPASSWORD,undefined);return listRun(_binary,args);
     }});assert.equal(result.dataBlocksRestored,false);
-    for(const omitted of ['TABLE DATA public users ','SEQUENCE SET public users_id_seq ','INDEX public idx_users_email_lower ','FK CONSTRAINT public bookings bookings_user_id_fkey '])assert.throws(()=>db.verify(archive,{run:()=>({status:0,stdout:listing().split('\n').filter(line=>!line.includes(omitted)).join('\n')})}),code('ARCHIVE_OBJECTS_MISSING'));
+    for(const omitted of ['TABLE DATA public users ','SEQUENCE SET public users_id_seq ','INDEX public idx_users_email_lower ','FK CONSTRAINT public bookings bookings_user_id_fkey '])assert.throws(()=>db.verify(archive,{run:(binary,args)=>args.includes('--list') ? ({status:0,stdout:listing().split('\n').filter(line=>!line.includes(omitted)).join('\n')}) : listRun(binary,args)}),code('ARCHIVE_OBJECTS_MISSING'));
   });
   await t.test('restore refuses missing/identical/remote targets before tools or network',async()=>{
     assert.throws(()=>db.restoreGuard(sourceEnv,true),code('RESTORE_URL_REQUIRED'));
@@ -180,12 +181,12 @@ test('3Y focused offline guards/command construction/privacy (no network)',async
     await assert.rejects(()=>db.restore(archive,{env:targetEnv,apply:true,run:listRun,factory}),code('TARGET_NOT_EMPTY'));
     occupied='0';let actualArgs;
     await db.restore(archive,{env:targetEnv,apply:true,factory,run:(_b,args,options)=>{
-      if(args.includes('--list'))return listRun();actualArgs=args;
+      if(args.includes('--list') || args.includes('--data-only') || args.includes('--schema-only'))return listRun(_b,args);actualArgs=args;
       assert.equal(options.env.PGDATABASE,'fixture_target');assert.equal(options.env.PGPASSWORD,'TARGET_PRIVATE_PASSWORD');assert.doesNotMatch(args.join(' '),/PRIVATE|postgresql:/);return {status:0};
     }});
     for(const flag of ['--single-transaction','--exit-on-error','--no-owner','--no-acl','--no-tablespaces'])assert.ok(actualArgs.includes(flag));
     assert.doesNotMatch(actualArgs.join(' '),/--clean|--create|--disable-triggers/);
-    await assert.rejects(()=>db.restore(archive,{env:targetEnv,apply:true,factory,run:(_b,args)=>args.includes('--list')?listRun():{status:1,stderr:'PRIVATE'}}),code('PG_RESTORE_FAILED'));
+    await assert.rejects(()=>db.restore(archive,{env:targetEnv,apply:true,factory,run:(_b,args)=>args.includes('--list') || args.includes('--data-only') || args.includes('--schema-only') ? listRun(_b,args):{status:1,stderr:'PRIVATE'}}),code('PG_RESTORE_FAILED'));
     assert.equal(ended,3);assert.ok(statements.every(sql=>sql.startsWith('SELECT')));
   });
   await t.test('diagnostics allowlist excludes raw records, arbitrary migration names and legacy metadata',()=>{
@@ -242,7 +243,7 @@ test('3Y focused offline guards/command construction/privacy (no network)',async
           fs.writeSync(options.stdio[1],'PGDMP-stub');return {status:0};
         }
         assert.equal(options.env.PGSSLMODE,undefined);
-        return args.includes('--list')?listRun():{status:0,stdout:'pg_dump (PostgreSQL) 18.4'};
+        return args.includes('--list') || args.includes('--data-only') || args.includes('--schema-only') ? listRun(_binary,args):{status:0,stdout:'pg_dump (PostgreSQL) 18.4'};
       }});
       assert.equal(dumpCalls,1);
       assert.equal(db.readManifest(result.file).sourceTlsMode,expectedMode);
