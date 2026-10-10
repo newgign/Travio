@@ -27,6 +27,8 @@ module.exports = function requestTelemetry(req, res, next) {
     const route = String(req.originalUrl || req.url || "").split("?")[0];
     finishInFlight();
     metricsService.recordRequest({ method: req.method, route, statusCode: res.statusCode, durationMs });
+    // Count 429 in metrics without per-attempt logs or DB-backed event amplification.
+    if (res.locals?.rateLimited) return;
 
     if (accessLogEnabled()) {
       logger.info("HTTP request", {

@@ -75,6 +75,9 @@ async function configuration(env) {
   for (const key of ['HEALTH_MONITOR_ENABLED', 'RELIABILITY_MONITOR_ENABLED']) add(key, env[key] === 'false', 'BACKGROUND_JOB_NOT_DISABLED');
   add('TLS_VERIFICATION', env.NODE_TLS_REJECT_UNAUTHORIZED !== '0');
   add('RATE_LIMIT_ENABLED', env.RATE_LIMIT_ENABLED === undefined || env.RATE_LIMIT_ENABLED === 'true');
+  let proxyValid = false;
+  try { require('../config/trustedProxy').trustedProxy(env); proxyValid = true; } catch { /* fixed output */ }
+  add('TRUST_PROXY', proxyValid, 'INVALID_TRUST_PROXY');
   const body = String(env.REQUEST_BODY_LIMIT || '1mb').match(/^(\d+(?:\.\d+)?)\s*(b|kb|mb)?$/i);
   const bytes = body ? Number(body[1]) * ({ b: 1, kb: 1024, mb: 1048576 }[(body[2] || 'b').toLowerCase()]) : 0;
   add('REQUEST_BODY_LIMIT', bytes > 0 && bytes <= 1048576);

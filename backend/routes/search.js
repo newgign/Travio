@@ -8,6 +8,6 @@ const {
   search,
 } = require("../controllers/searchController");
 
-router.get("/", searchValidator, search);
+router.get("/", require('../middleware/rateLimit').publicRateLimiter, searchValidator, search);
 
 module.exports = router;

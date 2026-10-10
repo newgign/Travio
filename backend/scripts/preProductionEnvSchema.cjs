@@ -32,6 +32,6 @@ module.exports = {
     RELIABILITY_MONITOR_ENABLED: 'Must remain false for blueprint staging; absent is not treated as false.',
     RATE_LIMIT_ENABLED: 'Default true; cannot be disabled in this release.',
     REQUEST_BODY_LIMIT: 'Default 1mb; explicit value must be a positive size no greater than 1mb.',
-    TRUST_PROXY: 'Render blueprint uses 1; requires deployment topology review.',
+    TRUST_PROXY: 'false/0 (default disabled), hops 1..8, loopback or up to16 literal IP/CIDR entries (comma separated, no spaces or /0). true rejected. Hop counts require fixed topology/no direct bypass acceptance; Render blueprint 1 is not topology proof.',
   },
 };

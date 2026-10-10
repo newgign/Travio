@@ -12,7 +12,7 @@ const {
 const authMiddleware = require("../middleware/authMiddleware");
 
 router.post("/register", register);
-router.post("/login", login);
+router.post("/login", require('../middleware/rateLimit').loginAccountLimiter, login);
 router.get("/profile", authMiddleware, profile);
 router.put("/profile", authMiddleware, updateProfile);
 router.put("/password", authMiddleware, changePassword);

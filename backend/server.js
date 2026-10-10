@@ -34,9 +34,7 @@ const app = express();
 
 const allowedOrigins = require('./config/cors').allowedOrigins();
 
-const trustProxy = String(process.env.TRUST_PROXY || "false").trim();
-if (trustProxy === "true") app.set("trust proxy", 1);
-else if (/^\d+$/.test(trustProxy) && Number(trustProxy) > 0) app.set("trust proxy", Number(trustProxy));
+app.set('trust proxy', require('./config/trustedProxy').trustedProxy());
 
 app.disable("x-powered-by");
 app.use(securityHeaders);

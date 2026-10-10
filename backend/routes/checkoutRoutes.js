@@ -6,6 +6,6 @@ const {
   getCheckout,
 } = require("../controllers/checkoutController");
 
-router.post("/review", getCheckout);
+router.post("/review", require('../middleware/rateLimit').publicRateLimiter, getCheckout);
 
 module.exports = router;

@@ -268,6 +268,7 @@ test('existing shutdown stops jobs, closes HTTP before pool, remains idempotent 
       if (name === './db') return pool;
       if (name.endsWith('/logger')) return { info() {}, error() {} };
       if (name.endsWith('/cors')) return { allowedOrigins: () => [] };
+      if (name.endsWith('/trustedProxy')) return require('../config/trustedProxy');
       if (name.endsWith('/lifecycleService')) return { beginShutdown: () => events.push('draining') };
       if (/MonitorService|SchedulerService/.test(name)) return { start() {}, stop: () => events.push('job-stop') };
       if (name.endsWith('/stagingHealth')) return { healthHandler: () => () => {} };
