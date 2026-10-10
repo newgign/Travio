@@ -117,7 +117,7 @@ function checksum(file) {
 }
 function sourceIdentity(conn) {
   // Stable identity without retaining host, database name, username or password.
-  return crypto.createHash('sha256').update(JSON.stringify([conn.local ? 'loopback' : conn.host,conn.port,conn.database])).digest('hex');
+  return require('../../config/renderInternalTls.cjs').sourceIdentity(conn);
 }
 function makeManifest(file, conn, now, clientVersion, env) {
   return {format:'asedeliya-postgresql-custom',version:2,toolVersion:'3Y.2',sourceTlsMode:conn.sslMode,createdAt:now.toISOString(),

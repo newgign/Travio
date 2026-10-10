@@ -48,7 +48,8 @@ async function configuration(env) {
   try {
     const db = databaseConfig(env), url = new URL(env.DATABASE_URL);
     // Operator provenance only; never infer private networking from a hostname.
-    internalException = env.DB_SSL_MODE === 'disable' && db.ssl === false && ownerAttested;
+    internalException = (env.DB_SSL_MODE === 'disable' && db.ssl === false && ownerAttested)
+      || (env.DB_SSL_MODE === 'require' && db.ssl?.rejectUnauthorized === false);
     dbValid = Boolean(attestationValid && url.hostname && url.username && url.pathname.length > 1 && !url.hash &&
       (db.ssl?.rejectUnauthorized || internalException));
   } catch { /* Never emit configuration exceptions or URLs. */ }

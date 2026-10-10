@@ -46,7 +46,9 @@ function assertExecutionAllowed(env = process.env) {
     }
     if (!['staging', 'production'].includes(env.APP_ENV) || env.APP_ENV !== env.EXPECTED_APP_ENV) return reject();
     if (env.RECONCILIATION_MIGRATION_APPROVAL !== 'I_APPROVE_021_FOR_VERIFIED_TARGET' || env.BACKUP_RESTORE_READY_ATTESTED !== 'I_VERIFIED_BACKUP_AND_RESTORE_EVIDENCE_FOR_TARGET') return reject();
-    const identity = sourceIdentity(connection(env));
+    const target = env.DB_SSL_MODE === 'require'
+      ? require('../../config/renderInternalTls.cjs').approvedTarget(env) : connection(env);
+    const identity = sourceIdentity(target);
     if (!/^[a-f0-9]{64}$/.test(env.RECONCILIATION_EXPECTED_DB_IDENTITY || '') || identity !== env.RECONCILIATION_EXPECTED_DB_IDENTITY) return reject();
   } catch { return reject(); }
 }

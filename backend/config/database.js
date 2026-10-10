@@ -3,7 +3,8 @@ const fs = require('fs');
 function databaseConfig(env = process.env) {
   const connectionString = String(env.DATABASE_URL || '').trim();
   const mode = env.DB_SSL_MODE || (connectionString ? 'verify-full' : 'disable');
-  if (!['disable', 'verify-full'].includes(mode)) throw new Error('DB_SSL_MODE must be disable or verify-full');
+  if (!['disable', 'verify-full', 'require'].includes(mode)) throw new Error('Invalid DB_SSL_MODE');
+  if (mode === 'require') require('./renderInternalTls.cjs').approvedTarget(env);
   if (connectionString) {
     let url;
     try { url = new URL(connectionString); } catch { throw new Error('Invalid DATABASE_URL'); }
@@ -19,7 +20,7 @@ function databaseConfig(env = process.env) {
       password: env.DB_PASSWORD, database: env.DB_NAME,
     }),
     ssl: mode === 'disable' ? false : {
-      rejectUnauthorized: true,
+      rejectUnauthorized: mode !== 'require',
       ...(env.DB_SSL_CA_PATH ? { ca: fs.readFileSync(env.DB_SSL_CA_PATH, 'utf8') } : {}),
     },
     connectionTimeoutMillis: 5000,
