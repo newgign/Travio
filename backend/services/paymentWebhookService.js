@@ -2,9 +2,11 @@ const crypto = require('node:crypto');
 const contract = require('./paymentProviderContract');
 const lifecycle = require('./bookingLifecycle');
 const recovery = require('./bookingPaymentRecovery');
+const boundary = require('./paymentEvidenceBoundary');
+const disabledEvidence = boundary.evaluatePaymentEvidence();
 
 function createProcessor({ adapter, intent, providerPaymentId } = {}) {
-  const reply = (code, extra = {}) => ({ code, contractOnly: true, commercialSuccess: false,
+  const reply = (code, extra = {}) => ({ code, contractOnly: true, commercialSuccess: disabledEvidence.commercialPaymentConfirmed,
     applicationPaymentState: 'PAYMENTS_DISABLED', providerState: 'PROVIDER_NOT_CALLED', ...extra });
   // Not wired to HTTP, DB or live provider. Default is disabled, regardless of requested payment flags.
   if (!adapter) return Object.freeze({ process: async () => reply('PAYMENTS_DISABLED') });
@@ -42,13 +44,20 @@ function createProcessor({ adapter, intent, providerPaymentId } = {}) {
     projection.recovery = plan.reconciliationRequired ? 'RECONCILIATION_REQUIRED' : plan.state;
     projection.compensation = plan.compensation; projection.reconciliationRequired = plan.reconciliationRequired;
     if (!lifecycle.validateLifecycleState(projection).valid) return reply('PAYMENT_STATE_CONFLICT');
+    const assessment = boundary.evaluatePaymentEvidence({ trustedIntent: trusted,
+      providerEvidence: { provider: event.provider, eventId: event.eventId, paymentId: event.paymentId,
+        requestId: event.requestId, amountMinor: event.amountMinor, currency: event.currency,
+        state: event.state, source: 'SYNTHETIC' },
+      providerContext: { selectedProvider: provider.name, environment: 'SANDBOX' },
+      persistenceContext: { mode: 'memory' }, lifecycleContext: { ...projection, payment: event.state } });
     // Synchronous commit after all async adapter work. Serialized processor prevents concurrent duplicate effects.
     const effectApplied = state !== event.state;
     state = event.state; seen.set(event.eventId, digest);
     return reply(state === 'PAYMENT_OUTCOME_UNKNOWN' ? 'PAYMENT_OUTCOME_UNKNOWN' : 'WEBHOOK_EVENT_ACCEPTED',
       { provider: provider.name, eventId: event.eventId, requestId: trusted.requestId, normalizedState: state,
         reconciliationRequired: plan.reconciliationRequired, compensation: plan.compensation,
-        effectApplied, amountMinor: trusted.amountMinor, currency: trusted.currency });
+        effectApplied, amountMinor: trusted.amountMinor, currency: trusted.currency,
+        commercialSuccess: assessment.commercialPaymentConfirmed });
   }
   return Object.freeze({ process(rawBody, authentication) {
     // Copy bytes immediately, before queueing, so caller mutation cannot alter queued signature input.

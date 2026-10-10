@@ -2,12 +2,18 @@ const crypto = require("crypto");
 const pool = require("../db");
 const bookingEventService = require("./bookingEventService");
 const productionGateService = require("./productionGateService");
+// Current API operations are disabled preparation or legacy sandbox simulation, never money proof.
+function commercialProjection() {
+  return { contractOnly: true, commercialSuccess: false,
+    commercialPaymentConfirmed: false };
+}
 
 function readiness() {
   const mode = String(process.env.PAYMENTS_MODE || "disabled").trim().toLowerCase();
   const provider = String(process.env.PAYMENTS_PROVIDER || "none").trim().toLowerCase();
   const gate = productionGateService.state();
   return {
+    ...commercialProjection(),
     mode,
     provider,
     realChargesEnabled: gate.realChargesEnabled,
@@ -91,7 +97,7 @@ async function createIntent({ bookingId, userId, isAdmin = false }) {
     },
   });
 
-  return { readiness: state, payment };
+  return { readiness: state, payment, ...commercialProjection() };
 }
 
 async function prepareCheckoutIntent(request) {
@@ -121,6 +127,7 @@ async function prepareCheckoutIntent(request) {
   const payment = readiness();
   // Hard stop even if someone requests sandbox/live flags. No row, reference or transaction is created.
   return { ...require('./bookingPaymentRecovery').disabledBoundary('payment', bookingIntent.requestId),
+    ...commercialProjection(),
     paymentState: 'PAYMENT_NOT_STARTED', bookingState: 'BOOKING_DISABLED',
     bookingAvailable: false, paymentAvailable: false,
     intent: { state: 'PAYMENT_INTENT_READY', reviewState: review.state, requestId: bookingIntent.requestId,
@@ -137,4 +144,4 @@ function prepareRefundIntent(request, booking, payment, access) {
 function createWebhookProcessor(options) {
   return require('./paymentWebhookService').createProcessor(options);
 }
-module.exports = { readiness, createIntent, prepareCheckoutIntent, prepareRefundIntent, createWebhookProcessor };
+module.exports = { readiness, createIntent, prepareCheckoutIntent, prepareRefundIntent, createWebhookProcessor, commercialProjection };

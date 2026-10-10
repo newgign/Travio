@@ -3,6 +3,7 @@ const crypto = require('node:crypto');
 const contract = require('./paymentProviderContract');
 const recovery = require('./bookingPaymentRecovery');
 const lifecycle = require('./bookingLifecycle');
+const boundary = require('./paymentEvidenceBoundary');
 const hash = value => crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const invalid = () => { throw Object.assign(new Error('Invalid reconciliation evidence'), { code: 'RECONCILIATION_INPUT_INVALID' }); };
 const paymentStates = ['PAYMENT_NOT_STARTED', 'PAYMENTS_DISABLED', ...Object.values(contract.STATES)];
@@ -97,11 +98,24 @@ function evaluate(input = {}) {
     eventFingerprint: event ? hash(event.eventId) : null, eventType: event?.type ?? null,
     previousEvidenceFingerprints: previous.map(hash), incomingEvidenceFingerprint: event ? hash(event) : null, amountMatch, currencyMatch };
   const caseId = hash({ diagnostic, recoveryState: input.recoveryState ?? 'RECOVERY_NOT_REQUIRED', amountMinor: trusted.amountMinor, currency: trusted.currency });
+  // 7B/7C normalized observations are synthetic even when signatures/order are valid.
+  // Keep the persisted 7C schema unchanged; use the boundary for commercial recognition only.
+  const observed = event || lastAccepted;
+  const assessment = boundary.evaluatePaymentEvidence({ trustedIntent: trusted,
+    providerEvidence: observed ? { provider: observed.provider, eventId: observed.eventId, paymentId: observed.paymentId,
+      requestId: observed.requestId, amountMinor: observed.amountMinor, currency: observed.currency,
+      state, source: 'SYNTHETIC' } : null,
+    providerContext: { selectedProvider: input.provider, environment: 'SANDBOX' },
+    persistenceContext: { mode: 'disabled' },
+    lifecycleContext: { checkRate: 'CONFIRMED', travelers: 'VALID', review: 'REVIEW_READY', booking, payment: state,
+      evidence: { booking: input.booking.providerResultObserved, payment: capturedEvidence === true },
+      recovery: unresolved ? input.recoveryState : plan.state, compensation: plan.compensation,
+      reconciliationRequired: plan.reconciliationRequired, conflict: Boolean(reason && status === 'STATE_CONFLICT') } });
   const result = { status, reasonCode: reason, manualReviewRequired: manual,
     reconciliationRequired: manual && (status === 'STATE_CONFLICT' || status === 'RECONCILIATION_REQUIRED' || status === 'MANUAL_REVIEW_REQUIRED'),
     compensationRequired: !reason?.includes('MISMATCH') && !historicalConflict && status === 'COMPENSATION_REQUIRED',
     recommendedNextAction: action, observedPaymentState: state, caseId, diagnostic,
-    contractOnly: true, commercialSuccess: false, applicationPaymentState: 'PAYMENTS_DISABLED', providerState: 'PROVIDER_NOT_CALLED',
+    contractOnly: true, commercialSuccess: assessment.commercialPaymentConfirmed, applicationPaymentState: 'PAYMENTS_DISABLED', providerState: 'PROVIDER_NOT_CALLED',
     effectApplied: false, paymentAttemptAllowed: false, refundAttemptAllowed: false, cancellationAttemptAllowed: false };
   return { ...result, manualReview: manual ? { caseId, reasonCode: reason, recommendedNextAction: action, ...diagnostic } : null };
 }

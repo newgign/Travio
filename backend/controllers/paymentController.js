@@ -158,6 +158,7 @@ const payBooking = async (req, res) => {
 
     return res.json({
       success: true,
+      ...paymentGatewayService.commercialProjection(),
       payment: paymentResult.rows[0],
       booking: bookingResult.rows[0],
     });
@@ -222,7 +223,7 @@ const getPayment = async (req, res) => {
       return res.status(404).json({ message: "Платёж не найден" });
     }
 
-    return res.json(result.rows[0]);
+    return res.json({ ...result.rows[0], ...paymentGatewayService.commercialProjection() });
   } catch (error) {
     logger.error("Operation failed", { error: error });
     return res.status(500).json({ message: "Ошибка загрузки платежа" });

@@ -12,6 +12,9 @@ const rules = Object.freeze({
   PAYMENT_CORRELATION_MISMATCH: ['HIGH', 'PAYMENT', 'ESCALATE_RECONCILIATION'],
   PAYMENT_AMOUNT_MISMATCH: ['HIGH', 'PAYMENT', 'REVIEW_PAYMENT'],
   PAYMENT_CURRENCY_MISMATCH: ['HIGH', 'PAYMENT', 'REVIEW_PAYMENT'],
+  PAYMENT_MERCHANT_BINDING_UNAVAILABLE: ['HIGH', 'PAYMENT', 'ESCALATE_RECONCILIATION'],
+  PAYMENT_MERCHANT_BINDING_MISMATCH: ['CRITICAL', 'PAYMENT', 'ESCALATE_RECONCILIATION'],
+  DURABLE_PAYMENT_EVIDENCE_UNAVAILABLE: ['HIGH', 'PAYMENT', 'ESCALATE_RECONCILIATION'],
   BOOKING_OUTCOME_UNKNOWN: ['HIGH', 'BOOKING', 'VERIFY_PROVIDER_STATUS'],
   BOOKING_PAYMENT_INCONSISTENCY: ['HIGH', 'LIFECYCLE', 'ESCALATE_RECONCILIATION'],
   RECONCILIATION_REQUIRED: ['HIGH', 'RECONCILIATION', 'ESCALATE_RECONCILIATION'],
@@ -94,6 +97,14 @@ function classify(input) {
     if (row.category !== 'AWAITING_PROVIDER_EVIDENCE') add(code, row.reasonCode, row.priority === 'CRITICAL' && !['PAYMENT_AMOUNT_MISMATCH', 'PAYMENT_CURRENCY_MISMATCH'].includes(code));
     if (row.reconciliationRequired) add('RECONCILIATION_REQUIRED', row.reasonCode);
     if (row.compensationRequired) add('COMPENSATION_REQUIRED', row.reasonCode);
+  }
+  // Pure signal derivation for rejected live-looking evidence. No alert delivery or acceptance.
+  if (data.paymentEvidence !== undefined) {
+    const decision = data.paymentEvidence;
+    if (!decision || decision.accepted !== false || decision.commercialPaymentConfirmed !== false
+      || decision.safeMetadata?.requestId !== data.requestId
+      || !['LIVE_EVIDENCE_REJECTED', 'NON_COMMERCIAL_EVIDENCE'].includes(decision.classification)) invalid();
+    if (decision.classification === 'LIVE_EVIDENCE_REJECTED' && Object.hasOwn(rules, decision.reasonCode)) add(decision.reasonCode);
   }
   if (booking === 'BOOKING_DISABLED') add('BOOKING_DISABLED');
   if (payment === 'PAYMENTS_DISABLED') add('PAYMENTS_DISABLED');
