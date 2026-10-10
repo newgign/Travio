@@ -4,11 +4,13 @@
 
 P0: before any commercial transaction. P1: before public production. P2: follow-up hardening. Current money/booking/storage/migration gates remain disabled. No penetration test, certification or PCI claim.
 
+2026-10-10, Sprint 7L: S-P0-01 refined to separate repository contract foundation from real provider commercial acceptance. The P0 remains open; requirement counts unchanged.
+
 ## Open P0
 
 | ID | Finding/evidence | Current mitigation | Required next action | Owner |
 | --- | --- | --- | --- | --- |
-| S-P0-01 | Live payment trust boundary is incomplete. paymentWebhookService.createProcessor is offline/test-only with injected adapter and in-memory dedupe; no production PSP-specific HTTP authentication/replay/account binding or durable accepted-event boundary. Reconciliation storage inactive. | Real charges/refunds hard-disabled; no production webhook route or selected live PSP. | Before transactions, implement/review selected PSP signature verification over exact bounded raw bytes, merchant/account/environment binding, replay/idempotency and durable event/intent correlation; independent acceptance and payment-data scope review. Do not attach callbacks to the global JSON parser. | Engineering + owner + external PSP/security reviewer |
+| S-P0-01 | 7L repository contract foundation READY: pure paymentEvidenceBoundary requires authenticity, merchant/account binding, trusted money/correlation, lifecycle/recovery consistency and durable idempotent evidence. Caller claims never mint LIVE_VERIFIED. External/provider commercial acceptance STILL OPEN: no selected real adapter, PSP authentication/replay/account proof or active durable live payment-evidence store. 7B/7C remain synthetic; reconciliation storage inactive. | Real charges/refunds/sales hard-disabled; explicit failed activation gate for partial live requests; synthetic/sandbox evidence cannot confirm commercial payment; legacy sandbox API labels remain noncommercial. No production webhook route. | Before transactions, select and independently accept a real PSP adapter; verify signatures over exact bounded raw bytes, merchant/account/environment binding, replay/idempotency and atomically committed event/intent correlation. Replace the deliberate unavailable-capability stop only through reviewed implementation and controlled provider acceptance. No env-only evidence or global JSON-parser callbacks. See SPRINT_7L_LIVE_PAYMENT_EVIDENCE_BOUNDARY_REPORT.md. | Engineering + owner + external PSP/security reviewer |
 
 ## Open P1
 
