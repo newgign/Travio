@@ -2,6 +2,24 @@ const crypto = require("crypto");
 const systemEventService = require("../services/systemEventService");
 const metricsService = require("../services/metricsService");
 const logger = require("../utils/logger");
+const { canonicalIp, getClientNetworkIdentity } = require('./clientNetworkIdentity');
+
+function proxyMetadata(req) {
+  const unknown = { networkIdentitySource: 'unknown', trustedProxy: false,
+    forwardedChainLength: 0, socketPeerMatchesCanonical: false };
+  try {
+    const peer = canonicalIp(req.socket?.remoteAddress);
+    const identity = getClientNetworkIdentity(req);
+    const client = canonicalIp(identity.ip);
+    if (!peer || !client) return unknown;
+    const length = identity.forwardedChainLength;
+    if (!Number.isInteger(length) || length < 0 || length > 16) return unknown;
+    const forwarded = identity.source === 'forwarded' && identity.trustedProxy === true && length > 0;
+    return { networkIdentitySource: forwarded ? 'forwarded' : 'direct',
+      trustedProxy: forwarded, forwardedChainLength: forwarded ? length : 0,
+      socketPeerMatchesCanonical: peer === client };
+  } catch { return unknown; }
+}
 
 function thresholdMs() {
   const value = Number(process.env.SYSTEM_SLOW_REQUEST_MS || 1500);
@@ -31,14 +49,15 @@ module.exports = function requestTelemetry(req, res, next) {
     if (res.locals?.rateLimited) return;
 
     if (accessLogEnabled()) {
-      logger.info("HTTP request", {
+      try { logger.info("HTTP request", {
         requestId,
         method: req.method,
         route,
         statusCode: res.statusCode,
         durationMs: Math.round(durationMs * 100) / 100,
         userId: req.user?.id || null,
-      });
+        ...proxyMetadata(req),
+      }); } catch { /* Access-log observation must not break the request. */ }
     }
 
     const failed = res.statusCode >= 400;
@@ -65,3 +84,4 @@ module.exports = function requestTelemetry(req, res, next) {
   res.on("close", finishInFlight);
   next();
 };
+module.exports.proxyMetadata = proxyMetadata;
