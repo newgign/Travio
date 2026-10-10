@@ -37,9 +37,10 @@ test('3Y focused offline guards/command construction/privacy (no network)',async
   fs.writeFileSync(manifestPath,JSON.stringify(fixtureManifest));
   await t.test('manual-only entrypoints and deterministic complete repo inventory',()=>{
     assert.deepEqual(db.migrationInventory(),inventory);
-    assert.equal(inventory.tables.length,25);assert.equal(inventory.migrations.length,21);assert.equal(inventory.indexes.length,76);
+    assert.equal(inventory.tables.length,25);assert.equal(inventory.migrations.length,22);assert.equal(inventory.indexes.length,76);
     assert.equal(inventory.foreignKeys.length,17);assert.equal(inventory.serials.length,19);
-    assert.equal(inventory.migrations.at(-1),'021_reconciliation_storage.sql');
+    assert.equal(inventory.migrations.at(-2),'021_reconciliation_storage.sql');
+    assert.equal(inventory.migrations.at(-1),'022_session_security_state.sql');
     assert.ok(inventory.tables.includes('_migrations'));
     for(const file of ['dbBackup.cjs','dbBackupVerify.cjs','dbRestore.cjs','dbInventory.cjs','dbSchemaCheck.cjs'])assert.match(fs.readFileSync(path.join(__dirname,'../scripts',file),'utf8'),/require.main === module/);
     const source=fs.readFileSync(path.join(__dirname,'../scripts/lib/dbContinuity.cjs'),'utf8');

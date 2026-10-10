@@ -1,6 +1,7 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const pool = require("../db");
+const accountSecurity = require('../services/accountSecurityState');
 
 function getJwtSecret() {
   const secret = process.env.JWT_SECRET;
@@ -113,7 +114,9 @@ const register = async (req, res) => {
 };
 
 const login = async (req, res) => {
+  let enforce = false;
   try {
+    enforce = accountSecurity.enforcementMode() === 'enabled';
     if (!credentialInput(req.body)) return res.status(400).json({ code: 'AUTH_INPUT_INVALID' });
     const email = normalizeEmail(req.body.email);
     const password = String(req.body.password || "");
@@ -132,6 +135,8 @@ const login = async (req, res) => {
     }
 
     const user = result.rows[0];
+    const security = enforce ? accountSecurity.securityState(user) : null;
+    if (security && !security.isActive) return res.status(401).json({ message: 'Неверный email или пароль' });
     const validPassword = await bcrypt.compare(password, user.password);
 
     if (!validPassword) {
@@ -141,7 +146,8 @@ const login = async (req, res) => {
     const publicUser = buildPublicUser(user);
 
     const token = jwt.sign(
-      { id: publicUser.id, email: publicUser.email, role: publicUser.role },
+      { id: publicUser.id, email: publicUser.email, role: publicUser.role,
+        ...(security ? { sessionVersion: security.sessionVersion } : {}) },
       getJwtSecret(),
       { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
     );
@@ -152,6 +158,8 @@ const login = async (req, res) => {
       user: publicUser,
     });
   } catch (err) {
+    if (enforce || ['SESSION_SECURITY_CONFIG_INVALID', 'ACCOUNT_SECURITY_STATE_UNAVAILABLE'].includes(err.code))
+      return res.status(503).json({ code: 'ACCOUNT_SECURITY_STATE_UNAVAILABLE' });
     require("../utils/logger").error("LOGIN ERROR:", { error: err });
     return res.status(500).json({ message: "Ошибка входа" });
   }
@@ -240,7 +248,9 @@ const updateProfile = async (req, res) => {
 };
 
 const changePassword = async (req, res) => {
+  let enforce = false;
   try {
+    enforce = accountSecurity.enforcementMode() === 'enabled';
     if (!req.body || typeof req.body.currentPassword !== 'string' || typeof req.body.newPassword !== 'string'
       || Buffer.byteLength(req.body.currentPassword, 'utf8') > 1024 || Buffer.byteLength(req.body.newPassword, 'utf8') > 72)
       return res.status(400).json({ code: 'AUTH_INPUT_INVALID' });
@@ -256,13 +266,18 @@ const changePassword = async (req, res) => {
     }
 
     const result = await pool.query(
-      "SELECT id, password FROM users WHERE id = $1",
+      enforce ? "SELECT id, password, role, session_version, is_active FROM users WHERE id = $1"
+        : "SELECT id, password FROM users WHERE id = $1",
       [req.user.id]
     );
 
     if (result.rows.length === 0) {
       return res.status(404).json({ message: "Пользователь не найден" });
     }
+
+    const security = enforce ? accountSecurity.securityState(result.rows[0]) : null;
+    if (security && (!security.isActive || security.id !== req.user.id || security.sessionVersion !== req.user.sessionVersion))
+      return res.status(401).json({ code: 'SESSION_INVALID' });
 
     const valid = await bcrypt.compare(currentPassword, result.rows[0].password);
     if (!valid) {
@@ -271,13 +286,20 @@ const changePassword = async (req, res) => {
 
     const hash = await bcrypt.hash(newPassword, 12);
 
-    await pool.query(
-      "UPDATE users SET password = $1, updated_at = NOW() WHERE id = $2",
-      [hash, req.user.id]
-    );
+    if (enforce) {
+      // One atomic mutation; stale concurrent password/account changes cannot silently win.
+      const changed = await pool.query(
+        "UPDATE users SET password = $1, session_version = session_version + 1, updated_at = NOW() WHERE id = $2 AND password = $3 AND session_version = $4 AND is_active = TRUE RETURNING id",
+        [hash, req.user.id, result.rows[0].password, security.sessionVersion]);
+      if (changed.rows.length !== 1) return res.status(401).json({ code: 'SESSION_INVALID' });
+    } else {
+      await pool.query("UPDATE users SET password = $1, updated_at = NOW() WHERE id = $2", [hash, req.user.id]);
+    }
 
-    return res.json({ message: "Пароль изменён" });
+    return res.json({ message: "Пароль изменён", ...(enforce ? { reauthenticationRequired: true } : {}) });
   } catch (err) {
+    if (enforce || ['SESSION_SECURITY_CONFIG_INVALID', 'ACCOUNT_SECURITY_STATE_UNAVAILABLE'].includes(err.code))
+      return res.status(503).json({ code: 'ACCOUNT_SECURITY_STATE_UNAVAILABLE' });
     require("../utils/logger").error("CHANGE PASSWORD ERROR:", { error: err });
     return res.status(500).json({ message: "Ошибка изменения пароля" });
   }

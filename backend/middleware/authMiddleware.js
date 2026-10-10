@@ -1,4 +1,5 @@
 const jwt = require("jsonwebtoken");
+const accountSecurity = require('../services/accountSecurityState');
 
 function getJwtSecret() {
   const secret = process.env.JWT_SECRET;
@@ -11,6 +12,7 @@ function getJwtSecret() {
 }
 
 module.exports = (req, res, next) => {
+  delete req.user;
   try {
     const authHeader = req.get("Authorization");
 
@@ -33,10 +35,20 @@ module.exports = (req, res, next) => {
     if (!session || typeof session !== 'object' || session.type !== undefined
       || !Number.isSafeInteger(session.id) || session.id < 1 || !['user', 'admin'].includes(session.role)
       || !Number.isFinite(session.exp)) throw new Error('Invalid session claims');
+    const mode = accountSecurity.enforcementMode();
+    if (mode === 'enabled') {
+      // Keep disabled rollout synchronous and DB-free. Enabled mode never falls back to JWT authority.
+      return accountSecurity.authenticate(session).then(current => {
+        if (!current) return res.status(401).json({ code: 'SESSION_INVALID' });
+        req.user = current;
+        return next();
+      }, () => res.status(503).json({ code: 'ACCOUNT_SECURITY_STATE_UNAVAILABLE' }));
+    }
     req.user = session;
 
     return next();
   } catch (err) {
+    if (err.code === 'SESSION_SECURITY_CONFIG_INVALID') return res.status(503).json({ code: 'SESSION_SECURITY_CONFIG_INVALID' });
     if (err.message === "JWT_SECRET is not configured") {
       console.error(err.message);
 

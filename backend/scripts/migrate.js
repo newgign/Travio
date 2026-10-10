@@ -1,11 +1,11 @@
 const fs = require("fs");
 const path = require("path");
-const { assertExecutionAllowed } = require('./lib/reconciliationMigrationGuard.cjs');
+const { assertExecutionAllowed } = require('./lib/sessionSecurityMigrationGuard.cjs');
 
 const migrationsDir = path.resolve(__dirname, "../../database/migrations");
 
 async function migrate(migrationPool, env = process.env) {
-  // Refuse the whole ordered batch, never skip 021 or mark it applied.
+  // Refuse the whole ordered batch, never skip 021/022 or mark either applied.
   // Guard before pool construction, connection, advisory lock or ledger mutation.
   assertExecutionAllowed(env);
   migrationPool = migrationPool || require("../db");

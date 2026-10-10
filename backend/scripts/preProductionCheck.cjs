@@ -27,6 +27,9 @@ async function configuration(env) {
   const checks = [];
   const reconciliation = require('./lib/reconciliationMigrationGuard.cjs').preflight(env);
   checks.push({ id: 'RECONCILIATION_STORAGE', status: reconciliation.status === 'PASS' ? 'PASS' : 'BLOCKED', code: reconciliation.status === 'PASS' ? 'DISABLED — SAFE' : 'RECONCILIATION_ACTIVATION_BLOCKED' });
+  const sessionSecurity = require('./lib/sessionSecurityMigrationGuard.cjs').preflight(env);
+  checks.push({ id: 'SESSION_SECURITY_ROLLOUT', status: sessionSecurity.status === 'PASS' ? 'PASS' : 'BLOCKED',
+    code: sessionSecurity.status === 'PASS' ? 'DISABLED_SAFE' : 'SESSION_SECURITY_ACTIVATION_BLOCKED' });
   const add = (id, ok, reason = 'INVALID_CONFIGURATION') => checks.push({ id, status: ok ? 'PASS' : 'BLOCKED', code: ok ? 'VALID' : reason });
   for (const [key, value] of Object.entries(schema.MUST_EQUAL)) {
     // NODE_ENV/provider selector and boolean flags are case-sensitive at runtime.
@@ -92,7 +95,7 @@ function sourceChecks() {
   const add = (id, ok) => checks.push({ id, status: ok ? 'PASS' : 'BLOCKED', code: ok ? 'SOURCE_CONTRACT_PRESENT' : 'SOURCE_CONTRACT_CHANGED' });
   const inventory = migrationInventory();
   const files = fs.readdirSync(path.join(root, 'database/migrations')).filter(file => file.endsWith('.sql')).sort();
-  add('MIGRATION_INVENTORY', files.length === 21 && files.every((file, i) => file === inventory.migrations[i] && file.startsWith(String(i + 1).padStart(3, '0') + '_')) && new Set(files).size === 21 && inventory.tables.length === 25 && inventory.indexes.length === 76);
+  add('MIGRATION_INVENTORY', files.length === 22 && files.every((file, i) => file === inventory.migrations[i] && file.startsWith(String(i + 1).padStart(3, '0') + '_')) && new Set(files).size === 22 && inventory.tables.length === 25 && inventory.indexes.length === 76);
   const server = read('backend/server.js'), pkg = JSON.parse(read('backend/package.json'));
   add('STARTUP', pkg.scripts.start === 'node server.js' && !pkg.scripts.prestart && !pkg.scripts.poststart && !/scripts\/|\b(?:TRUNCATE|DROP\s+(?:TABLE|DATABASE)|migrate\s*\(|seed\s*\()/i.test(server));
   const runtimeFiles = ['backend/server.js', ...['routes', 'controllers', 'services', 'middleware', 'providers', 'integrations'].flatMap(dir => walk(path.join(root, 'backend', dir)).filter(f => /\.(js|cjs)$/.test(f)).map(f => path.relative(root, f)))];
