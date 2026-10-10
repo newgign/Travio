@@ -2,6 +2,14 @@
 
 2026-10-10, Asia/Qyzylorda. CODE/OFFLINE: PASS. Safe proxy telemetry READY in tested repository scope. Existing telemetry architecture REUSED. Render topology acceptance OPEN; TRUST_PROXY recommendation NONE YET. No deploy or live observation performed.
 
+## Sprint 7N.4 acceptance update
+
+Current Render staging topology **STAGING ACCEPTED**, TRUST_PROXY=1, HTTP_ACCESS_LOG=true, backend LIVE; health PASS per owner. Normal GET /api/health/live and exactly one bounded synthetic forwarding request each yielded statusCode200, networkIdentitySource=forwarded, trustedProxy=true, forwardedChainLength=1, socketPeerMatchesCanonical=false. Normal observation PASS; single spoof observation PASS within this bounded acceptance. No raw addresses/headers or synthetic value recorded here.
+
+Public direct-to-Node bypass BLOCKED BY CURRENT RENDER PLATFORM CONTRACT. This acceptance combines owner observations, owner-supplied Render platform guidance/contract and prior offline regressions; equal classification projections alone do not prove canonical IP equality or rejection of a specific supplied address. See SPRINT_7N4_TRUSTED_PROXY_STAGING_ACCEPTANCE_REPORT.md. Earlier OPEN and NOT PROVEN statements below describe the 7N.3 evidence state, superseded only for the current staging contract.
+
+Re-acceptance required after proxy/CDN, topology/hop, ingress-path or hosting-provider changes, or direct private-network callers. Distributed multi-instance protection remains OPEN / FUTURE / NOT READY; overall abuse P1 PARTIAL. HTTP_ACCESS_LOG unchanged by this documentation task; any later disable decision is operational, not required for acceptance. No runtime change, deploy or additional spoof request.
+
 ## Baseline and evidence boundary
 
 develop; tracked tree clean at start; HEAD `22c9f75 docs: add Sprint 7N.2 Render proxy observation plan`. Unrelated untracked owner files preserved. Owner supplied live TRUST_PROXY=1, live revision22c9f75, ancestry check against94de420 exit0, /health200 and backend LIVE. These are owner evidence, not independent agent checks. They do not certify topology. Scope inspected narrowly: telemetry, canonical identity helper, proxy config, startup mounts, direct tests, prior reports and directly referenced health handlers.

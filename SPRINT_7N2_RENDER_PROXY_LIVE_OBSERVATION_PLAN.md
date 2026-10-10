@@ -2,7 +2,15 @@
 
 2026-10-10, Asia/Qyzylorda. LIVE OBSERVATION PLAN: PASS. LIVE TOPOLOGY ACCEPTANCE: OPEN. TRUST_PROXY recommendation: NONE YET. No live acceptance request executed by this task.
 
-## Sprint 7N.3 update — current observation procedure
+## Sprint 7N.4 — acceptance supersedes earlier OPEN status
+
+Current Render staging topology: **STAGING ACCEPTED**, TRUST_PROXY=1, HTTP_ACCESS_LOG=true, backend LIVE. Owner normal GET /api/health/live and exactly one bounded synthetic forwarding request both returned statusCode200, networkIdentitySource=forwarded, trustedProxy=true, forwardedChainLength=1, socketPeerMatchesCanonical=false. Health PASS. No further observation request is requested by this update; historical commands below are retained as the earlier plan, not instructions to repeat acceptance.
+
+Conclusion combines owner runtime/spoof observations, owner-supplied Render platform contract/guidance and prior offline regressions. Public direct-to-Node bypass BLOCKED BY CURRENT RENDER PLATFORM CONTRACT. The four fields alone do not prove cross-request canonical IP equality or that the synthetic value was ignored. No raw IP/header content or synthetic value is recorded in the new acceptance evidence. See SPRINT_7N4_TRUSTED_PROXY_STAGING_ACCEPTANCE_REPORT.md.
+
+TRUST_PROXY=1 accepted only for current staging architecture; no universal production recommendation. Re-accept after another proxy/CDN, topology/hop change, direct private-network callers, another ingress path or hosting-provider change. Distributed multi-instance limiting remains NOT READY; overall abuse P1 PARTIAL. No runtime/Render/logging change or deployment performed here. Earlier OPEN/UNKNOWN statements below describe their historical sprint state.
+
+## Sprint 7N.3 update — historical observation procedure
 
 Owner evidence supplied on 2026-10-10: live TRUST_PROXY=1, live revision `22c9f75`, ancestry check against `94de420` exit0, /health200, backend LIVE. These are owner observations, not new agent live checks. The historical UNKNOWN statements below describe the original 7N.2 baseline.
 
