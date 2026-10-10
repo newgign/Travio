@@ -13,8 +13,7 @@ function approvedTarget(env) {
       || !/^[a-f0-9]{64}$/.test(env.RECONCILIATION_EXPECTED_DB_IDENTITY || '')
       || env.SESSION_SECURITY_EXPECTED_DB_IDENTITY !== env.RECONCILIATION_EXPECTED_DB_IDENTITY
       || env.DB_SSL_CA_PATH !== undefined || env.NODE_TLS_REJECT_UNAUTHORIZED === '0') return reject();
-    if (require('./sessionSecurity').enforcementMode(env) !== 'disabled'
-      || require('./reconciliationStorage').storageMode(env) !== 'disabled') return reject();
+    if (require('./reconciliationStorage').storageMode(env) !== 'disabled') return reject();
     for (const key of ['PRODUCTION_SALES_ENABLED', 'REAL_CHARGES_ENABLED', 'REAL_REFUNDS_ENABLED', 'HOTELBEDS_BOOKING_ENABLED', 'HOTELBEDS_LIVE_BOOKING_ENABLED']) {
       if (env[key] !== undefined && env[key] !== 'false') return reject();
     }

@@ -35,6 +35,8 @@ function preflight(env = process.env) {
 function assertExecutionAllowed(env = process.env) {
   const reject = () => { throw Object.assign(new Error('Reconciliation migration blocked'), { code: 'RECONCILIATION_MIGRATION_BLOCKED' }); };
   try {
+    // Migration safety only; normal runtime TLS permits either session mode.
+    if (require('../../config/sessionSecurity').enforcementMode(env) !== 'disabled') return reject();
     if (!inventoryCheck() || env.RECONCILIATION_STORAGE_MIGRATION_ENABLED !== 'true' || !disabledChecks(env).every(([, ok]) => ok)) return reject();
     // Disposable local integration only; remote/staging/production policy below is unchanged.
     if (env.LOCAL_SESSION_INTEGRATION_APPROVAL === 'I_APPROVE_DISPOSABLE_LOCAL_021_022') {
