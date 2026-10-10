@@ -1,5 +1,30 @@
 # Security production gap checklist — Sprint 7K
 
+## Sprint 7S — authoritative current reconciliation
+
+2026-10-10. This section supersedes historical counts and open/closed labels below; historical evidence is preserved. Full current inventory, every 7A/7K original requirement mapping, source evidence, remaining actions and launch impact: [Sprint 7S re-audit](SPRINT_7S_PRODUCTION_READINESS_REAUDIT_REPORT.md).
+
+Current mutually exclusive primary work-package counts: **P0 4 / P1 8 / P2 6 / OWNER 7 / EXTERNAL 2**. OWNER/EXTERNAL prerequisites can still block launch; they are not waived or counted again as engineering defects. Historical 7A ten P0 and 7K P0:1/P1:6/P2:3 counts are superseded, not blindly carried forward. Seven implemented capability improvements since 7K and six staging-evidenced areas are evidence rollups, not additional blockers or fully closed broad requirements.
+
+| Historical security requirement | Exactly one current state | Current evidence / remaining action |
+| --- | --- | --- |
+| S-P0-01 live payment evidence | FOUNDATION READY / OWNER ACCEPTANCE OPEN | 7L fail-closed contract, no accepted real adapter/merchant/durable money receipt; C0-02 + external X-01. Real charges/refunds/sales hard-disabled. |
+| S-P1-01 sessions/account state | FOUNDATION READY / OWNER ACCEPTANCE OPEN | 7M.3 staging runtime active, local PostgreSQL integration PASS. Owner legacy JWT E2E NOT CONFIRMED; password/role/disable staging E2E NOT RUN. R1-01. |
+| S-P1-02 proxy/abuse | PARTIAL | 7N.4 current public Render proxy STAGING ACCEPTED; process-local counters are not distributed. R1-02; reaccept changed topology. |
+| S-P1-03 browser token/headers | STAGING ACCEPTED | 7P.2 persistent localStorage bearer RESOLVED, sessionStorage and real document headers accepted. Active bearer XSS-readable by design; CSP baseline only. Logout owner E2E NOT RECONFIRMED. Static Site manually configured, Blueprint NOT ACTIVE; optional IaC Q2-06. |
+| S-P1-04 config/secrets | STAGING ACCEPTED | 7O current owner update: startup guard active, independent signing keys and health/login/admin accepted. Rotation/custody/access evidence O-05/O-04 remains open. |
+| S-P1-05 legacy bcrypt | STAGING ACCEPTED | 7Q.2 normal runtime accepted; purpose-isolated logged-out upgrade ready, replay/version controls proved offline. Legacy >72 staging E2E NOT RUN; original length impossible to recover, no full historical ambiguity remediation. |
+| S-P1-06 PII | PARTIAL | 7R.2 controlled code/logs STAGING ACCEPTED; raw password/token/email/phone/body NOT OBSERVED in bounded owner activity. API minimization R1-03 partial; retention O-03 and access O-04 open. Overall PII P1 NOT CLOSED. |
+| S-P2-01 saved-profile validation | OPEN | Current travelerProfileController coerces types/nonempty names; strict bounded name/date/type contract missing. Q2-01; ownership SQL/cap retained. |
+| S-P2-02 route/metadata minimization | RESOLVED | 7R/7R.1 controlled route-template/query omission, finite metadata/fixed messages and reduced projections. Remaining free-text/API/privacy requirements owned by R1-03/O-03/O-04, not duplicated as this P2. |
+| S-P2-03 independent keys/rotation | OBSOLETE / SUPERSEDED | 7O blocks production fallback/shared JWT/offer keys; staging accepted independent keys. Remaining operational rotation O-05/access O-04 counted once. |
+
+Current engineering P0: C0-01 booking execution, C0-02 real payment/evidence, C0-03 cancellation/refund, C0-04 durable orchestration/recovery. Current P1: R1-01 session acceptance, R1-02 distributed abuse, R1-03 API/PII minimization, R1-04 advisory/SCA, R1-05 monitoring/delivery, R1-06 capacity/fleet/quota, R1-07 commercial UX/fulfilment, R1-08 operational rehearsal. Current P2: Q2-01 saved profiles, Q2-02 measured performance, Q2-03 broader browsers/accessibility, Q2-04 optional case automation, Q2-05 advanced dispute analytics, Q2-06 optional IaC reconciliation.
+
+OWNER: O-01 production resource/deploy evidence; O-02 production DR/schedule; O-03 retention/privacy policy; O-04 operational access; O-05 rotation/custody; O-06 legal/commercial disclosures; O-07 staffed support/on-call/fulfilment. EXTERNAL: X-01 selected merchant/PSP acceptance; X-02 Hotelbeds LIVE account/contract/acceptance. Production resource provisioning historically paused, no later production attestation found; current plans/costs not independently known. Verified staging backup/local restore is PRE-022 evidence, not production/post-022 DR. Migration 021 applied does not activate reconciliation runtime/Admin datasource.
+
+DEPENDENCY VULNERABILITY EVIDENCE **OPEN**; dependency-tree consistency is not advisory scanning. No online audit run in 7S. Commercial production/sales/real booking/real payment ready **NO**; security certified/penetration tested **NO**; PCI/legal/privacy compliance **NOT CLAIMED**. Required offline checks are recorded in the 7S report. No runtime/Render/DB/migration/provider/money action. All older “counts unchanged” text below is historical.
+
 ## Sprint 7R.2 — current staging acceptance
 
 2026-10-10. Authoritative owner evidence: combined7R+7R.1 deployed to staging backend; LIVE, /health and /api/health/ready PASS with database.ok=true; normal login/admin/profile/account/bookings PASS. PII code controls STAGING RUNTIME ACCEPTED; admin query PII logging and controlled log redaction STAGING ACCEPTED within controlled application sinks. After normal owner activity, raw password/token, raw email/phone and request-body dumps NOT OBSERVED. This is bounded owner observation, not proof all free-text/edge cases are PII-free or that platform query logging was reviewed.
