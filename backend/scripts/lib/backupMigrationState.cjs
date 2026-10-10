@@ -37,4 +37,20 @@ function checkSessionSchema(sql, names, schema = 'public') {
     || !/^boolean DEFAULT true NOT NULL,?$/.test(active[1])
     || !/CONSTRAINT users_session_version_check CHECK \(\(session_version >= 1\)\)/.test(body)) reject('ARCHIVE_SESSION_SCHEMA_INVALID');
 }
-module.exports = { assertHistory, readHistory, checkSessionSchema };
+function hasUniqueConstraint(sql, objects, schema, table, columns) {
+  // Parse pg_restore schema text only. Match semantics, never predict generated names.
+  const identifier = '(?:"(?:[^"]|"")*"|[a-z_][a-z0-9_$]*)';
+  const pattern = new RegExp(`ALTER TABLE(?: ONLY)? (${identifier})\\.(${identifier})\\s+ADD CONSTRAINT (${identifier}) UNIQUE \\(([^)]+)\\);`, 'g');
+  const unquote = value => value.startsWith('"') ? value.slice(1,-1).replace(/""/g,'"') : value;
+  const matches = [];
+  for (const match of sql.matchAll(pattern)) {
+    const actualColumns = match[4].split(',').map(value => value.trim());
+    if (actualColumns.some(value => !new RegExp(`^${identifier}$`).test(value))) continue;
+    if (unquote(match[1]) === schema && unquote(match[2]) === table
+      && JSON.stringify(actualColumns.map(unquote)) === JSON.stringify(columns)) matches.push(unquote(match[3]));
+  }
+  if (matches.length !== 1) return false;
+  const prefix = `CONSTRAINT ${schema} ${table} ${matches[0]} `;
+  return objects.filter(line => line.startsWith(prefix)).length === 1;
+}
+module.exports = { assertHistory, readHistory, checkSessionSchema, hasUniqueConstraint };

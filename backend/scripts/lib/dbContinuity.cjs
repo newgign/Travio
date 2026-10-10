@@ -230,7 +230,7 @@ function verify(file, { env = process.env, run = spawnSync, schema = 'public', a
   for (const {table} of inventory.primary) if(!has('CONSTRAINT',`${table} ${table}_pkey`))missing.push(`PK:${table}`);
   for (const {table,column,constraintName} of inventory.foreignKeys) if(!has('FK CONSTRAINT',`${table} ${constraintName || `${table}_${column}_fkey`}`))missing.push(`FK:${table}`);
   for (const {name} of inventory.indexes) if(!has('INDEX',name))missing.push(`INDEX:${name}`);
-  for (const {table,columns} of inventory.unique) if(!has('CONSTRAINT',`${table} ${table}_${columns.join('_')}_key`))missing.push(`UNIQUE:${table}`);
+  for (const {table,columns} of inventory.unique) if(!archiveState.hasUniqueConstraint(definition,objects,schema,table,columns))missing.push(`UNIQUE:${table}`);
   if (missing.length) fail('ARCHIVE_OBJECTS_MISSING');
   return {status:archiveOnly ? 'archive-list-readable' : 'BACKUP_VERIFIED',...(manifest ? {sha256:manifest.sha256} : {}),sizeBytes:stat.size,expectedTables:inventory.tables.length,expectedIndexes:inventory.indexes.length,
     appliedMigrations:applied, dataBlocksRestored:false}; // Text extraction is not a full data-block restore/integrity proof.

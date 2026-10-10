@@ -9,14 +9,7 @@ const sourceEnv = {DATABASE_URL:'postgresql://owner:OFFLINE_PRIVATE_PASSWORD@127
 const targetEnv = {...sourceEnv,RESTORE_DATABASE_URL:'postgresql://owner:TARGET_PRIVATE_PASSWORD@localhost:5432/fixture_target',RESTORE_DB_SSL_MODE:'disable',RESTORE_CONFIRM_DATABASE:'fixture_target'};
 const code = value => error => error.code === value;
 function listing() {
-  const entries=[];
-  for(const table of inventory.tables)for(const kind of ['TABLE','TABLE DATA'])entries.push(`${kind} public ${table} owner`);
-  for(const {table,column} of inventory.serials)for(const kind of ['SEQUENCE','SEQUENCE SET'])entries.push(`${kind} public ${table}_${column}_seq owner`);
-  for(const {table} of inventory.primary)entries.push(`CONSTRAINT public ${table} ${table}_pkey owner`);
-  for(const {table,column,constraintName} of inventory.foreignKeys)entries.push(`FK CONSTRAINT public ${table} ${constraintName || `${table}_${column}_fkey`} owner`);
-  for(const {table,columns} of inventory.unique)entries.push(`CONSTRAINT public ${table} ${table}_${columns.join('_')}_key owner`);
-  for(const {name} of inventory.indexes)entries.push(`INDEX public ${name} owner`);
-  return entries.map((entry,i)=>`${i+1}; 1259 100 ${entry}`).join('\n');
+  return archiveFixture.fixture().listing;
 }
 const archiveFixture = require('./helpers/backupArchiveFixture.cjs');
 const listRun = (_binary, args = ['--list']) => archiveFixture.runFor()(_binary, args);
