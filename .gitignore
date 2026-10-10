@@ -36,6 +36,9 @@ Thumbs.db
 *.cer
 backend/backups/
 *.backup.json
+/backups/
+*.dump
+*.dump.*
 
 # Runtime cache
 backend/cache/
