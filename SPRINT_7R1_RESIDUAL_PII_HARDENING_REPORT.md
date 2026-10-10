@@ -1,5 +1,9 @@
 # Sprint 7R.1 — Residual PII Exposure Hardening
 
+## Sprint 7R.2 — current owner staging acceptance
+
+2026-10-10. Authoritative owner confirms combined7R+7R.1 staging backend deployment LIVE; health/readiness PASS with database.ok=true; login/admin/profile/account/bookings PASS. PII code controls STAGING RUNTIME ACCEPTED; admin query PII logging and controlled redaction STAGING ACCEPTED in controlled application sinks. Normal owner activity showed no visible raw password/token/email/phone or request-body dump: NOT OBSERVED, not an exhaustive leakage guarantee. API response minimization PARTIAL; traveller/free-text residual risk DOCUMENTED. Platform logging/access not newly reviewed; retention OWNER POLICY REQUIRED, operational access evidence OPEN, legal/privacy compliance NOT CLAIMED. P1 PII CODE CONTROLS STAGING ACCEPTED; P1 PII OVERALL PARTIAL and remains open. Backup failure/metadata edge tests below remain offline evidence. Earlier acceptance-NOT-RUN statements describe7R.1 itself. See SPRINT_7R2_PII_STAGING_ACCEPTANCE_REPORT.md. No runtime/Render/deploy/DB action in this documentation task; COMMERCIAL PRODUCTION READY NO.
+
 2026-10-10, Asia/Qyzylorda. CODE/OFFLINE PASS in tested scope. P1 PII CODE CONTROLS READY in controlled boundaries; P1 PII OVERALL PARTIAL. COMMERCIAL PRODUCTION READY NO. Legal/privacy compliance NOT CLAIMED.
 
 ## Baseline and original residual gaps

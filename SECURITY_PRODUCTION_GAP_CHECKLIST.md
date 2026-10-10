@@ -1,5 +1,11 @@
 # Security production gap checklist — Sprint 7K
 
+## Sprint 7R.2 — current staging acceptance
+
+2026-10-10. Authoritative owner evidence: combined7R+7R.1 deployed to staging backend; LIVE, /health and /api/health/ready PASS with database.ok=true; normal login/admin/profile/account/bookings PASS. PII code controls STAGING RUNTIME ACCEPTED; admin query PII logging and controlled log redaction STAGING ACCEPTED within controlled application sinks. After normal owner activity, raw password/token, raw email/phone and request-body dumps NOT OBSERVED. This is bounded owner observation, not proof all free-text/edge cases are PII-free or that platform query logging was reviewed.
+
+API response minimization PARTIAL; traveller/free-text residual risk DOCUMENTED; retention OWNER POLICY REQUIRED; operational access evidence OPEN; legal/privacy compliance NOT CLAIMED. P1 PII CODE CONTROLS STAGING ACCEPTED; P1 PII OVERALL PARTIAL and remains open, counts unchanged. Offline backup/metadata/purpose/authorization evidence remains separate; no new staging backup-failure or exhaustive PII test claimed. See SPRINT_7R2_PII_STAGING_ACCEPTANCE_REPORT.md. Earlier acceptance-pending text is historical; no runtime/Render/deploy/DB action in7R.2. COMMERCIAL PRODUCTION READY NO.
+
 ## Sprint 7R.1 residual hardening
 
 Controlled application admin-query PII logging RESOLVED: route-template/no-query telemetry retained; logger now drops query/search/free-context values. Admin search SQL/pagination unchanged. Platform/ingress raw query handling remains OPEN and is not a source-code acceptance claim. Free-text operational metadata READY for tested typed/finite-vocabulary writes and response projection; retained incident detail is bounded/control-cleaned/redacted, not perfectly PII-detectable. Legacy backup diagnostic leakage READY in hardened command catch/summary boundaries (fixed stage/code, generated basename only, no raw message/subprocess output). API response minimization PARTIAL overall; selected admin action/event/incident internal/raw-field boundaries READY. Browser PII persistence READY within accepted7P profile/auth contract, no new persistence or copies; frontend unchanged.
