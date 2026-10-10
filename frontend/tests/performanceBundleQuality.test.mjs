@@ -16,9 +16,9 @@ const pages = ['Help','Contacts','Results','Favorites','TourDetails','Login','Re
 test('5H route imports, auth boundaries, images and real build graph offline', async t => {
   let requests = 0;
   t.mock.method(globalThis, 'fetch', async () => { requests++; throw Error('All network forbidden in 5H'); });
-  const previous = { storage:globalThis.localStorage, window:globalThis.window, evaluated:globalThis.__performanceEvaluated };
+  const previous = { storage:globalThis.sessionStorage, window:globalThis.window, evaluated:globalThis.__performanceEvaluated };
   const memory = new Map();
-  globalThis.localStorage = { getItem:key=>memory.get(key)??null, setItem:(key,value)=>memory.set(key,String(value)), removeItem:key=>memory.delete(key) };
+  globalThis.sessionStorage = { getItem:key=>memory.get(key)??null, setItem:(key,value)=>memory.set(key,String(value)), removeItem:key=>memory.delete(key) };
   globalThis.window = new EventTarget(); window.location = { href:'/' };
   globalThis.__performanceEvaluated = [];
   const server = await createServer({ root, configFile:false, server:{middlewareMode:true,hmr:false}, esbuild:{jsx:'automatic'},
@@ -119,6 +119,6 @@ test('5H route imports, auth boundaries, images and real build graph offline', a
     await t.test('all import/render/build checks made zero network requests',()=>assert.equal(requests,0));
   } finally {
     await server.close();
-    globalThis.localStorage=previous.storage;globalThis.window=previous.window;globalThis.__performanceEvaluated=previous.evaluated;
+    globalThis.sessionStorage=previous.storage;globalThis.window=previous.window;globalThis.__performanceEvaluated=previous.evaluated;
   }
 });

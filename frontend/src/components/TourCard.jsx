@@ -1,3 +1,4 @@
+import { authStorage } from '../services/authStorage';
 import { stayGuests } from '../utils/resultsPresentation';
 import { resultsOrigin } from '../utils/detailsPresentation';
 import StayPrice from '../components/StayPrice';
@@ -58,7 +59,7 @@ function TourCardView({ tour }) {
     event.stopPropagation();
     if(favoriteLock.current || sharedPending)return;
     setFavoriteError('');
-    if (!localStorage.getItem("token")) { navigate("/login"); return; }
+    if (!authStorage.getItem("token")) { navigate("/login"); return; }
     favoriteLock.current = true;
     setFavoritePending(true);
     try { await toggleFavorite(tour); }

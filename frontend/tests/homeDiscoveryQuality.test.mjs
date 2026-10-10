@@ -10,9 +10,9 @@ import postcss from 'postcss';
 
 test('5G Home and discovery: offline behavior and truthful presentation',async t=>{
   const server=await createServer({root:fileURLToPath(new URL('..',import.meta.url)),configFile:false,server:{middlewareMode:true,hmr:false},esbuild:{jsx:'automatic'},define:{'import.meta.env.VITE_HOTELBEDS_STAGING_TEST_ENABLED':'"true"'}});
-  const old={storage:globalThis.localStorage,window:globalThis.window};
+  const old={storage:globalThis.sessionStorage,window:globalThis.window};
   const memory=new Map();
-  globalThis.localStorage={getItem:k=>memory.get(k)??null,setItem:(k,v)=>memory.set(k,v),removeItem:k=>memory.delete(k)};
+  globalThis.sessionStorage={getItem:k=>memory.get(k)??null,setItem:(k,v)=>memory.set(k,v),removeItem:k=>memory.delete(k)};
   globalThis.window=new EventTarget();window.location={href:'/'};
   let status=200,reply={destinations:[]};const calls=[];
   t.mock.method(globalThis,'fetch',async(url,options={})=>{
@@ -109,5 +109,5 @@ test('5G Home and discovery: offline behavior and truthful presentation',async t
     await t.test('Home paths never import operational provider/payment/email services',async()=>{for(const file of ['pages/Home.jsx','hooks/useHomeLoad.js','services/homeCatalog.js','components/HomeSearch.jsx'])assert.doesNotMatch(await source(file),/bookingService|paymentService|checkoutService|checkRate|contentHotels|\.availability\(|emailService|setInterval/);});
     await t.test('backend special/catalog sources are read-only local metadata/history',async()=>{const special=await readFile(new URL('../../backend/routes/specialOffers.js',import.meta.url),'utf8');assert.match(special,/history.specials\(\)/);const catalog=await readFile(new URL('../../backend/routes/catalog.js',import.meta.url),'utf8');assert.match(catalog,/findDestinations/);assert.doesNotMatch(special+catalog,/\.availability\(|checkRates|contentHotels|createBooking|cancelBooking/);});
     await t.test('all intercepted requests are own Home GETs, no real provider/payment/notification calls',()=>{assert.ok(calls.length>0);assert.ok(calls.every(path=>['/api/catalog/test-options'].includes(path)));});
-  }finally{globalThis.localStorage=old.storage;globalThis.window=old.window;await server.close();}
+  }finally{globalThis.sessionStorage=old.storage;globalThis.window=old.window;await server.close();}
 });

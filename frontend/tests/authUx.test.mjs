@@ -12,8 +12,8 @@ require('../../backend/tests/offlineNetwork.cjs');
 
 test('3U auth forms, session lifecycle, safe return and app-only HTTP', async t => {
   const server = await createServer({root:fileURLToPath(new URL('..',import.meta.url)),configFile:false,server:{middlewareMode:true,hmr:false},esbuild:{jsx:'automatic'}});
-  const previous={storage:globalThis.localStorage,window:globalThis.window};
-  const memory=new Map();globalThis.localStorage={getItem:key=>memory.get(key)??null,setItem:(key,value)=>memory.set(key,value),removeItem:key=>memory.delete(key)};
+  const previous={storage:globalThis.sessionStorage,window:globalThis.window};
+  const memory=new Map();globalThis.sessionStorage={getItem:key=>memory.get(key)??null,setItem:(key,value)=>memory.set(key,value),removeItem:key=>memory.delete(key)};
   globalThis.window=new EventTarget();window.location={href:'/login'};
   const user={id:987654321,full_name:'Fixture User',email:'fixture@example.test',phone:null,role:'user',password:'PRIVATE_HASH',internal:'PRIVATE_INTERNAL'};
   const requests=[],navigations=[];
@@ -100,13 +100,13 @@ test('3U auth forms, session lifecycle, safe return and app-only HTTP', async t 
     await t.test('source accessibility/redirect/session wiring and responsive 320–390px contracts',async()=>{
       const [view,css,protectedRoute,account,nav,profilePage,bookings]=await Promise.all(['components/AuthPage.jsx','styles/Auth.css','components/ProtectedRoute.jsx','components/AccountStates.jsx','components/Navbar.jsx','pages/Profile.jsx','pages/MyBookings.jsx'].map(path=>readFile(new URL('../src/'+path,import.meta.url),'utf8')));
       assert.match(view,/focusAuthError\(event.currentTarget/);assert.match(view,/role="alert"/);assert.match(view,/aria-live="polite"/);assert.match(view,/type="button"/);assert.match(view,/aria-pressed=\{visible\}/);
-      assert.doesNotMatch(view,/alert\(|console\.|localStorage|JSON.stringify|URLSearchParams/);
+      assert.doesNotMatch(view,/alert\(|console\.|sessionStorage|JSON.stringify|URLSearchParams/);
       assert.match(protectedRoute,/returnTo: authOrigin\(location.pathname\)/);assert.match(account,/returnTo: authOrigin/);
       assert.match(profilePage,/returnTo: '\/profile'/);assert.match(bookings,/returnTo: '\/my-bookings'/);
       assert.match(nav,/accountName\(user\)/);assert.match(nav,/to="\/register"/);assert.match(nav,/onClick=\{logout\}/);
       for(const rule of [/max-width:500px/,/max-width:1024px/,/max-width:600px/,/max-width:360px/,/min-width:0/,/box-sizing:border-box/,/overflow-wrap:anywhere/,/:focus-visible/])assert.match(css,rule);
     });
-  } finally {globalThis.localStorage=previous.storage;globalThis.window=previous.window;await server.close();}
+  } finally {globalThis.sessionStorage=previous.storage;globalThis.window=previous.window;await server.close();}
 });
 
 test('3U real login/register controllers remain DB/crypto-only with six zero provider counters',async t=>{

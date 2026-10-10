@@ -1,9 +1,10 @@
+import { authStorage } from './authStorage';
 import { getProfile, updateProfile, changePassword } from './profileService';
 import { clearSession, updateSessionUser, readSession, sessionSnapshot, subscribeSession, takeRestoredProfile } from './session';
 import { emptyPassword, passwordErrors, profileDraft, profileErrors, publicProfile } from '../utils/profilePresentation';
 
 // Page-local draft state; the existing session remains the only shared user store.
-export function createProfileStore({ token, readToken = () => localStorage.getItem('token'), readUserId = () => typeof localStorage === 'undefined' ? null : readSession(sessionSnapshot()).user?.id, api = { getProfile: () => takeRestoredProfile(token) || getProfile(), updateProfile, changePassword }, publish = updateSessionUser } = {}) {
+export function createProfileStore({ token, readToken = () => authStorage.getItem('token'), readUserId = () => typeof authStorage === 'undefined' ? null : readSession(sessionSnapshot()).user?.id, api = { getProfile: () => takeRestoredProfile(token) || getProfile(), updateProfile, changePassword }, publish = updateSessionUser } = {}) {
   const ownerId = readUserId();
   const sameIdentity = () => ownerId == null || String(readUserId()) === String(ownerId);
   let state = { status: token ? 'loading' : 'auth', user: null, draft: null, dirty: false, saving: false, errors: {}, message: '', saveError: '', password: emptyPassword(), passwordErrors: {}, passwordBusy: false, passwordMessage: '', passwordError: '' };

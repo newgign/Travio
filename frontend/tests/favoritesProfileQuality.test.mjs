@@ -9,9 +9,9 @@ import {MemoryRouter} from 'react-router-dom';
 
 test('5C shared favorites and supported profile quality',async t=>{
  const server=await createServer({root:fileURLToPath(new URL('..',import.meta.url)),configFile:false,server:{middlewareMode:true,hmr:false},esbuild:{jsx:'automatic'}});
- const old={storage:globalThis.localStorage,window:globalThis.window};
+ const old={storage:globalThis.sessionStorage,window:globalThis.window};
  const memory=new Map([['token','user-a']]);
- globalThis.localStorage={getItem:k=>memory.get(k)??null,setItem:(k,v)=>memory.set(k,v),removeItem:k=>memory.delete(k)};
+ globalThis.sessionStorage={getItem:k=>memory.get(k)??null,setItem:(k,v)=>memory.set(k,v),removeItem:k=>memory.delete(k)};
  globalThis.window=new EventTarget();window.location={href:'/'};
  const hotel={provider:'hotelbeds',providerHotelId:'3424',name:'Grand Kaptan',city:'ALANYA',country:'Turkey',contentEnvironment:'test',stars:5};
  const user={id:7,full_name:'Анна',email:'fixture@example.test',phone:'123',role:'user',preferred_language:'ru',email_notifications:false,booking_reminders:false};
@@ -81,5 +81,5 @@ test('5C shared favorites and supported profile quality',async t=>{
   await t.test('parallel list reads share one request',async()=>{const s=fresh();const n=calls.length;const first=s.load();assert.equal(first,s.load());await first;assert.equal(calls.length,n+1);});
   await t.test('new profile store starts empty and loads its own account',async()=>{memory.set('token','user-b');const b=createProfileStore({token:'user-b',api:{getProfile:async()=>({...user,id:8,full_name:'Second user'})}});assert.equal(b.getSnapshot().user,null);await b.load();assert.equal(b.getSnapshot().user.id,8);assert.equal(profileHtml(b).includes(user.full_name),false);memory.set('token','user-a');});
   await t.test('no provider network or raw UI errors',async()=>{assert.ok(calls.every(([,path])=>path.startsWith('/favorites')));for(const path of ['pages/Favorites.jsx','pages/Profile.jsx','components/SavedHotelCard.jsx'])assert.doesNotMatch(await source(path),/\{error\.message\}|dangerouslySetInnerHTML|checkRate|availability\(/);});
- }finally{globalThis.localStorage=old.storage;globalThis.window=old.window;await server.close();}
+ }finally{globalThis.sessionStorage=old.storage;globalThis.window=old.window;await server.close();}
 });

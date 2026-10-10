@@ -1,3 +1,4 @@
+import { authStorage } from './authStorage';
 import API_URL from "./api";
 import { clearSession, storedSessionIdentity } from "./session";
 
@@ -6,7 +7,7 @@ export default async function authFetch(url, options = {}) {
   let path;
   try { path = decodeURIComponent(typeof url === 'string' ? url.split('?')[0] : ''); } catch { throw Error('INVALID_API_PATH'); }
   if (!path.startsWith('/') || path.startsWith('//') || /[\\#\s]/.test(path) || path.split('/').some(part => part === '.' || part === '..')) throw Error('INVALID_API_PATH');
-  const token = localStorage.getItem("token");
+  const token = authStorage.getItem("token");
   const identity = storedSessionIdentity();
 
   const headers = {

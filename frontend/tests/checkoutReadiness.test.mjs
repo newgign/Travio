@@ -8,8 +8,8 @@ import { renderToStaticMarkup } from 'react-dom/server';
 test('6H final checkout review contract offline', async t => {
     const server = await createServer({ root: fileURLToPath(new URL('..', import.meta.url)), configFile: false,
         server: { middlewareMode: true, hmr: false }, esbuild: { jsx: 'automatic' } });
-    const previousStorage = globalThis.localStorage;
-    globalThis.localStorage = { getItem: () => null };
+    const previousStorage = globalThis.sessionStorage;
+    globalThis.sessionStorage = { getItem: () => null };
     try {
         const { createFinalReview, reviewPrerequisite, safeReviewModel } = await server.ssrLoadModule('/src/services/checkoutReadiness.js');
         const { default: View } = await server.ssrLoadModule('/src/components/checkout/FinalReviewStep.jsx');
@@ -52,5 +52,5 @@ test('6H final checkout review contract offline', async t => {
         await t.test('expired session and changed price without acceptance block readiness', async () => { const offer = checkout(); offer.checkoutExpiresAt = '2000-01-01'; assert.equal(reviewPrerequisite(offer, form()), 'CHECKRATE_REQUIRED'); offer.checkoutExpiresAt = expiresAt; offer.priceChangedAtCheckRate = true; assert.equal(reviewPrerequisite(offer, form()), 'CHECKRATE_REQUIRED'); offer.acceptedPriceToken = offer.checkoutToken; assert.equal(reviewPrerequisite(offer, form()), null); const value = model(); value.expiresAt = '2000-01-01'; assert.throws(() => safeReviewModel(value), { code: 'REVIEW_NOT_READY' }); assert.doesNotMatch(render(value), /Synthetic AdultOne/); });
         await t.test('malformed previews and fake booking success rejected', async () => { for (const patch of [{ code: 'BOOKED' }, { review: null }, { review: { ...model(), travelers: [] } }, { review: { ...model(), bookingAvailable: true } }]) { const current = store(async () => ({ ...response(), ...patch })); await assert.rejects(current.prepare(checkout(), form())); assert.equal(current.getSnapshot().review, null); } });
         await t.test('explicit authenticated preview uses existing intent route and no PII URL', async sub => { let sent; sub.mock.method(globalThis, 'fetch', async (url, options) => { assert.match(url, /\/bookings\/intent$/); assert.doesNotMatch(url, /Synthetic|birthDate|\?/); assert.equal(options.method, 'POST'); sent = JSON.parse(options.body); return { ok: false, status: 503, text: async () => JSON.stringify(response()) }; }); const result = await createBookingReview({ checkoutToken: checkout().checkoutToken, travelers: guests() }); assert.equal(sent.review, true); assert.equal(result.review.state, 'REVIEW_READY'); });
-    } finally { await server.close(); if (previousStorage === undefined) delete globalThis.localStorage; else globalThis.localStorage = previousStorage; }
+    } finally { await server.close(); if (previousStorage === undefined) delete globalThis.sessionStorage; else globalThis.sessionStorage = previousStorage; }
 });

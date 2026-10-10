@@ -1,11 +1,12 @@
-﻿import { createAccountListStore } from './accountListStore';
+import { authStorage } from './authStorage';
+import { createAccountListStore } from './accountListStore';
 import { getMyBookings, getBookingDetails } from './bookingService';
 import { readSession, sessionSnapshot, subscribeSession } from './session';
 
 const storedUserId = () => readSession(sessionSnapshot()).user?.id;
 const sessionKey = (token, userId) => token && /^[1-9]\d*$/.test(String(userId)) ? JSON.stringify([token, String(userId)]) : null;
 
-export function createBookingHistory({ token, userId, readToken = () => localStorage.getItem('token'), readUserId = storedUserId, api = { getMyBookings, getBookingDetails } }) {
+export function createBookingHistory({ token, userId, readToken = () => authStorage.getItem('token'), readUserId = storedUserId, api = { getMyBookings, getBookingDetails } }) {
   const options = { ownerToken: sessionKey(token, userId), readToken: () => sessionKey(readToken(), readUserId()) };
   const list = createAccountListStore({ ...options, loadData: async () => {
     const rows = await api.getMyBookings();
@@ -43,7 +44,7 @@ let owner = null, history = null, connected = false;
 export function bookingHistory(token, userId = storedUserId()) {
   if (!connected) {
     subscribeSession(() => {
-      if (sessionKey(localStorage.getItem('token'), storedUserId()) !== owner) { history?.invalidate(); history = null; owner = null; }
+      if (sessionKey(authStorage.getItem('token'), storedUserId()) !== owner) { history?.invalidate(); history = null; owner = null; }
     });
     connected = true;
   }

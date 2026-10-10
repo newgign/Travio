@@ -72,6 +72,22 @@ services:
     autoDeployTrigger: "off"
     buildCommand: npm ci --include=dev && node scripts/validate-staging-env.mjs && npm run build
     staticPublishPath: dist
+    headers:
+      - path: /*
+        name: Content-Security-Policy
+        value: "object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: no-referrer
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: Permissions-Policy
+        value: "camera=(), microphone=(), geolocation=()"
     routes:
       - type: rewrite
         source: /*

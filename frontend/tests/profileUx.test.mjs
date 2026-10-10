@@ -12,9 +12,9 @@ require('../../backend/tests/offlineNetwork.cjs');
 
 test('3T profile account contract, confirmed edits and session privacy offline', async t => {
   const server = await createServer({ root:fileURLToPath(new URL('..',import.meta.url)), configFile:false, server:{middlewareMode:true,hmr:false}, esbuild:{jsx:'automatic'} });
-  const previous = { storage:globalThis.localStorage, window:globalThis.window };
+  const previous = { storage:globalThis.sessionStorage, window:globalThis.window };
   const memory = new Map([['token','fixture-session']]);
-  globalThis.localStorage = { getItem:key=>memory.get(key) ?? null, setItem:(key,value)=>memory.set(key,value), removeItem:key=>memory.delete(key) };
+  globalThis.sessionStorage = { getItem:key=>memory.get(key) ?? null, setItem:(key,value)=>memory.set(key,value), removeItem:key=>memory.delete(key) };
   globalThis.window = new EventTarget();
   window.location = { href:'/profile' };
   let user = { id:987654321, full_name:'Анна Тест', email:'fixture@example.test', phone:'+7 (123) 000', role:'admin', created_at:'2026-01-01', preferred_language:'kk', email_notifications:false, booking_reminders:false, password:'PRIVATE_HASH', token:'PRIVATE_TOKEN' };
@@ -122,7 +122,7 @@ test('3T profile account contract, confirmed edits and session privacy offline',
       assert.equal(presentation.accountName({email:'fallback@example.test'}),'fallback@example.test');
       assert.equal(presentation.accountInitials({full_name:'Анна Тест'}),'АТ');
     });
-  } finally { globalThis.localStorage=previous.storage;globalThis.window=previous.window;await server.close(); }
+  } finally { globalThis.sessionStorage=previous.storage;globalThis.window=previous.window;await server.close(); }
 });
 
 test('3T real profile/update/password controllers perform DB-only account operations',async t=>{

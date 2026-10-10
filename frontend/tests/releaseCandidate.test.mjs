@@ -238,7 +238,8 @@ test('3X release integration: real helpers/services and SSR, no browser acceptan
       const pending=store.load();await Promise.resolve();token='new';release([selected]);await pending;
       assert.deepEqual(store.getSnapshot().items,[]);
       assert.match(await source('components/ProtectedRoute.jsx'),/state=\{\{ returnTo: authOrigin\(location.pathname\) \}\}/);
-      assert.match(await source('services/session.js'),/localStorage.removeItem\("token"\)/);
+      assert.match(await source('services/session.js'),/authStorage.removeItem\("token"\)/);
+      assert.match(await source('services/authStorage.js'),/sessionStorage\?\.removeItem\(key\)/);
       assert.match(await source('components/Navbar.jsx'),/accountName\(user\)/);
       assert.doesNotMatch(built.url+url,/email|password|token|signature|rateKey/i);
     });

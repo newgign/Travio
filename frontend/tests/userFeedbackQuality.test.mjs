@@ -10,9 +10,9 @@ import postcss from 'postcss';
 
 test('5F consumer feedback offline contracts', async t => {
   const server = await createServer({root:fileURLToPath(new URL('..',import.meta.url)),configFile:false,server:{middlewareMode:true,hmr:false},esbuild:{jsx:'automatic'}});
-  const previous = { storage:globalThis.localStorage, window:globalThis.window };
+  const previous = { storage:globalThis.sessionStorage, window:globalThis.window };
   const memory = new Map();
-  globalThis.localStorage = {getItem:k=>memory.get(k)??null,setItem:(k,v)=>memory.set(k,v),removeItem:k=>memory.delete(k)};
+  globalThis.sessionStorage = {getItem:k=>memory.get(k)??null,setItem:(k,v)=>memory.set(k,v),removeItem:k=>memory.delete(k)};
   globalThis.window = new EventTarget(); window.location = {href:'/'};
   const requests = [];
   let status=200, body=[], wait=null;
@@ -123,5 +123,5 @@ test('5F consumer feedback offline contracts', async t => {
     await t.test('profile connected logout clears prior success before next account',async()=>{login();const s=profile();const stop=s.connect();await s.load();s.edit('full_name','Saved');await s.save();assert.ok(s.getSnapshot().message);session.logout();assert.equal(s.getSnapshot().message,'');assert.equal(s.getSnapshot().user,null);session.establishSession('offline-second',{...user,id:8},session.beginAuthAttempt());assert.equal(s.getSnapshot().user,null);stop();});
     await t.test('registration conflict has intentional safe copy',async()=>{session.logout();const s=createAuthFormStore({mode:'register',onSuccess:()=>assert.fail('conflict')});for(const [k,v] of Object.entries({email:'fixture@example.test',password:'synthetic-password',full_name:'Fixture',confirmPassword:'synthetic-password'}))s.edit(k,v);status=409;body={message:poison};await s.submit();const html=render(AuthView,{mode:'register',state:s.getSnapshot(),actions:s});assert.match(html,/Аккаунт с таким email уже существует/);safe(html);assert.doesNotMatch(html,/synthetic-password/);status=200;});
     await t.test('all exercised network requests are intercepted own API only, zero provider calls',()=>{assert.ok(requests.length>0);assert.ok(requests.every(([path])=>!/(hotelbeds|checkrate|cancellation|payment|voucher|checkout)/i.test(path)));});
-  } finally {globalThis.localStorage=previous.storage;globalThis.window=previous.window;await server.close();}
+  } finally {globalThis.sessionStorage=previous.storage;globalThis.window=previous.window;await server.close();}
 });

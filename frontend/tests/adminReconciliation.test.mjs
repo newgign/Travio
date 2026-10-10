@@ -18,9 +18,9 @@ const decision = extra => evaluate({ intent: { state: 'PAYMENT_INTENT_READY', re
 
 test('7E read-only admin reconciliation offline', async t => {
   const server = await createServer({ root: fileURLToPath(new URL('..', import.meta.url)), configFile: false, server: { middlewareMode: true, hmr: false }, esbuild: { jsx: 'automatic' } });
-  const previous = { storage: globalThis.localStorage, window: globalThis.window };
+  const previous = { storage: globalThis.sessionStorage, window: globalThis.window };
   const memory = new Map();
-  globalThis.localStorage = { getItem: key => memory.get(key) ?? null, setItem: (key, value) => memory.set(key, value), removeItem: key => memory.delete(key) };
+  globalThis.sessionStorage = { getItem: key => memory.get(key) ?? null, setItem: (key, value) => memory.set(key, value), removeItem: key => memory.delete(key) };
   globalThis.window = new EventTarget(); window.location = { href: '/' };
   let networkCalls = 0;
   t.mock.method(globalThis, 'fetch', async (url, options) => {
@@ -77,7 +77,7 @@ test('7E read-only admin reconciliation offline', async t => {
     await t.test('navigation stays inside guarded Admin and responsive focus styles exist', async () => { const source = path => readFile(new URL('../src/' + path, import.meta.url), 'utf8'); assert.match(await source('components/admin/Sidebar.jsx'), /reconciliation.*Сверка платежей/); assert.match(await source('pages/AdminPanel.jsx'), /tab === "reconciliation"/); assert.match(await source('App.jsx'), /ProtectedRoute adminOnly/); assert.match(await source('styles/ReconciliationCenter.css'), /:focus-visible/); assert.match(await source('styles/ReconciliationCenter.css'), /@media/); });
     await t.test('runtime transport is authenticated GET only with four intercepted reads', async () => { const source = await readFile(new URL('../src/services/reconciliationService.js', import.meta.url), 'utf8'); assert.match(source, /authFetch/); assert.doesNotMatch(source, /POST|PUT|PATCH|DELETE/); assert.equal(networkCalls, 4); });
   } finally {
-    await server.close(); globalThis.localStorage = previous.storage; globalThis.window = previous.window;
+    await server.close(); globalThis.sessionStorage = previous.storage; globalThis.window = previous.window;
   }
 });
 

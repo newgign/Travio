@@ -1,3 +1,4 @@
+import { authStorage } from './authStorage';
 import authFetch from "./authFetch";
 import API_URL from "./api";
 
@@ -84,7 +85,7 @@ export async function getBookingVoucher(id) {
 }
 
 export async function downloadBookingVoucherPdf(id) {
-  const token = localStorage.getItem("token");
+  const token = authStorage.getItem("token");
   const response = await fetch(`${API_URL}/bookings/${id}/voucher.pdf`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });

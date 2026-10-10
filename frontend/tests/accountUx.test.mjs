@@ -15,8 +15,8 @@ test('3S saved account UX and app-only data operations', async t => {
   const server = await createServer({ root:fileURLToPath(new URL('..',import.meta.url)), configFile:false,
     server:{middlewareMode:true,hmr:false}, esbuild:{jsx:'automatic'} });
   const memory = new Map([['token','offline-session'],['user','{"id":7}']]);
-  const oldStorage = globalThis.localStorage, oldWindow = globalThis.window;
-  globalThis.localStorage = {getItem:key=>memory.get(key) ?? null,setItem:(key,value)=>memory.set(key,value),removeItem:key=>memory.delete(key)};
+  const oldStorage = globalThis.sessionStorage, oldWindow = globalThis.window;
+  globalThis.sessionStorage = {getItem:key=>memory.get(key) ?? null,setItem:(key,value)=>memory.set(key,value),removeItem:key=>memory.delete(key)};
   globalThis.window = new EventTarget();
   const requests = [];
   let favoriteFailure = false, bookingFailure = false, removeFailure = false, unauthorized = false, deleted = false;
@@ -221,7 +221,7 @@ test('3S saved account UX and app-only data operations', async t => {
       assert.ok(requests.every(([method,path])=>allowed.has(method+' '+path)));
     });
   } finally {
-    globalThis.localStorage=oldStorage;globalThis.window=oldWindow;await server.close();
+    globalThis.sessionStorage=oldStorage;globalThis.window=oldWindow;await server.close();
   }
 });
 

@@ -7,8 +7,8 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 
 test('6G traveller data and safe intent flow', async t => {
-    const previousStorage = globalThis.localStorage;
-    globalThis.localStorage = { getItem: () => null };
+    const previousStorage = globalThis.sessionStorage;
+    globalThis.sessionStorage = { getItem: () => null };
     const server = await createServer({ root: fileURLToPath(new URL('..', import.meta.url)), configFile: false,
         server: { middlewareMode: true, hmr: false }, esbuild: { jsx: 'automatic' } });
     try {
@@ -52,5 +52,5 @@ test('6G traveller data and safe intent flow', async t => {
             sub.mock.method(globalThis, 'fetch', async () => ({ ok: false, status: 409, text: async () => JSON.stringify({ code: 'VALIDATION_ERROR', validationKind: 'TRAVELLER_VALIDATION_ERROR', message: 'private SQL stack' }) }));
             await assert.rejects(createBookingIntent({}), error => { assert.equal(error.validationKind, 'TRAVELLER_VALIDATION_ERROR'); assert.equal(error.data, undefined); assert.doesNotMatch(error.message, /private|SQL|stack/); return true; });
         });
-    } finally { await server.close(); if (previousStorage === undefined) delete globalThis.localStorage; else globalThis.localStorage = previousStorage; }
+    } finally { await server.close(); if (previousStorage === undefined) delete globalThis.sessionStorage; else globalThis.sessionStorage = previousStorage; }
 });

@@ -52,7 +52,7 @@ test('3V help, contacts, factual notices and complete navigation offline',async 
     await t.test('cancellation/privacy have no fabricated policies, deadlines or compliance',()=>{
       const cancellation=render(HelpView,{topic:'cancellation'});assert.match(cancellation,/сейчас недоступны/);assert.match(cancellation,/зависеть от конкретного тарифа/);
       assert.doesNotMatch(cancellation,/бесплатн|\d+\s*(дн|час|%)|гарантируем/i);
-      const privacy=render(HelpView,{topic:'privacy'});assert.match(privacy,/не утверждённая юридическая политика/);assert.match(privacy,/localStorage/);assert.match(privacy,/не удаление аккаунта/);
+      const privacy=render(HelpView,{topic:'privacy'});assert.match(privacy,/не утверждённая юридическая политика/);assert.match(privacy,/sessionStorage/);assert.match(privacy,/не удаление аккаунта/);
       assert.doesNotMatch(privacy,/GDPR|соответствуем законодательству|никогда не переда|\d+\s*(лет|дней)/i);
     });
     await t.test('contacts use only existing config, accessible tel/mailto, no map/form',()=>{

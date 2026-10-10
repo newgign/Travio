@@ -11,9 +11,9 @@ createRequire(import.meta.url)('../../backend/tests/offlineNetwork.cjs');
 
 test('5E auth session and account security offline', async t => {
   const server = await createServer({ root: fileURLToPath(new URL('..', import.meta.url)), configFile: false, server: { middlewareMode: true, hmr: false }, esbuild: { jsx: 'automatic' } });
-  const previous = { storage: globalThis.localStorage, window: globalThis.window };
+  const previous = { storage: globalThis.sessionStorage, window: globalThis.window };
   const memory = new Map();
-  globalThis.localStorage = { getItem: key => memory.get(key) ?? null, setItem: (key, value) => memory.set(key, value), removeItem: key => memory.delete(key) };
+  globalThis.sessionStorage = { getItem: key => memory.get(key) ?? null, setItem: (key, value) => memory.set(key, value), removeItem: key => memory.delete(key) };
   globalThis.window = new EventTarget(); window.location = { href: '/' };
   const userA = { id: 7, full_name: 'Fixture A', email: 'a@example.test', role: 'user' };
   const userB = { ...userA, id: 8, full_name: 'Fixture B', email: 'b@example.test' };
@@ -164,5 +164,5 @@ test('5E auth session and account security offline', async t => {
     await t.test('responsive and accessibility source contracts retain 320/390/768/1440 layouts', async () => { const auth = await source('styles/Auth.css'), profile = await source('styles/Profile.css'), navbar = await source('styles/Navbar.css'); assert.match(auth, /max-width:360px/); assert.match(auth, /max-width:600px/); assert.match(auth, /min-width:0/); assert.match(auth, /:focus-visible/); assert.match(profile, /max-width:1024px/); assert.match(profile, /max-width:600px/); assert.match(profile, /minmax\(0,1fr\)/); assert.match(navbar, /max-width:1040px/); assert.match(navbar, /overflow-y:auto/); });
     await t.test('auth implementation has no raw UI errors, secret logging, polling or provider imports', async () => { const files = ['services/session.js', 'services/authFormStore.js', 'components/AuthPage.jsx', 'components/SessionBoundary.jsx', 'pages/Profile.jsx']; for (const path of files) assert.doesNotMatch(await source(path), /console\.|setInterval|\{error\.message\}|hotelbeds|paymentService|offerResolver|URLSearchParams/); });
     await t.test('all observed network is mocked own account API; no external/provider service', () => { assert.ok(requests.length > 0); assert.ok(requests.every(r => ['/auth/profile', '/auth/login', '/auth/register', '/auth/password', '/favorites', '/bookings/me'].includes(r.path))); });
-  } finally { globalThis.localStorage = previous.storage; globalThis.window = previous.window; await server.close(); }
+  } finally { globalThis.sessionStorage = previous.storage; globalThis.window = previous.window; await server.close(); }
 });

@@ -1,3 +1,4 @@
+import { authStorage } from './authStorage';
 import API_URL from './api';
 import { authSuccess } from '../utils/authPresentation';
 
@@ -20,7 +21,7 @@ export function validatedSessionSnapshot() {
   if (snapshot !== validatedSnapshot) {
     restoredProfileAvailable = false;
     validatedSnapshot = snapshot;
-    const token = localStorage.getItem('token');
+    const token = authStorage.getItem('token');
     validatedState = { status: token ? 'unknown' : 'guest', token: null, user: null, notice: sessionNotice };
   }
   return validatedState;
@@ -52,7 +53,7 @@ export function ensureSessionValidated({ retry = false } = {}) {
   const snapshot = sessionSnapshot();
   if (bootstrap?.snapshot === snapshot && bootstrap.revision === authRevision) return bootstrap.promise;
   if (state.status !== 'unknown' && !(retry && state.status === 'error')) return Promise.resolve();
-  const token = localStorage.getItem('token');
+  const token = authStorage.getItem('token');
   const revision = authRevision;
   const current = () => snapshot === sessionSnapshot() && revision === authRevision;
   validatedState = { status: 'bootstrapping', token: null, user: null, notice: '' };
@@ -67,7 +68,7 @@ export function ensureSessionValidated({ retry = false } = {}) {
       if (!response.ok) throw Error('SESSION_UNAVAILABLE');
       const user = authSuccess('profile', { user: JSON.parse(await response.text()) });
       if (!current()) return;
-      localStorage.setItem('user', JSON.stringify(user));
+      authStorage.setItem('user', JSON.stringify(user));
       acceptIdentity(token, user, true);
       window.dispatchEvent(new Event('travio-auth-changed'));
     } catch {
@@ -91,15 +92,20 @@ export function beginAuthAttempt() {
 export function establishSession(token, user, isCurrent) {
   if (!isCurrent()) return false;
   authRevision++;
-  localStorage.setItem("token", token);
-  localStorage.setItem("user", JSON.stringify(user));
+  try {
+    authStorage.setItem("token", token);
+    authStorage.setItem("user", JSON.stringify(user));
+  } catch {
+    authStorage.removeItem('token'); authStorage.removeItem('user');
+    throw Error('AUTH_STORAGE_UNAVAILABLE');
+  }
   acceptIdentity(token, user);
   window.dispatchEvent(new Event("travio-auth-changed"));
   return true;
 }
 
 export function sessionSnapshot() {
-  return JSON.stringify([localStorage.getItem("token"), localStorage.getItem("user")]);
+  return JSON.stringify([authStorage.getItem("token"), authStorage.getItem("user")]);
 }
 
 export function subscribeSession(callback) {
@@ -124,24 +130,24 @@ export function readSession(snapshot) {
 
 export function clearSession(token, reason = '') {
   // A late response from an old session must not log out a newer login.
-  if (localStorage.getItem("token") !== token) return;
+  if (authStorage.getItem("token") !== token) return;
   authRevision++;
   sessionNotice = reason === 'expired' ? 'Сессия завершена. Войдите снова.' : '';
   validatedSnapshot = null;
-  localStorage.removeItem("token");
-  localStorage.removeItem("user");
+  authStorage.removeItem("token");
+  authStorage.removeItem("user");
   window.dispatchEvent(new Event("travio-auth-changed"));
 }
 
 export function logout() {
-  clearSession(localStorage.getItem("token"));
+  clearSession(authStorage.getItem("token"));
   window.location.href = "/";
 }
 
 export function updateSessionUser(token, user) {
-  if (!token || localStorage.getItem("token") !== token) return;
+  if (!token || authStorage.getItem("token") !== token) return;
   authRevision++;
-  localStorage.setItem("user", JSON.stringify(user));
+  authStorage.setItem("user", JSON.stringify(user));
   if (validatedState?.status === 'authenticated' && validatedState.token === token && String(validatedState.user.id) === String(user.id)) acceptIdentity(token, user);
   window.dispatchEvent(new Event("travio-auth-changed"));
 }

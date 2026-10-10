@@ -11,8 +11,8 @@ const { evaluate } = require('../../backend/services/paymentReconciliation');
 const operations = require('../../backend/services/reconciliationOperationsReadModel');
 test('7G authenticated read API integration offline', async t => {
   const server = await createServer({ root: fileURLToPath(new URL('..', import.meta.url)), configFile: false, server: { middlewareMode: true, hmr: false }, esbuild: { jsx: 'automatic' } });
-  const old = { storage: globalThis.localStorage, window: globalThis.window }, memory = new Map();
-  globalThis.localStorage = { getItem: key => memory.get(key) ?? null, setItem: (key, value) => memory.set(key, value), removeItem: key => memory.delete(key) };
+  const old = { storage: globalThis.sessionStorage, window: globalThis.window }, memory = new Map();
+  globalThis.sessionStorage = { getItem: key => memory.get(key) ?? null, setItem: (key, value) => memory.set(key, value), removeItem: key => memory.delete(key) };
   globalThis.window = new EventTarget(); window.location = { href: '/' };
   let requests = [], response = { source: 'unavailable', items: [], pagination: { page: 1, limit: 100, total: 0, pages: 1 } }, status = 200;
   t.mock.method(globalThis, 'fetch', async (url, options) => { assert.match(url, /\/api\/admin\/reconciliation(?:\?|\/[a-f0-9]{64}$)/); assert.equal(options.method, 'GET'); assert.equal(options.body, undefined); requests.push({ url, options }); return { ok: status < 400, status, text: async () => JSON.stringify(response) }; });
@@ -50,5 +50,5 @@ test('7G authenticated read API integration offline', async t => {
     await run('raw webhook secrets and PII removed from API rendering', async () => { response = { source: 'available', items: [{ ...row, rawWebhook: 'private-sensitive-marker', Authorization: 'private-sensitive-marker', email: 'private-sensitive-marker' }] }; const s = store(); await s.load(); response = { ...detail, passport: 'private-sensitive-marker', signature: 'private-sensitive-marker' }; await s.open(row.caseId); assert.doesNotMatch(html(s) + JSON.stringify(s.getSnapshot()), /private-sensitive-marker|passport|signature|rawWebhook/); });
     await run('no refund cancel retry resolve action buttons', async () => { response = { source: 'available', items: [row] }; const s = store(); await s.load(); const buttons = html(s).match(/<button[^>]*>[\s\S]*?<\/button>/g)?.join(' ') || ''; assert.doesNotMatch(buttons, /Refund|Cancel|Retry|Resolved|Возврат|Отменить|Повторить|Завершить/); });
     await run('local filter does not issue mutation or extra request', async () => { response = { source: 'available', items: [row] }; const s = store(); await s.load(); s.filter('priority', 'LOW'); assert.equal(requests.length, 1); assert.equal(requests[0].options.method, 'GET'); });
-  } finally { await server.close(); globalThis.localStorage = old.storage; globalThis.window = old.window; }
+  } finally { await server.close(); globalThis.sessionStorage = old.storage; globalThis.window = old.window; }
 });

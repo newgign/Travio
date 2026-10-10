@@ -1,3 +1,4 @@
+import { authStorage } from '../../services/authStorage';
 import { useEffect, useState } from "react";
 import {
   FiTrash2,
@@ -20,7 +21,7 @@ export default function UsersTable({
 
   const currentUser = (() => {
     try {
-      return JSON.parse(localStorage.getItem("user") || "null");
+      return JSON.parse(authStorage.getItem("user") || "null");
     } catch {
       return null;
     }

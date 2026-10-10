@@ -13,9 +13,9 @@ const render=(View,props={})=>renderToStaticMarkup(React.createElement(MemoryRou
 test('5K consumer release journey, offline imports/rendering and contracts',async t=>{
   let calls=0;
   t.mock.method(globalThis,'fetch',async()=>{calls++;throw Error('Network forbidden');});
-  const previous={storage:globalThis.localStorage,window:globalThis.window};
+  const previous={storage:globalThis.sessionStorage,window:globalThis.window};
   const memory=new Map();
-  globalThis.localStorage={getItem:key=>memory.get(key)??null,setItem:(key,value)=>memory.set(key,String(value)),removeItem:key=>memory.delete(key)};
+  globalThis.sessionStorage={getItem:key=>memory.get(key)??null,setItem:(key,value)=>memory.set(key,String(value)),removeItem:key=>memory.delete(key)};
   globalThis.window=new EventTarget();window.location={href:'/'};
   const server=await createServer({root:fileURLToPath(new URL('..',import.meta.url)),configFile:false,server:{middlewareMode:true,hmr:false},esbuild:{jsx:'automatic'},define:{'import.meta.env.VITE_HOTELBEDS_STAGING_TEST_ENABLED':'"true"'}});
   const load=path=>server.ssrLoadModule('/src/'+path);
@@ -76,5 +76,5 @@ test('5K consumer release journey, offline imports/rendering and contracts',asyn
       assert.doesNotMatch(await route('/admin'),/admin-layout/);
     });
     await t.test('all import/SSR checks made zero network calls',()=>assert.equal(calls,0));
-  } finally {await server.close();globalThis.localStorage=previous.storage;globalThis.window=previous.window;}
+  } finally {await server.close();globalThis.sessionStorage=previous.storage;globalThis.window=previous.window;}
 });

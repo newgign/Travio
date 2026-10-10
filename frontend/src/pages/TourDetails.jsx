@@ -1,3 +1,4 @@
+import { authStorage } from '../services/authStorage';
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import Navbar from '../components/Navbar';
@@ -154,7 +155,7 @@ function DetailsFavoriteButton({ tour, provider }) {
     if(pendingFavorite.current)return;
     setFavoritePending(true);
     setFavoriteError('');
-    try { await toggleDetailsFavorite(tour, { hasSession: Boolean(localStorage.getItem('token')), toggleFavorite, navigate, pending:pendingFavorite }); }
+    try { await toggleDetailsFavorite(tour, { hasSession: Boolean(authStorage.getItem('token')), toggleFavorite, navigate, pending:pendingFavorite }); }
     catch { setFavoriteError('Не удалось обновить избранное. Попробуйте ещё раз.'); }
     finally { setFavoritePending(false); }
   }

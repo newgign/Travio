@@ -13,9 +13,9 @@ const { publicBooking } = require('../../backend/services/bookingHistoryPublic')
 
 test('5D stored booking history quality', async t => {
   const server = await createServer({root:fileURLToPath(new URL('..',import.meta.url)),configFile:false,server:{middlewareMode:true,hmr:false},esbuild:{jsx:'automatic'}});
-  const oldStorage=globalThis.localStorage, oldWindow=globalThis.window;
+  const oldStorage=globalThis.sessionStorage, oldWindow=globalThis.window;
   let token='owner', userId=7;
-  globalThis.localStorage={getItem:key=>key==='token'?token:key==='user'?JSON.stringify(userId ? {id:userId} : null):null};
+  globalThis.sessionStorage={getItem:key=>key==='token'?token:key==='user'?JSON.stringify(userId ? {id:userId} : null):null};
   globalThis.window=new EventTarget();
   const requests=[], historyRequests=[];
   const row={id:12,provider:'hotelbeds',provider_status:'CONFIRMED',status:'Подтверждена',booking_date:'2026-09-27 23:30:00',total_amount:'1014.42',stored_currency:'EUR',currency:'EUR',people:3,
@@ -192,6 +192,6 @@ test('5D stored booking history quality', async t => {
       const backend=await readFile(new URL('../../backend/server.js',import.meta.url),'utf8');assert.match(backend,/app.use\("\/api\/bookings", bookingRoutes\)/);
     });
     for(const forbidden of ['Availability','Content','CheckRate','Booking','Cancellation']) await t.test('no '+forbidden+' provider network',()=>{assert.ok(requests.every(path=>path==='/bookings/me'||path==='/bookings/12/details'));});
-  } finally {globalThis.localStorage=oldStorage;globalThis.window=oldWindow;await server.close();}
+  } finally {globalThis.sessionStorage=oldStorage;globalThis.window=oldWindow;await server.close();}
 });
 

@@ -1,3 +1,5 @@
+import { authStorage } from '../../services/authStorage';
+import { logout } from '../../services/session';
 import {
   FiBell,
   FiSearch,
@@ -13,13 +15,8 @@ export default function Header({
   search = "",
   setSearch = () => {},
 }) {
-  const user = JSON.parse(localStorage.getItem("user"));
+  const user = JSON.parse(authStorage.getItem("user"));
 
-  function logout() {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    window.location.href = "/";
-  }
 
   return (
     <header className="admin-header">

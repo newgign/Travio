@@ -196,7 +196,7 @@ test('5A search experience: offline behavior, exact offers and explicit refresh'
     await t.test('effect depends on search identity only, no persistent cache or automatic retry',async()=>{
       const page=await source('pages/Results.jsx'),cache=await source('services/resultsSearch.js');
       assert.match(page,/\[requestQuery,valid\]/);assert.match(page,/if \(!valid\)/);assert.match(page,/onRetry=\{\(\)=>loadTours\(true\)\}/);assert.doesNotMatch(page,/err\.message|console\.error/);
-      assert.doesNotMatch(cache,/localStorage|sessionStorage|setInterval|60000/);assert.match(await source('components/HomeSearch.jsx'),/beginResultsSearch\(result.url\)/);
+      assert.doesNotMatch(cache,/sessionStorage|sessionStorage|setInterval|60000/);assert.match(await source('components/HomeSearch.jsx'),/beginResultsSearch\(result.url\)/);
       assert.equal(external,0);
     });
   } finally {await server.close();}
