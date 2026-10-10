@@ -2,6 +2,12 @@ const jwt = require("jsonwebtoken");
 
 class OfferTokenService {
   getSecret() {
+    const contract = require('../config/mandatoryConfig');
+    if (contract.productionLike(process.env)) {
+      const checks = contract.secretChecks(process.env);
+      if (checks.length) throw Object.assign(new Error('Offer signing configuration blocked'), { code: 'OFFER_TOKEN_CONFIG_BLOCKED', status: 500 });
+      return process.env.OFFER_TOKEN_SECRET;
+    }
     const secret = process.env.OFFER_TOKEN_SECRET || process.env.JWT_SECRET;
 
     if (!secret) {

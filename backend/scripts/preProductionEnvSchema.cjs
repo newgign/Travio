@@ -1,6 +1,6 @@
 // Operator release contract, not a replacement for runtime configuration parsing.
 module.exports = {
-  REQUIRED_SECRET: ['DATABASE_URL', 'JWT_SECRET'],
+  REQUIRED_SECRET: ['DATABASE_URL', 'JWT_SECRET', 'OFFER_TOKEN_SECRET'],
   REQUIRED_NON_SECRET: ['CORS_ORIGINS', 'VITE_API_URL'],
   OPTIONAL_OPERATOR_ATTESTATION: {
     PREPROD_RENDER_INTERNAL_DB_ATTESTATION: 'Preflight only: explicit owner assertion after privately matching host, port, database and user against the Render Internal URL. Never infer or set automatically; not an application runtime setting. See report section 30 for controlled execution.',
@@ -16,7 +16,6 @@ module.exports = {
   ],
   OPTIONAL: {
     APP_ENV: 'If supplied, staging/test only; absent means the staging contract selected by this CLI.',
-    OFFER_TOKEN_SECRET: 'Secret; runtime falls back to JWT_SECRET. Any explicit value must be strong.',
     OFFER_SECRET: 'Unused by runtime; not an alias for OFFER_TOKEN_SECRET.',
     HOTELBEDS_ENABLED: 'Boolean, default false; TEST reads require separate owner authorization.',
     HOTELBEDS_STAGING_TEST_ENABLED: 'Boolean, default false; never enables booking.',

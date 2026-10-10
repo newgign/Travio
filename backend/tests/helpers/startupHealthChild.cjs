@@ -5,6 +5,11 @@ const original = Module._load;
 const dbFile = path.resolve(__dirname, '../../db.js');
 let queries = 0, connects = 0, probes = 0, external = 0;
 const diagnostics = [];
+// Strict production startup contract uses synthetic independent keys and a non-routable URL.
+process.env.JWT_SECRET = require('node:crypto').randomBytes(32).toString('hex');
+process.env.OFFER_TOKEN_SECRET = require('node:crypto').randomBytes(32).toString('hex');
+process.env.DATABASE_URL = 'postgresql://synthetic:synthetic@database.invalid/test';
+process.env.DB_SSL_MODE = 'verify-full';
 const pool = {
   async query() { queries++; throw Error('OFFLINE_DATABASE_UNAVAILABLE'); },
   async connect() { connects++; throw Error('OFFLINE_DATABASE_FORBIDDEN'); },

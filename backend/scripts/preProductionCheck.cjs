@@ -10,8 +10,7 @@ const { migrationInventory } = require('./lib/dbContinuity.cjs');
 const root = path.resolve(__dirname, '../..');
 const norm = value => String(value || '').trim().toLowerCase();
 function strongSecret(value) {
-  return typeof value === 'string' && value.trim() === value && value.length >= 32 &&
-    new Set(value).size >= 10 && !/placeholder|change.?me|replace.?me|your.?secret|generate.?a.?long|example|default|password/i.test(value);
+  return require('../config/mandatoryConfig').strongSecret(value);
 }
 function publicHttps(value) {
   try {
@@ -38,7 +37,8 @@ async function configuration(env) {
   for (const key of schema.MUST_BE_FALSE) add(key, env[key] === 'false', env[key] ? 'UNSAFE_CONFIGURATION' : 'CONFIG_NOT_PROVIDED');
   add('APP_ENV', !env.APP_ENV || ['staging', 'test'].includes(norm(env.APP_ENV)));
   add('JWT_SECRET', strongSecret(env.JWT_SECRET), env.JWT_SECRET ? 'WEAK_SECRET' : 'CONFIG_NOT_PROVIDED');
-  add('OFFER_TOKEN_SECRET', strongSecret(env.OFFER_TOKEN_SECRET || env.JWT_SECRET), 'WEAK_OR_MISSING_EFFECTIVE_SECRET');
+  add('OFFER_TOKEN_SECRET', strongSecret(env.OFFER_TOKEN_SECRET) && env.OFFER_TOKEN_SECRET !== env.JWT_SECRET, 'WEAK_MISSING_OR_REUSED_SECRET');
+  add('MANDATORY_RUNTIME_CONFIG', require('../config/mandatoryConfig').validate({ ...env, EXPECTED_APP_ENV: 'staging' }).length === 0, 'MANDATORY_CONFIG_BLOCKED');
   if (env.OFFER_SECRET) checks.push({ id: 'OFFER_SECRET', status: 'WARN', code: 'UNUSED_ENV_NAME' });
   let dbValid = false;
   const attestation = env.PREPROD_RENDER_INTERNAL_DB_ATTESTATION;

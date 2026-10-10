@@ -6,6 +6,7 @@ process.env.HOTELBEDS_BASE_URL='https://api.hotelbeds.com';
 process.env.HOTELBEDS_CONTENT_BASE_URL='https://api.hotelbeds.com';
 process.env.HOTELBEDS_BOOKING_BASE_URL='https://api-mtls.hotelbeds.com';
 process.env.OFFER_TOKEN_SECRET=crypto.randomBytes(32).toString('hex');
+process.env.JWT_SECRET=crypto.randomBytes(32).toString('hex');
 const config=require('../config/providers');
 const client=require('../integrations/hotelbeds/client');
 const pool=require('../db');

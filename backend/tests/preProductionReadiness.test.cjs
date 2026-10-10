@@ -17,7 +17,7 @@ const contract = require('../scripts/preProductionEnvSchema.cjs');
 function baseline() {
   return { ...contract.MUST_EQUAL, ...Object.fromEntries(contract.MUST_BE_FALSE.map(key => [key, 'false'])),
     DATABASE_URL: 'postgresql://fixture:fixture@database.example/staging',
-    JWT_SECRET: crypto.randomBytes(32).toString('hex'), CORS_ORIGINS: 'https://web.example',
+    JWT_SECRET: crypto.randomBytes(32).toString('hex'), OFFER_TOKEN_SECRET: crypto.randomBytes(32).toString('hex'), CORS_ORIGINS: 'https://web.example',
     VITE_API_URL: 'https://api.example/api/', HOTELBEDS_ENABLED: 'false',
     HEALTH_MONITOR_ENABLED: 'false', RELIABILITY_MONITOR_ENABLED: 'false' };
 }
@@ -39,7 +39,7 @@ for (const [key, value] of [['NODE_ENV', 'development'], ['ACTIVE_PROVIDER', 'mo
 test('missing and weak JWT secrets block, including long placeholders/repetition', async () => {
   for (const value of [undefined, '', 'short', 'x'.repeat(64), 'generate_a_long_random_secret_for_production']) await blocked({ JWT_SECRET: value }, 'JWT_SECRET');
 });
-test('offer signing follows runtime fallback; explicit weak secret blocks', async () => {
+test('offer signing requires independent production key; explicit weak secret blocks', async () => {
   assert.equal((await check(baseline())).status, 'PASS');
   await blocked({ OFFER_TOKEN_SECRET: 'short' }, 'OFFER_TOKEN_SECRET');
   await blocked({ JWT_SECRET: undefined, OFFER_TOKEN_SECRET: undefined }, 'OFFER_TOKEN_SECRET');
@@ -70,10 +70,10 @@ test('provider configuration, TEST disclosure, credentials and retry contract', 
 const attestationKey = 'PREPROD_RENDER_INTERNAL_DB_ATTESTATION';
 const attestationValue = 'I_VERIFIED_DATABASE_URL_MATCHES_RENDER_INTERNAL_URL';
 const attested = { DB_SSL_MODE: 'disable', [attestationKey]: attestationValue };
-test('operator attestation permits disable with fixed provenance code and preserves verified TLS', async () => {
+test('legacy operator attestation cannot bypass mandatory startup TLS contract', async () => {
   for (const patch of [{}, { DB_SSL_MODE: 'verify-full' }, attested]) {
     const result = await check({ ...baseline(), ...patch });
-    assert.equal(result.status, 'PASS');
+    assert.equal(result.status, patch === attested ? 'BLOCKED' : 'PASS');
     assert.equal(result.checks.find(c => c.id === 'DATABASE_URL').code,
       patch === attested ? 'OWNER_ATTESTED_RENDER_INTERNAL_DATABASE' : 'VALID');
   }

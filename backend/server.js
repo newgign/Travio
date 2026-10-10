@@ -1,6 +1,12 @@
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
+// Must precede DB/client imports and listener creation. Diagnostics contain names/codes only.
+try { require('./config/mandatoryConfig').assertValid(); }
+catch (error) {
+  console.error(JSON.stringify({ code: 'MANDATORY_CONFIG_BLOCKED', checks: error.checks || [] }));
+  process.exit(1);
+}
 
 const pool = require("./db");
 const logger = require("./utils/logger");

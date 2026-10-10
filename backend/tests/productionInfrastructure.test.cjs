@@ -168,7 +168,7 @@ test('stale assets, missing receipt, receipt environment/version and sourcemaps 
   ]) { const buildDir = fixture(t, env); mutate(buildDir); blocked(await check(env, { buildDir }), 'FOUNDATION'); }
 });
 test('TEST-enabled provider requires visible-disclosure build intent', async t => {
-  const env = { ...baseline(), HOTELBEDS_ENABLED: 'true', HOTELBEDS_API_KEY: 'synthetic-test-api-key', HOTELBEDS_API_SECRET: 'synthetic-test-api-secret' };
+  const env = { ...baseline(), HOTELBEDS_ENABLED: 'true', HOTELBEDS_API_KEY: 'synthetic-test-api-key', HOTELBEDS_API_SECRET: 'synthetic-test-api-secret', HOTELBEDS_MTLS_CERT_PATH: 'synthetic-cert-path', HOTELBEDS_MTLS_KEY_PATH: 'synthetic-key-path' };
   blocked(await check(env, { buildDir: fixture(t, env) }), 'TEST_DISCLOSURE');
   env.HOTELBEDS_STAGING_TEST_ENABLED = env.VITE_HOTELBEDS_STAGING_TEST_ENABLED = 'true';
   assert.equal((await check(env, { buildDir: fixture(t, env) })).status, 'PASS');

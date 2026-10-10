@@ -80,10 +80,11 @@ test('strict DB/JWT/CORS/API validation and environment matching remain active',
     assert.equal((await check({ ...env, ...patch }, { buildDir: dir })).status, 'BLOCKED');
   }
 });
-test('attested internal DB still requires distinct production target and recovery evidence', async t => {
+test('plaintext attestation cannot bypass mandatory TLS; target and recovery remain required', async t => {
   const env = { ...baseline(), DB_SSL_MODE: 'disable', PREPROD_RENDER_INTERNAL_DB_ATTESTATION: 'I_VERIFIED_DATABASE_URL_MATCHES_RENDER_INTERNAL_URL' };
   const dir = fixture(t, env);
-  assert.equal((await check(env, { buildDir: dir })).status, 'FOUNDATION_PASS');
+  assert.equal((await check(env, { buildDir: dir })).status, 'BLOCKED');
+  assert.equal((await check({ ...env, DB_SSL_MODE: 'verify-full' }, { buildDir: dir })).status, 'FOUNDATION_PASS');
   assert.equal((await check({ ...env, PRODUCTION_DATABASE_TARGET_ATTESTED: 'true' }, { buildDir: dir })).status, 'BLOCKED');
 });
 test('staging bundle and CORS cannot be used as production even with new metadata', async t => {
