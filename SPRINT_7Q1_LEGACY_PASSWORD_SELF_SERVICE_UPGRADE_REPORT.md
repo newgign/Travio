@@ -1,5 +1,9 @@
 # Sprint 7Q.1 — Legacy Password Self-Service Upgrade
 
+## 7Q.2 owner staging acceptance — current status
+
+2026-10-10: authoritative owner evidence confirms combined7Q+7Q.1 staging deployment. Backend LIVE; health/readiness PASS with database.ok=true; normal<=72-byte login and admin access PASS. Frontend deployed successfully; ordinary login UI works with no new auth/storage errors observed. Normal auth regression PASS; legacy password upgrade foundation STAGING RUNTIME READY; logged-out self-service upgrade READY; session revocation PRESERVED; schema UNCHANGED. Legacy>72 owner E2E NOT RUN because no safe known legacy account was used and no fake staging account was created solely for acceptance. Capability/purpose/replay/revocation assertions below remain offline evidence, not newly observed staging edge-case results. P1 LEGACY BCRYPT STAGING RUNTIME ACCEPTED / LEGACY EDGE E2E NOT RUN. Historical original-length identification remains IMPOSSIBLE BY DESIGN; effective-prefix ambiguity is not fully remediated. Prior staging-acceptance-pending wording below is historical. See [7Q.2 report](SPRINT_7Q2_LEGACY_PASSWORD_STAGING_ACCEPTANCE_REPORT.md). No runtime/Render/deploy/DB/password action in this documentation task; COMMERCIAL PRODUCTION READY NO.
+
 2026-10-10, Asia/Qyzylorda. CODE/OFFLINE PASS. Logged-out self-service upgrade READY in tested scope. P1 LEGACY BCRYPT FOUNDATION READY / overall PARTIAL. COMMERCIAL PRODUCTION READY NO.
 
 ## Baseline and scope
