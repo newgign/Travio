@@ -2,25 +2,7 @@ const pool = require("../db");
 
 const MAX_SAVED_TRAVELERS = 12;
 
-function normalizeTraveler(body = {}) {
-  return {
-    label: String(body.label || "Турист").trim().slice(0, 80) || "Турист",
-    travelerType: String(body.traveler_type || body.travelerType || "AD").toUpperCase() === "CH"
-      ? "CH"
-      : "AD",
-    firstName: String(body.first_name || body.firstName || "").trim(),
-    lastName: String(body.last_name || body.lastName || "").trim(),
-    birthDate: body.birth_date || body.birthDate || null,
-  };
-}
-
-function validateTraveler(traveler) {
-  if (!traveler.firstName || !traveler.lastName) {
-    const error = new Error("Укажите имя и фамилию туриста");
-    error.status = 400;
-    throw error;
-  }
-}
+const { travelerInput: normalizeTraveler, publicTraveler } = require('../utils/profileBoundary');
 
 async function listTravelers(req, res) {
   try {
@@ -34,8 +16,9 @@ async function listTravelers(req, res) {
       [req.user.id]
     );
 
-    return res.json(result.rows);
+    return res.json(result.rows.map(publicTraveler));
   } catch (error) {
+    if (error.code === 'PROFILE_INPUT_INVALID') return res.status(400).json({ code: error.code, field: error.field, message: '\u041f\u0440\u043e\u0432\u0435\u0440\u044c\u0442\u0435 \u043f\u043e\u043b\u044f \u0442\u0443\u0440\u0438\u0441\u0442\u0430' });
     require("../utils/logger").error("LIST TRAVELERS ERROR:", { error: error });
     return res.status(500).json({ message: "Ошибка загрузки сохранённых туристов" });
   }
@@ -44,7 +27,6 @@ async function listTravelers(req, res) {
 async function createTraveler(req, res) {
   try {
     const traveler = normalizeTraveler(req.body);
-    validateTraveler(traveler);
 
     const count = await pool.query(
       "SELECT COUNT(*)::int AS count FROM traveler_profiles WHERE user_id = $1",
@@ -74,8 +56,9 @@ async function createTraveler(req, res) {
       ]
     );
 
-    return res.status(201).json(result.rows[0]);
+    return res.status(201).json(publicTraveler(result.rows[0]));
   } catch (error) {
+    if (error.code === 'PROFILE_INPUT_INVALID') return res.status(400).json({ code: error.code, field: error.field, message: '\u041f\u0440\u043e\u0432\u0435\u0440\u044c\u0442\u0435 \u043f\u043e\u043b\u044f \u0442\u0443\u0440\u0438\u0441\u0442\u0430' });
     require("../utils/logger").error("CREATE TRAVELER ERROR:", { error: error });
     return res.status(error.status || 500).json({
       message: require("../utils/apiResponse").publicMessage(error, "Ошибка сохранения туриста"),
@@ -86,7 +69,6 @@ async function createTraveler(req, res) {
 async function updateTraveler(req, res) {
   try {
     const traveler = normalizeTraveler(req.body);
-    validateTraveler(traveler);
 
     const result = await pool.query(
       `
@@ -115,8 +97,9 @@ async function updateTraveler(req, res) {
       return res.status(404).json({ message: "Сохранённый турист не найден" });
     }
 
-    return res.json(result.rows[0]);
+    return res.json(publicTraveler(result.rows[0]));
   } catch (error) {
+    if (error.code === 'PROFILE_INPUT_INVALID') return res.status(400).json({ code: error.code, field: error.field, message: '\u041f\u0440\u043e\u0432\u0435\u0440\u044c\u0442\u0435 \u043f\u043e\u043b\u044f \u0442\u0443\u0440\u0438\u0441\u0442\u0430' });
     require("../utils/logger").error("UPDATE TRAVELER ERROR:", { error: error });
     return res.status(error.status || 500).json({
       message: require("../utils/apiResponse").publicMessage(error, "Ошибка обновления туриста"),
@@ -141,6 +124,7 @@ async function deleteTraveler(req, res) {
 
     return res.json({ success: true });
   } catch (error) {
+    if (error.code === 'PROFILE_INPUT_INVALID') return res.status(400).json({ code: error.code, field: error.field, message: '\u041f\u0440\u043e\u0432\u0435\u0440\u044c\u0442\u0435 \u043f\u043e\u043b\u044f \u0442\u0443\u0440\u0438\u0441\u0442\u0430' });
     require("../utils/logger").error("DELETE TRAVELER ERROR:", { error: error });
     return res.status(500).json({ message: "Ошибка удаления туриста" });
   }

@@ -1,3 +1,4 @@
+import { sessionUser } from '../utils/profilePresentation';
 // Tab-scoped bearer storage. Never promote a legacy persistent session.
 function removeLegacy() {
   try { globalThis.localStorage?.removeItem('token'); globalThis.localStorage?.removeItem('user'); } catch { /* Storage may be unavailable. */ }
@@ -11,7 +12,7 @@ export const authStorage = {
     removeLegacy();
     try {
       if (!globalThis.sessionStorage) throw Error();
-      globalThis.sessionStorage.setItem(key, value);
+      globalThis.sessionStorage.setItem(key, key === 'user' ? JSON.stringify(sessionUser(JSON.parse(value))) : value);
     } catch { throw Error('AUTH_STORAGE_UNAVAILABLE'); }
   },
   removeItem(key) {

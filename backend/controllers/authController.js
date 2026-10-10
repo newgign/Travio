@@ -21,19 +21,8 @@ function credentialInput(body, registration = false) {
     && (body.phone == null || typeof body.phone === 'string' && body.phone.length <= 50));
 }
 
-function buildPublicUser(row) {
-  return {
-    id: row.id,
-    full_name: row.full_name,
-    email: row.email,
-    phone: row.phone || null,
-    role: row.role || "user",
-    preferred_language: row.preferred_language || "ru",
-    email_notifications: row.email_notifications !== false,
-    booking_reminders: row.booking_reminders !== false,
-    created_at: row.created_at,
-  };
-}
+const profileBoundary = require('../utils/profileBoundary');
+const buildPublicUser = profileBoundary.publicUser;
 
 async function bookingStats(userId) {
   const result = await pool.query(
@@ -201,17 +190,7 @@ const profile = async (req, res) => {
 
 const updateProfile = async (req, res) => {
   try {
-    const fullName = String(req.body.full_name || "").trim();
-    const phone = String(req.body.phone || "").trim() || null;
-    const preferredLanguage = ["ru", "en", "kk"].includes(String(req.body.preferred_language || "ru"))
-      ? String(req.body.preferred_language || "ru")
-      : "ru";
-    const emailNotifications = req.body.email_notifications !== false;
-    const bookingReminders = req.body.booking_reminders !== false;
-
-    if (!fullName) {
-      return res.status(400).json({ message: "Укажите имя" });
-    }
+    const { fullName, phone, preferredLanguage, emailNotifications, bookingReminders } = profileBoundary.profileInput(req.body);
 
     const result = await pool.query(
       `
@@ -248,6 +227,7 @@ const updateProfile = async (req, res) => {
       stats: await bookingStats(req.user.id),
     });
   } catch (err) {
+    if (err.code === 'PROFILE_INPUT_INVALID') return res.status(400).json({ code: err.code, field: err.field, message: 'Проверьте поля профиля' });
     require("../utils/logger").error("UPDATE PROFILE ERROR:", { error: err });
     return res.status(500).json({ message: "Ошибка сохранения профиля" });
   }
