@@ -1,5 +1,9 @@
 # Sprint 7R — PII Operational Controls & Data Minimization
 
+## Sprint 7R.1 continuation — current code boundary
+
+7R.1 supersedes the identified raw legacy backup CLI error boundary and permissive operational-label handling. Controlled admin-query logging now additionally redacts query/free-context keys; existing route-template telemetry still omits values, with admin filtering preserved. Operational labels use a finite vocabulary rather than accepting arbitrary identifier-shaped strings. System-event messages are fixed categories; historical action/event/incident API data is projected/minimized. Free diagnostic incident text remains bounded/control-cleaned/credential-redacted, with no perfect PII detection claim. Legacy backup CLI failures use fixed stage/code and summary allowlists, without raw parser/subprocess/error text or absolute paths. SessionStorage profile contract remains justified and unchanged; platform query logging, historical stored content, retention and operational access remain owner/ops boundaries. See SPRINT_7R1_RESIDUAL_PII_HARDENING_REPORT.md for exact scope, tests and limitations. No deploy or staging acceptance performed by7R.1.
+
 2026-10-10, Asia/Qyzylorda. CODE/OFFLINE PASS in tested scope. P1 PII OPERATIONAL CONTROLS FOUNDATION READY / overall PARTIAL. Legal/privacy compliance NOT CLAIMED. COMMERCIAL PRODUCTION READY NO.
 
 ## 1. Baseline and scope
