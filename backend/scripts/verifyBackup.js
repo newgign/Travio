@@ -1,3 +1,4 @@
+const diagnostics = require('./lib/backupDiagnostics.cjs');
 require("dotenv").config();
 const path = require("path");
 const backupService = require("../services/databaseBackupService");
@@ -11,15 +12,15 @@ if (!file) {
 try {
   const parsed = backupService.parseBackupFile(path.resolve(file));
   console.log("✓ Backup integrity OK");
-  console.table([{
+  console.table([diagnostics.summary({
     file: parsed.absolute,
     encrypted: Boolean(parsed.envelope.encrypted),
     createdAt: parsed.payload.createdAt,
     release: parsed.payload.release,
     tables: Object.keys(parsed.payload.tables).length,
-    checksum: parsed.checksum.slice(0, 16),
-  }]);
+    checksum: parsed.checksum,
+  })]);
 } catch (error) {
-  console.error("BACKUP VERIFY ERROR:", error.message);
+  console.error(JSON.stringify(diagnostics.failure('verify')));
   process.exit(1);
 }

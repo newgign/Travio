@@ -155,7 +155,7 @@ async function list({ status = "all", limit = 50 } = {}) {
      LIMIT ${limitParam}`,
     params
   );
-  return result.rows;
+  return result.rows.map(require('../utils/operationalPublic').incident);
 }
 
 async function counts() {

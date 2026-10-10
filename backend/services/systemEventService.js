@@ -36,7 +36,7 @@ async function recordEvent({
       cleanText(level, 20).toLowerCase() || "info",
       cleanText(category, 50).toLowerCase() || "system",
       code ? cleanText(code, 80) : null,
-      cleanText(message, 3000),
+      require('../utils/operationalPublic').eventMessage(code),
       requestId ? cleanText(requestId, 80) : null,
       userId || null,
       route ? cleanText(route, 255) : null,
@@ -89,7 +89,7 @@ async function listRecent({ limit = 50, level = "", category = "" } = {}) {
     params
   );
 
-  return result.rows;
+  return result.rows.map(require('../utils/operationalPublic').event);
 }
 
 module.exports = { recordEvent, safeRecordEvent, listRecent };

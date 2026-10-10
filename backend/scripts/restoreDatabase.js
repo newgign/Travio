@@ -1,3 +1,4 @@
+const diagnostics = require('./lib/backupDiagnostics.cjs');
 require("dotenv").config();
 const pool = require("../db");
 const backupService = require("../services/databaseBackupService");
@@ -19,9 +20,9 @@ if (!file) {
     } else {
       console.log("✓ Restore completed inside a database transaction.");
     }
-    console.table([result]);
+    console.table([diagnostics.summary(result)]);
   } catch (error) {
-    console.error("RESTORE ERROR:", error.message);
+    console.error(JSON.stringify(diagnostics.failure('restore')));
     process.exitCode = 1;
   } finally {
     await pool.end().catch(() => {});

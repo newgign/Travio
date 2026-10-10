@@ -186,7 +186,7 @@ async function getOverview(req, res) {
       refunds: refundStats.rows[0],
       notifications: notificationStats.rows[0],
       attentionBookings: attention.rows,
-      recentAdminActions: actions.rows,
+      recentAdminActions: actions.rows.map(require('../utils/operationalPublic').action),
     });
   } catch (error) {
     require("../utils/logger").error("ADMIN OVERVIEW ERROR:", { error: error });
@@ -360,7 +360,7 @@ async function getActions(req, res) {
       `,
       [limit]
     );
-    return res.json({ items: result.rows });
+    return res.json({ items: result.rows.map(require('../utils/operationalPublic').action) });
   } catch (error) {
     require("../utils/logger").error("ADMIN ACTIONS ERROR:", { error: error });
     return res.status(500).json({ message: "Ошибка загрузки журнала администратора" });

@@ -1,5 +1,6 @@
 const sensitiveKey = /secret|password|token|api.?key|authorization|cookie|database.?url|connection.?string|private.?key|passphrase/i;
 const personalKey = /email|phone|recipient|(?:first|last|full)[_-]?name|birth[_-]?date|date[_-]?of[_-]?birth|passport|document[_-]?(?:number|id)|travell?ers?|passengers?|contact|special[_-]?requests|^(?:name|surname|age|dob|holder|paxes|comment|body|payload|request|response|headers|config|html|text)$/i;
+const freeContextKey = /^(?:q|query|queryString|search|searchValue|params|note|reason|description|details|context)$/i;
 function cleanText(value) {
   let text = String(value || '');
   for (const [key, secret] of Object.entries(process.env)) {
@@ -14,9 +15,14 @@ function cleanText(value) {
     .replace(/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g, '[redacted-jwt]');
 }
 function privateText(value) {
-  return cleanText(value)
+  if (value && typeof value === 'object') return '[structured-content]';
+  const text = cleanText(value);
+  // Raw JSON/request dumps are not useful operational messages.
+  if (/[\[{]\s*"[^"\r\n]+"\s*:/.test(text)) return '[structured-content]';
+  return text
     .replace(/[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '[redacted-email]')
-    .replace(/(?:\+\d[\d ().-]{7,}\d)/g, '[redacted-phone]');
+    .replace(/(?:\+\d[\d ().-]{7,}\d)/g, '[redacted-phone]')
+    .replace(/[\u0000-\u001f\u007f-\u009f]/g, ' ').slice(0,1000);
 }
 function cleanMeta(meta, seen = new WeakSet(), depth = 0) {
   if (typeof meta === 'string') return privateText(meta);
@@ -30,7 +36,7 @@ function cleanMeta(meta, seen = new WeakSet(), depth = 0) {
   seen.add(meta);
   if (Array.isArray(meta)) return meta.slice(0,50).map(value => cleanMeta(value, seen, depth+1));
   return Object.fromEntries(Object.entries(meta).slice(0,50).filter(([, value]) => value !== undefined)
-    .map(([key, value]) => [key, sensitiveKey.test(key) || personalKey.test(key) ? '[redacted]' : cleanMeta(value, seen, depth+1)]));
+    .map(([key, value]) => [key, sensitiveKey.test(key) || personalKey.test(key) || freeContextKey.test(key) ? '[redacted]' : cleanMeta(value, seen, depth+1)]));
 }
 
 class Logger {
