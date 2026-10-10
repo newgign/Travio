@@ -21,7 +21,8 @@ const getUsers = async (req, res) => {
       ORDER BY id DESC
     `);
 
-    res.json(result.rows);
+    res.json(result.rows.map(row => Object.fromEntries(
+      ['id','full_name','email','phone','role','created_at'].filter(key => row[key] !== undefined).map(key => [key,row[key]]))));
 
   } catch (err) {
 

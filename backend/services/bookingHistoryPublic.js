@@ -23,4 +23,8 @@ function publicBooking(row) {
 function publicDetails(booking, events) {
   return { success: true, booking: publicBooking(booking), events: events.map(event => ({...pick(event,['id','event_type']), occurred_at: date(event.occurred_at)})) };
 }
-module.exports = { publicBooking, publicDetails };
+function adminBooking(row) {
+  // The legacy admin table needs lead/contact fields, never raw provider/payment blobs.
+  return { ...publicBooking(row), ...pick(row, ['user_id','first_name','last_name','phone','email','hotel','country','city','price','updated_at']) };
+}
+module.exports = { publicBooking, publicDetails, adminBooking };

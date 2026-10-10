@@ -52,9 +52,9 @@ async function sendViaResend({ recipient, subject, html, text }) {
   }
 }
 
-async function sendViaConsole({ recipient, subject, text }) {
+async function sendViaConsole() {
   const messageId = `console-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
-  logger.info(`EMAIL CONSOLE | to=${recipient} | subject=${subject} | ${String(text || "").replaceAll("\n", " | ")}`);
+  logger.info('EMAIL CONSOLE', { provider: 'console', messageId });
   return { provider: "console", messageId };
 }
 

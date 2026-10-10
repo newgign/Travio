@@ -6,7 +6,7 @@ function dbClient(client) {
 }
 
 function cleanText(value, max = 1000) {
-  return String(value || "").slice(0, max);
+  return logger.sanitizeText(value).slice(0, max);
 }
 
 async function recordEvent({
@@ -43,7 +43,7 @@ async function recordEvent({
       method ? cleanText(method, 12).toUpperCase() : null,
       Number.isFinite(Number(statusCode)) ? Number(statusCode) : null,
       Number.isFinite(Number(durationMs)) ? Math.max(0, Math.round(Number(durationMs))) : null,
-      JSON.stringify(metadata || {}),
+      JSON.stringify(require('../utils/operationalMetadata')(metadata)),
     ]
   );
 

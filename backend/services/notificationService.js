@@ -130,12 +130,12 @@ async function dispatchOutboxItem(id, { force = false } = {}) {
     await updateOutbox(id, {
       status: "failed",
       provider: providerName(),
-      lastError: error.message,
+      lastError: 'EMAIL_DELIVERY_FAILED',
       countAttempt: true,
       nextAttemptAt,
     });
     logger.warn(`EMAIL NOTIFICATION FAILED | outboxId=${id} | `, { error });
-    return { status: "failed", message: error.message };
+    return { status: "failed", message: 'EMAIL_DELIVERY_FAILED' };
   }
 }
 

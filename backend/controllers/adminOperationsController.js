@@ -258,7 +258,9 @@ async function getRefunds(req, res) {
     const queryParams = [...params, limit, offset];
     const result = await pool.query(
       `
-      SELECT r.*, b.status AS booking_status, b.provider, b.provider_status,
+      SELECT r.id, r.booking_id, r.payment_id, r.amount, r.currency, r.status,
+             r.idempotency_key, r.requested_at, r.processed_at, r.created_at,
+             b.status AS booking_status, b.provider, b.provider_status,
              b.email, b.total_amount AS booking_total, b.currency AS booking_currency,
              COALESCE(NULLIF(b.offer_snapshot->>'name',''), NULLIF(b.offer_snapshot->>'title',''), 'Travio booking #' || b.id) AS hotel
       FROM refund_requests r

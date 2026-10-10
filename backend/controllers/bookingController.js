@@ -3,7 +3,7 @@ const offerResolverService = require("../services/offerResolverService");
 const checkoutSessionService = require("../services/checkoutSessionService");
 const logger = require("../utils/logger");
 const bookingEventService = require("../services/bookingEventService");
-const { publicBooking, publicDetails } = require("../services/bookingHistoryPublic");
+const { publicBooking, publicDetails, adminBooking } = require("../services/bookingHistoryPublic");
 const adminAuditService = require("../services/adminAuditService");
 
 function normalizeSearchFilters(filters = {}, people) {
@@ -446,7 +446,7 @@ const getBookings = async (req, res) => {
        ORDER BY b.booking_date DESC`
     );
 
-    return res.json(result.rows);
+    return res.json(result.rows.map(adminBooking));
   } catch (error) {
     require("../utils/logger").error("GET BOOKINGS ERROR:", { error: error });
     return res.status(500).json({ message: "Ошибка загрузки бронирований" });
@@ -516,7 +516,7 @@ const updateBookingStatus = async (req, res) => {
       metadata: { previousStatus: current.rows[0].status || null, status },
     });
 
-    return res.json(updated);
+    return res.json(adminBooking(updated));
   } catch (error) {
     require("../utils/logger").error("UPDATE BOOKING ERROR:", { error: error });
     return res.status(500).json({ message: "Ошибка обновления бронирования" });

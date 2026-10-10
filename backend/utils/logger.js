@@ -1,4 +1,5 @@
 const sensitiveKey = /secret|password|token|api.?key|authorization|cookie|database.?url|connection.?string|private.?key|passphrase/i;
+const personalKey = /email|phone|recipient|(?:first|last|full)[_-]?name|birth[_-]?date|date[_-]?of[_-]?birth|passport|document[_-]?(?:number|id)|travell?ers?|passengers?|contact|special[_-]?requests|^(?:name|surname|age|dob|holder|paxes|comment|body|payload|request|response|headers|config|html|text)$/i;
 function cleanText(value) {
   let text = String(value || '');
   for (const [key, secret] of Object.entries(process.env)) {
@@ -12,18 +13,24 @@ function cleanText(value) {
     .replace(/\$2[aby]\$\d\d\$[./A-Za-z0-9]{53}/g, '[redacted-hash]')
     .replace(/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g, '[redacted-jwt]');
 }
-function cleanMeta(meta, seen = new WeakSet()) {
-  if (typeof meta === 'string') return cleanText(meta);
+function privateText(value) {
+  return cleanText(value)
+    .replace(/[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '[redacted-email]')
+    .replace(/(?:\+\d[\d ().-]{7,}\d)/g, '[redacted-phone]');
+}
+function cleanMeta(meta, seen = new WeakSet(), depth = 0) {
+  if (typeof meta === 'string') return privateText(meta);
   if (!meta || typeof meta !== 'object') return meta;
   if (meta instanceof Date) return Number.isFinite(meta.getTime()) ? meta.toISOString() : null;
   if (Buffer.isBuffer(meta)) return '[binary]';
   // PostgreSQL/Axios errors can carry row details, headers, passwords and response bodies.
   if (meta instanceof Error) return { name: 'Error', code: /^[A-Z0-9_]{2,40}$/.test(meta.code || '') ? cleanText(meta.code) : 'INTERNAL_ERROR' };
   if (seen.has(meta)) return '[circular]';
+  if (depth > 6) return '[depth-limit]';
   seen.add(meta);
-  if (Array.isArray(meta)) return meta.map(value => cleanMeta(value, seen));
-  return Object.fromEntries(Object.entries(meta).filter(([, value]) => value !== undefined)
-    .map(([key, value]) => [key, sensitiveKey.test(key) ? '[redacted]' : cleanMeta(value, seen)]));
+  if (Array.isArray(meta)) return meta.slice(0,50).map(value => cleanMeta(value, seen, depth+1));
+  return Object.fromEntries(Object.entries(meta).slice(0,50).filter(([, value]) => value !== undefined)
+    .map(([key, value]) => [key, sensitiveKey.test(key) || personalKey.test(key) ? '[redacted]' : cleanMeta(value, seen, depth+1)]));
 }
 
 class Logger {
@@ -38,7 +45,7 @@ class Logger {
       level,
       service: this.service,
       release: this.release,
-      message: cleanText(message),
+      message: privateText(message),
       ...cleanMeta(meta),
     };
     if (String(process.env.LOG_FORMAT || "pretty").toLowerCase() === "json") return JSON.stringify(entry);
@@ -52,3 +59,4 @@ class Logger {
 }
 
 module.exports = new Logger();
+module.exports.sanitizeText = privateText;

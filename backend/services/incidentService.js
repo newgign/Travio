@@ -5,7 +5,7 @@ const logger = require("../utils/logger");
 const ACTIVE_STATUSES = ["open", "acknowledged"];
 
 function clean(value, max = 1000) {
-  return String(value || "").trim().slice(0, max);
+  return logger.sanitizeText(value).trim().slice(0, max);
 }
 
 function severity(value) {
@@ -42,7 +42,7 @@ async function openOrUpdate({ key, source, severity: level = "warning", title, s
         severity(level),
         clean(title, 255) || incidentKey,
         clean(summary, 3000) || incidentKey,
-        JSON.stringify(metadata || {}),
+        JSON.stringify(require('../utils/operationalMetadata')(metadata)),
       ]
     );
     return { incident: updated.rows[0], created: false };
@@ -59,7 +59,7 @@ async function openOrUpdate({ key, source, severity: level = "warning", title, s
       severity(level),
       clean(title, 255) || incidentKey,
       clean(summary, 3000) || incidentKey,
-      JSON.stringify(metadata || {}),
+      JSON.stringify(require('../utils/operationalMetadata')(metadata)),
     ]
   );
 

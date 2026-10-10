@@ -42,7 +42,8 @@ module.exports = function requestTelemetry(req, res, next) {
 
   res.on("finish", () => {
     const durationMs = Number(process.hrtime.bigint() - started) / 1e6;
-    const route = String(req.originalUrl || req.url || "").split("?")[0];
+    // Express route templates come from code; caller-controlled unmatched paths are not diagnostic labels.
+    const route = typeof req.route?.path === 'string' ? `${req.baseUrl || ''}${req.route.path}` : '/unmatched';
     finishInFlight();
     metricsService.recordRequest({ method: req.method, route, statusCode: res.statusCode, durationMs });
     // Count 429 in metrics without per-attempt logs or DB-backed event amplification.

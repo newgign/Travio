@@ -31,7 +31,7 @@ async function recordAction({
       String(targetType || "system"),
       targetId === undefined || targetId === null ? null : String(targetId),
       String(status || "success"),
-      JSON.stringify(metadata || {}),
+      JSON.stringify(require('../utils/operationalMetadata')(metadata)),
     ]
   );
 
