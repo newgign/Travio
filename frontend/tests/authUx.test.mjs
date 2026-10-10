@@ -33,6 +33,13 @@ test('3U auth forms, session lifecycle, safe return and app-only HTTP', async t 
     const session=await server.ssrLoadModule('/src/services/session.js');
     const profile=await server.ssrLoadModule('/src/utils/profilePresentation.js');
     const fresh=(mode='login',returnTo='/profile')=>createAuthFormStore({mode,returnTo,onSuccess:(...args)=>navigations.push(args)});
+    await t.test('verified legacy update requirement is fixed presentation with no session or password persistence',async()=>{
+      status=409;body={code:'PASSWORD_UPDATE_REQUIRED',message:'PRIVATE_SERVER_DETAIL'};
+      const store=fresh();store.edit('email','fixture@example.test');store.edit('password','x'.repeat(80));await store.submit();
+      assert.match(store.getSnapshot().error,/обновить пароль/);assert.doesNotMatch(store.getSnapshot().error,/PRIVATE_|x{72}/);
+      assert.equal(store.getSnapshot().form.password,'');assert.equal(memory.has('token'),false);assert.equal(navigations.length,0);
+      status=200;body=null;
+    });
     const fill=(store,mode='login')=>{for(const [key,value] of Object.entries({email:' Fixture@example.test ',password:'fixture-password',...(mode==='register'?{full_name:'Fixture User',phone:'+7 raw',confirmPassword:'fixture-password'}:{})}))store.edit(key,value);};
     const render=(store,mode='login')=>renderToStaticMarkup(React.createElement(MemoryRouter,{},React.createElement(AuthView,{mode,state:store.getSnapshot(),actions:store})));
 

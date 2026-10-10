@@ -26,7 +26,9 @@ export function authPayload(mode, form) {
   const payload = { email: form.email.trim(), password: form.password };
   return mode === 'register' ? { full_name: form.full_name.trim(), phone: form.phone, ...payload } : payload;
 }
-export function authError(mode, status) {
+export function authError(mode, status, code) {
+  if (mode === 'login' && status === 409 && code === 'PASSWORD_UPDATE_REQUIRED')
+    return 'Для входа требуется обновить пароль. Если активной сессии нет, обратитесь в поддержку.';
   if (mode === 'login' && status === 401) return 'Не удалось войти. Проверьте email и пароль.';
   if (mode === 'register' && status === 409) return 'Аккаунт с таким email уже существует.';
   if (status === 400) return 'Проверьте заполненные поля и попробуйте ещё раз.';

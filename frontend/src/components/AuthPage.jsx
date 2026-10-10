@@ -21,6 +21,14 @@ function AuthField({ name, mode, state, onEdit }) {
 }
 
 export function AuthView({ mode, state, actions, returnTo = '/', registered = false, notice = '' }) {
+  if (state.upgrade) return <main className="auth-page"><section className="auth-card">
+    <h1>Для безопасности необходимо обновить пароль.</h1>
+    <form onSubmit={event => { event.preventDefault(); void actions.submitUpgrade(); }} aria-busy={state.pending}>
+      {['password', 'confirmPassword'].map(name => <AuthField key={name} name={name} mode="register" state={state} onEdit={actions.edit} />)}
+      {state.error && <p role="alert">{state.error}</p>}
+      <button type="submit" disabled={state.pending}>Обновить пароль</button>
+      <button type="button" onClick={actions.cancelUpgrade}>Отмена</button>
+    </form></section></main>;
   const register = mode === 'register';
   function submit(event) {
     event.preventDefault();
@@ -31,6 +39,7 @@ export function AuthView({ mode, state, actions, returnTo = '/', registered = fa
     <header><Link to="/" className="auth-logo">✈️ Asedeliya</Link><h1 id="auth-heading">{register ? 'Создать аккаунт' : 'Вход в аккаунт'}</h1><p>{register ? 'Сохраняйте понравившиеся отели и управляйте личными данными.' : 'Войдите, чтобы управлять избранным, профилем и поездками.'}</p></header>
     {!register && registered && <p className="auth-success" role="status" aria-live="polite">Аккаунт создан. Теперь войдите в Asedeliya.</p>}
     {notice && <p role="status" aria-live="polite">{notice}</p>}
+    {state.message && <p role="status">{state.message}</p>}
     <form noValidate onSubmit={submit} aria-busy={state.pending}>
       {authFields(mode).map(name => <AuthField key={name} name={name} mode={mode} state={state} onEdit={actions.edit} />)}
       {state.error && <p className="auth-error auth-server-error" role="alert">{state.error}</p>}

@@ -143,6 +143,12 @@ const login = async (req, res) => {
       return res.status(401).json({ message: "Неверный email или пароль" });
     }
 
+    // A successful bcrypt comparison does not authenticate bytes beyond its boundary.
+    // Do not mint a general session or silently rehash an ambiguous long credential.
+    if (Buffer.byteLength(password, 'utf8') > 72)
+      return res.status(409).json({ code: 'PASSWORD_UPDATE_REQUIRED',
+        passwordUpdateToken: require('../services/legacyPasswordUpgrade').issue(user) });
+
     const publicUser = buildPublicUser(user);
 
     const token = jwt.sign(
