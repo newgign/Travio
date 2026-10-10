@@ -2,6 +2,16 @@
 
 2026-10-10, Asia/Qyzylorda. CODE/OFFLINE PASS; P1 FRONTEND TOKEN / BROWSER POLICY PARTIAL / FOUNDATION READY. Browser deployment acceptance OPEN. COMMERCIAL PRODUCTION READY NO.
 
+## Sprint 7P.2 — final staging acceptance update
+
+Owner confirms Sprint7P frontend deployed and authenticated frontend works. Session Storage contains token/user; Local Storage contains neither; legacy persistent bearer removed without automatic migration; same-tab reload remains authenticated; JWT not observed in URL. Persistent localStorage bearer RESOLVED; SessionStorage bearer policy STAGING ACCEPTED.
+
+Owner establishes asedeliya-staging-web is a manually-created Render Static Site and no Blueprint instances exist. render.yaml was not automatically reconciled. Owner manually added intended headers to the existing staging Static Site before this Codex documentation task. Render infrastructure-as-code NOT ACTIVE; Blueprint management NOT ACTIVE. Future infrastructure reconciliation OPEN / operational improvement. Repository declarations are prepared configuration, not evidence of active IaC management.
+
+Actual frontend document response observed by owner contains CSP object-src 'none'; base-uri 'self'; frame-ancestors 'none'; Permissions-Policy camera=(), microphone=(), geolocation=(); Referrer-Policy no-referrer; X-Frame-Options DENY; X-Content-Type-Options nosniff; Strict-Transport-Security present. Browser security headers STAGING ACCEPTED; CSP DEPLOYED / ACCEPTED BASELINE. Frontend renders, authenticated API calls work, no CSP violation or broken script/style/API behavior observed. Informational lazy-image warning is not a CSP failure.
+
+CSP intentionally constrains object/base/frame only; complete XSS/exfiltration prevention not claimed. XSS-readable active bearer REMAINS BY DESIGN. Earlier offline DOM sink audit remains NONE FOUND IN INSPECTED SCOPE, not a new browser penetration test. Logout owner E2E NOT RECONFIRMED; offline logout tests remain PASS. Browser security P1 STAGING ACCEPTED / remaining architectural XSS exposure documented. Earlier OPEN deployment-acceptance statements below describe historical7P evidence and are superseded within this bounded staging scope. See SPRINT_7P2_FRONTEND_BROWSER_STAGING_ACCEPTANCE_REPORT.md. No runtime/render.yaml/Render change or deployment performed by7P.2; commercial production readiness NO.
+
 ## Baseline before edits
 
 develop, tracked clean; HEAD9f4a990 docs: record Sprint7O mandatory config hardening, preceding da3a811 implementation;7O committed. Owner untracked files preserved. Token/user persisted separately in localStorage keys `token` and `user`; session.js managed restoration/profile validation and auth events, but authFetch, booking/profile helpers, consumer favorite actions and admin components also read storage directly. Persistent tokens survived normal reload/browser restart until removal. localStorage was shared across tabs and storage events invalidated views. No server logout revocation implied by local removal.
