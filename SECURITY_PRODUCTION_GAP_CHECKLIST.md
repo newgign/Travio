@@ -6,6 +6,8 @@ P0: before any commercial transaction. P1: before public production. P2: follow-
 
 2026-10-10, Sprint 7L: S-P0-01 refined to separate repository contract foundation from real provider commercial acceptance. The P0 remains open; requirement counts unchanged.
 
+2026-10-10, Sprint 7M schema audit: S-P1-01 remains OPEN. Checked-in users schema has no dedicated session/password freshness version or account disabled/status field. updated_at changes on ordinary profile updates and cannot safely serve as a revocation marker. Implementation stopped under the explicit schema-change stop condition; current JWT snapshot behavior is unchanged. See SPRINT_7M_SESSION_REVOCATION_ACCOUNT_STATE_REPORT.md. A current-user/role lookup is schema-free partial work, but full durable session revocation needs a separately authorized schema/rollout decision.
+
 ## Open P0
 
 | ID | Finding/evidence | Current mitigation | Required next action | Owner |
