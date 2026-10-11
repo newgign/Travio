@@ -22,6 +22,7 @@ function validate(env = {}) {
   if (!productionLike(env)) return [];
   const checks = secretChecks(env);
   const add = (name, code) => checks.push({ name, code });
+  try { require('./abuseProtection').configuration(env); } catch { add('RATE_LIMIT_STORE', 'ABUSE_PROTECTION_BLOCKED'); }
   try {
     const url = new URL(env.DATABASE_URL);
     if (!['postgres:', 'postgresql:'].includes(url.protocol) || !url.hostname || !url.username || url.pathname.length < 2 || url.hash)

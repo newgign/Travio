@@ -1,4 +1,5 @@
 const crypto = require("crypto");
+const { createMemoryStore, validateDecision } = require('../services/limiterStore');
 const { getClientNetworkIdentity } = require('./clientNetworkIdentity');
 
 function positiveInt(value, fallback) {
@@ -20,18 +21,17 @@ function createRateLimiter({
   maxKeys = 10000,
   privateBucket = false,
   now = Date.now,
+  store: suppliedStore,
+  storeTimeoutMs = 1000,
 } = {}) {
-  const store = new Map();
+  if (!suppliedStore) require('../config/abuseProtection').configuration();
   const safeWindowMs = positiveInt(windowMs, 60_000);
   const safeMax = positiveInt(max, 600);
   const safeMaxKeys = positiveInt(maxKeys, 10000);
-  let nextCleanup = 0;
-  function cleanup(time) {
-    for (const [key, item] of store) {
-      if (item.resetAt <= time) store.delete(key);
-    }
-    nextCleanup = time + Math.min(30000, safeWindowMs);
-  }
+  const store = suppliedStore || createMemoryStore({ maxKeys: safeMaxKeys });
+  if (!Number.isSafeInteger(storeTimeoutMs) || storeTimeoutMs < 1 || storeTimeoutMs > 3000)
+    throw Object.assign(Error('Limiter store invalid'), { code: 'LIMITER_STORE_INVALID' });
+  if (!store || typeof store.consume !== 'function') throw Object.assign(Error('Limiter store invalid'), { code: 'LIMITER_STORE_INVALID' });
   function reject(res, req, seconds) {
     res.setHeader('Retry-After', String(seconds));
     // Fixed local signal only; telemetry must not persist attacker headers/identifiers.
@@ -48,29 +48,42 @@ function createRateLimiter({
     const time = now();
     const bucket = key(req);
     if (bucket == null) return next();
-    if (time >= nextCleanup) cleanup(time);
-    let item = store.get(bucket);
-    if (!item || item.resetAt <= time) {
-      if (store.size >= safeMaxKeys) cleanup(time);
-      if (!store.has(bucket) && store.size >= safeMaxKeys) return reject(res, req, Math.max(1, Math.ceil(safeWindowMs / 1000)));
-      item = { count: 0, resetAt: time + safeWindowMs };
-      store.set(bucket, item);
-    }
-
-    item.count += 1;
-    const remaining = Math.max(0, safeMax - item.count);
-    const resetSeconds = Math.max(1, Math.ceil((item.resetAt - time) / 1000));
-
-    res.setHeader("RateLimit-Policy", `${safeMax};w=${Math.ceil(safeWindowMs / 1000)}`);
-    res.setHeader("RateLimit-Limit", String(safeMax));
-    if (!privateBucket) res.setHeader("RateLimit-Remaining", String(remaining));
-    res.setHeader("RateLimit-Reset", String(resetSeconds));
-
-    if (item.count > safeMax) {
-      return reject(res, req, resetSeconds);
-    }
-
-    next();
+    // Scope each bucket so independent categories cannot share counters accidentally.
+    const scopedKey = crypto.createHash('sha256').update(`${name}:${bucket}`).digest('hex');
+    const options = { limit: safeMax, windowMs: safeWindowMs, now: time };
+    const unavailable = () => {
+      res.locals = res.locals || {};
+      res.locals.rateLimited = true;
+      res.setHeader('Retry-After', '1');
+      return res.status(503).json({ success: false, code: 'ABUSE_PROTECTION_UNAVAILABLE' });
+    };
+    const finish = value => {
+      const decision = validateDecision(value, options);
+      const resetSeconds = Math.max(1, Math.ceil(decision.retryAfterMs / 1000));
+      if (decision.capacity) return reject(res, req, resetSeconds);
+      res.setHeader('RateLimit-Policy', `${safeMax};w=${Math.ceil(safeWindowMs / 1000)}`);
+      res.setHeader('RateLimit-Limit', String(safeMax));
+      if (!privateBucket) res.setHeader('RateLimit-Remaining', String(decision.remaining));
+      res.setHeader('RateLimit-Reset', String(resetSeconds));
+      if (!decision.allowed) return reject(res, req, resetSeconds);
+      return next();
+    };
+    let decision;
+    let asynchronous;
+    try { decision = store.consume(scopedKey, options); asynchronous = decision && typeof decision.then === 'function'; }
+    catch { return unavailable(); }
+    if (asynchronous) return new Promise((resolve, rejectPromise) => {
+      let settled = false;
+      const timer = setTimeout(() => { if (!settled) { settled = true; resolve(unavailable()); } }, storeTimeoutMs);
+      Promise.resolve(decision).then(value => {
+        if (settled) return;
+        settled = true; clearTimeout(timer);
+        try { validateDecision(value, options); } catch { resolve(unavailable()); return; }
+        try { resolve(finish(value)); } catch (error) { rejectPromise(error); }
+      }, () => { if (!settled) { settled = true; clearTimeout(timer); resolve(unavailable()); } });
+    });
+    try { validateDecision(decision, options); } catch { return unavailable(); }
+    return finish(decision);
   }
 
   middleware.describe = () => ({
@@ -78,7 +91,7 @@ function createRateLimiter({
     enabled: String(process.env.RATE_LIMIT_ENABLED || "true").toLowerCase() !== "false",
     windowMs: safeWindowMs,
     max: safeMax,
-    storage: "memory",
+    storage: suppliedStore ? 'injected-contract' : 'memory',
     maxKeys: safeMaxKeys,
   });
 
@@ -99,8 +112,11 @@ const authRateLimiter = createRateLimiter({
 
 // Random per-process HMAC prevents a reusable raw-email/dictionary key in memory.
 function createLoginAccountLimiter(options = {}) {
-  const secret = crypto.randomBytes(32);
-  const limiter = createRateLimiter({ name: 'login-account', windowMs: 15 * 60000, max: 30, ...options,
+  const { accountKeySecret, ...limiterOptions } = options;
+  if (accountKeySecret !== undefined && (!Buffer.isBuffer(accountKeySecret) || accountKeySecret.length !== 32))
+    throw Object.assign(Error('Account key configuration invalid'), { code: 'LIMITER_STORE_INVALID' });
+  const secret = accountKeySecret ? Buffer.from(accountKeySecret) : crypto.randomBytes(32);
+  const limiter = createRateLimiter({ name: 'login-account', windowMs: 15 * 60000, max: 30, ...limiterOptions,
     privateBucket: true, key: req => crypto.createHmac('sha256', secret).update(req.body.email.trim().toLowerCase()).digest('hex') });
   return function loginAccountLimit(req, res, next) {
     const body = req.body;

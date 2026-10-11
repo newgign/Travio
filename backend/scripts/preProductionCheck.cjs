@@ -75,6 +75,9 @@ async function configuration(env) {
   for (const key of ['HEALTH_MONITOR_ENABLED', 'RELIABILITY_MONITOR_ENABLED']) add(key, env[key] === 'false', 'BACKGROUND_JOB_NOT_DISABLED');
   add('TLS_VERIFICATION', env.NODE_TLS_REJECT_UNAUTHORIZED !== '0');
   add('RATE_LIMIT_ENABLED', env.RATE_LIMIT_ENABLED === undefined || env.RATE_LIMIT_ENABLED === 'true');
+  let abuseValid = false;
+  try { require('../config/abuseProtection').configuration(env); abuseValid = true; } catch { /* fixed output, no fallback */ }
+  add('ABUSE_PROTECTION_TOPOLOGY', abuseValid, 'ABUSE_PROTECTION_BLOCKED');
   let proxyValid = false;
   try { require('../config/trustedProxy').trustedProxy(env); proxyValid = true; } catch { /* fixed output */ }
   add('TRUST_PROXY', proxyValid, 'INVALID_TRUST_PROXY');
