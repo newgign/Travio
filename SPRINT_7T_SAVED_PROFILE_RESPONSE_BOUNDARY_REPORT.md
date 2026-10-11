@@ -1,5 +1,11 @@
 # Sprint 7T — Saved Profile Validation & Response Boundary Hardening
 
+## Sprint 7T.1 — current staging acceptance
+
+Authoritative owner evidence:7T backend/frontend deployed and LIVE; /health and /api/health/ready PASS, database.ok=true; normal login, profile load, safe edit, reload/persistence and admin access PASS. Saved profile validation, profile response allowlist, profile authorization and frontend persisted-user minimization STAGING ACCEPTED. Profile/network observation found no password_hash, session_version or unexpected internal metadata; no real PII values recorded. Internal future DB fields auto-leak NO in tested/observed boundary. PII logging regression NO in existing tested scope; no new exhaustive staging log observation claimed.
+
+Saved traveller owner E2E NOT RUN (no result supplied); validation STAGING READY / OWNER E2E NOT RUN. Mass assignment OFFLINE SYNTHETIC PASS only: owner performed no real role/is_active/session_version/password_hash/permissions attacks. Offline55/55 and other7T checks below are historical evidence, not rerun staging tests. Schema UNCHANGED; P2 SAVED PROFILE VALIDATION RESOLVED / STAGING ACCEPTED; overall API/PII R1-03 remains PARTIAL, unrelated counts unchanged. See [7T.1 report](SPRINT_7T1_SAVED_PROFILE_STAGING_ACCEPTANCE_REPORT.md). Older staging-pending text describes7T itself. No runtime/Render/deploy/DB/migration/provider/money action in this documentation task; commercial production ready NO.
+
 2026-10-10, Asia/Qyzylorda. CODE/OFFLINE: PASS in tested scope; staging acceptance NOT RUN. Commercial production ready NO. Existing account/auth/storage architecture reused; no schema migration.
 
 ## Baseline and inspected scope

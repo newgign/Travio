@@ -4,6 +4,8 @@
 
 ## Subsequent Sprint 7T update
 
+7T.1 current owner acceptance: backend/frontend LIVE; health/readiness/database.ok=true, login/profile load/safe edit/reload/admin PASS. Saved profile validation, profile response allowlist, profile authorization and persisted-user minimization STAGING ACCEPTED; Q2-01/S-P2-01 RESOLVED / STAGING ACCEPTED. Traveller owner E2E NOT RUN; mass assignment remains OFFLINE SYNTHETIC PASS, no real privilege manipulation. No password_hash/session_version/unexpected internal metadata observed within supplied profile/network evidence. Current counts remain4/8/5, owner7/external2; no unrelated P0/P1 closure. See [7T.1 report](SPRINT_7T1_SAVED_PROFILE_STAGING_ACCEPTANCE_REPORT.md). Earlier7T staging-pending text below is historical. Commercial production ready NO; no runtime or remote action in7T.1.
+
 7T closes Q2-01/S-P2-01 saved profile validation in tested code/offline scope and narrows profile/user/traveller response and browser persistence boundaries. Current counts after7T: **P0 4 / P1 8 / P2 5 / OWNER 7 / EXTERNAL 2**. All7S counts/tables below remain the audit-time historical record, superseded for Q2-01 by [7T report](SPRINT_7T_SAVED_PROFILE_RESPONSE_BOUNDARY_REPORT.md). R1-03 remains PARTIAL overall; no unrelated P0/P1 reclassification, staging acceptance or commercial readiness inferred. No schema change.
 
 ## 1. Executive summary and counting rule

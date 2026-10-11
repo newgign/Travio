@@ -1,5 +1,13 @@
 # Security production gap checklist — Sprint 7K
 
+## Sprint 7T.1 — current saved profile staging acceptance
+
+Authoritative owner evidence:7T backend/frontend deployed and LIVE; health/readiness PASS with database.ok=true; normal login, profile load, safe profile edit, reload/persistence and admin access PASS. Saved profile validation, profile response allowlist, profile authorization and frontend persisted-user minimization **STAGING ACCEPTED**. No password_hash, session_version or unexpected internal metadata observed in the supplied profile/network boundary; no real PII recorded. Internal future DB fields auto-leak NO in tested/observed scope; no universal all-endpoint claim.
+
+Mass assignment **OFFLINE SYNTHETIC PASS**, not a staging attack result: owner did not manipulate role/is_active/session_version/password_hash/permissions. Traveller validation **STAGING READY / OWNER E2E NOT RUN**: no saved-traveller owner result supplied. PII logging regression NO in existing tested scope; no new owner log-inspection result inferred. Schema UNCHANGED. **P2 SAVED PROFILE VALIDATION: RESOLVED / STAGING ACCEPTED**; counts remain P0 4/P1 8/P2 5/OWNER 7/EXTERNAL 2; overall R1-03 remains PARTIAL.
+
+See [7T.1 acceptance report](SPRINT_7T1_SAVED_PROFILE_STAGING_ACCEPTANCE_REPORT.md). This docs-only task changes no runtime/Render/deploy/DB/migration/provider/money behavior. Older7T acceptance-pending statements below are historical and superseded only within the evidence above. Commercial production ready NO.
+
 ## Sprint 7T — saved profile and response boundary update
 
 CODE/OFFLINE acceptance only; staging deployment NOT RUN. [7T report](SPRINT_7T_SAVED_PROFILE_RESPONSE_BOUNDARY_REPORT.md) records current rules, tests and limitations. Saved profile validation, mass-assignment resistance, profile/traveller response allowlists, owner-scoped authorization and frontend persisted-user minimization READY in tested scope. Unknown input fields IGNORED through explicit column/payload mappings; protected fields cannot change account authority. Email remains read-only on profile update. Strict Unicode string bounds, boolean/language/type validation and calendar-only DOB validation added; no schema change or real DB operation.
