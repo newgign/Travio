@@ -1,5 +1,13 @@
 # Security production gap checklist — Sprint 7K
 
+## Sprint 7U — distributed abuse foundation, not production acceptance
+
+2026-10-11. Process-local limiter STAGING READY (7N.4 historical acceptance); distributed store contract READY; atomic consume contract READY; local synthetic A/B proof PASS, separate-memory negative control PASS. Real distributed provider NOT IMPLEMENTED; production multi-instance protection OPEN. **P1 DISTRIBUTED ABUSE PROTECTION: FOUNDATION READY / overall PARTIAL**, not resolved. Counts stay P0 4/P1 8/P2 5/OWNER 7/EXTERNAL 2.
+
+Current defaults preserve single_instance/memory and synchronous limiter behavior. Explicit ABUSE_PROTECTION_TOPOLOGY other than single_instance or RATE_LIMIT_STORE other than memory BLOCKED by startup/preproduction/factory validation; no distributed/synthetic production selector or silent fallback. WEB_CONCURRENCY is not fleet evidence. Synthetic shared adapter exists only under tests; proof covers logically independent A/B limiters, not separate OS-process/store durability. Declared topology is an owner assertion, not automatic Render scale discovery.
+
+Account derivation defaults remain ephemeral per-process HMAC. Local account aggregation uses an explicit synthetic shared32-byte key; a future real provider needs reviewed deployment-private key custody/rotation and consistent namespace/policy/time semantics as well as atomic shared counters. No raw email/IP/token/key logging added; privacy regression NO in tested scope. Store exception/rejection/invalid receipt/timeout yields fixed503 with no retry/fallback; capacity/quota preserve429. Health routes/default quotas unchanged; new7U staging runtime acceptance NOT RUN. See [7U report](SPRINT_7U_DISTRIBUTED_ABUSE_PROTECTION_REPORT.md). Schema unchanged, no real KV/DB/provider/money action. Commercial production ready NO.
+
 ## Sprint 7T.1 — current saved profile staging acceptance
 
 Authoritative owner evidence:7T backend/frontend deployed and LIVE; health/readiness PASS with database.ok=true; normal login, profile load, safe profile edit, reload/persistence and admin access PASS. Saved profile validation, profile response allowlist, profile authorization and frontend persisted-user minimization **STAGING ACCEPTED**. No password_hash, session_version or unexpected internal metadata observed in the supplied profile/network boundary; no real PII recorded. Internal future DB fields auto-leak NO in tested/observed scope; no universal all-endpoint claim.
