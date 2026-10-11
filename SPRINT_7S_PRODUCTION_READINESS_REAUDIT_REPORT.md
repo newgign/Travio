@@ -1,5 +1,9 @@
 # Sprint 7S — Production Readiness Re-Audit & Remaining Blockers
 
+## Subsequent Sprint 7V schema prerequisite finding
+
+2026-10-11. Sprint 7V **BLOCKED — SCHEMA GAP DISCOVERED**; explicit stop before migration/implementation. C0-04 remains PARTIAL, counts4/8/5, owner7/external2 unchanged. Booking confirmation has an atomic conditional persisted claim, but stranded confirming restart recovery remains incomplete. Payment intent has no durable operation write; cancellation calls the supplier before persisting its result without an atomic pre-dispatch cancellation claim. 021 observation schema and 022 session state do not implement the required four-operation intent/attempt contract. Next work: separately authorized schema design for scoped uniqueness, immutable payload binding, atomic claims and durable ambiguous outcomes, not a memory-based production guarantee. New synthetic crash/concurrency proof NOT RUN under stop; commercial ordering OWNER DECISION REQUIRED. See [7V report](SPRINT_7V_DURABLE_COMMERCIAL_ORCHESTRATION_REPORT.md). Real booking/payment/commercial production remain NOT READY. No runtime/schema/Render/DB/provider changes.
+
 2026-10-10, Asia/Qyzylorda. **AUDIT PASS — repository and supplied owner-evidence scope. COMMERCIAL PRODUCTION READY: NO.** Documentation only; no independent live verification or implementation.
 
 ## Subsequent Sprint 7T update

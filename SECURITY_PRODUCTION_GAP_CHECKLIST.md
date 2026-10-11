@@ -1,5 +1,11 @@
 # Security production gap checklist — Sprint 7K
 
+## Sprint 7V — schema prerequisite stop
+
+2026-10-11. **BLOCKED — SCHEMA GAP DISCOVERED**, under the explicit 7V STOP rule. C0-04 remains PARTIAL; counts P0 4/P1 8/P2 5/OWNER 7/EXTERNAL 2 unchanged. Existing atomic per-booking confirmation claim is retained evidence, not complete crash recovery. Payment intent is not persisted; cancellation lacks a pre-dispatch atomic operation claim. 021 observation/event uniqueness does not supply a generic account/resource/operation intent and attempt ledger; 022 is account security. Required invariant: durable scoped logical-operation uniqueness, immutable payload binding, atomic dispatch ownership and persisted ambiguous/result evidence across process death. No migration or runner implemented. See [7V report](SPRINT_7V_DURABLE_COMMERCIAL_ORCHESTRATION_REPORT.md).
+
+Booking durable intent/idempotency PARTIAL; payment durable intent OPEN/payment idempotency PARTIAL; webhook replay, cancellation/refund idempotency, ambiguous handling, crash recovery and cross-process durability PARTIAL. Commercial ordering OWNER DECISION REQUIRED. New crash/concurrency proof NOT RUN after stop. Real booking/payment readiness NO; no production activation or external acceptance.
+
 ## Sprint 7U.1 — current process-local staging acceptance
 
 2026-10-11. Authoritative owner evidence:7U deployed to staging backend, LIVE; /health and /api/health/ready PASS with database.ok=true; normal login/admin/search PASS; unexpected429 NOT OBSERVED under ordinary owner use. Current mode PROCESS-LOCAL / MEMORY; process-local limiter STAGING ACCEPTED, normal-use regression PASS. No real distributed provider configured; no live limiter exhaustion/brute force/load test/DoS performed. No separate failed-login acceptance result inferred.
