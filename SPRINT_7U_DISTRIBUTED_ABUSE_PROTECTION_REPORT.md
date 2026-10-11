@@ -1,5 +1,11 @@
 # Sprint 7U — Distributed Abuse Protection Contract & Local Fleet Proof
 
+## Sprint 7U.1 — current staging acceptance
+
+2026-10-11. Authoritative owner confirms7U deployed to staging backend: LIVE; /health and /api/health/ready PASS, database.ok=true; normal login/admin/search PASS; unexpected429 NOT OBSERVED under ordinary owner use. PROCESS-LOCAL / MEMORY limiter STAGING ACCEPTED; normal-use regression PASS. No live limiter exhaustion, brute force, load test or DoS; no separate failed-login test result supplied. New runtime acceptance supersedes staging-pending text below only for this bounded normal-use scope.
+
+Distributed store/atomic contracts READY; synthetic A/B fleet proof, separate-memory negative control and auth-network/account/public aggregation PASS remain offline7U evidence, not staging fleet acceptance. No real distributed provider configured or implemented. Production multi-instance protection OPEN, silent fallback BLOCKED. **P1 DISTRIBUTED ABUSE PROTECTION: STAGING FOUNDATION ACCEPTED / PRODUCTION DISTRIBUTED PROVIDER OPEN**, not fully resolved. Counts4/8/5, owner7/external2 unchanged; commercial production ready NO. See [7U.1 report](SPRINT_7U1_ABUSE_PROTECTION_STAGING_ACCEPTANCE_REPORT.md). Documentation-only finalization; no runtime/Render/deploy/DB/KV/migration/provider/money action or full test rerun here. Historical7U execution/check results below retained.
+
 2026-10-11, Asia/Qyzylorda. **CODE/OFFLINE PASS — tested foundation scope. P1 DISTRIBUTED ABUSE PROTECTION: FOUNDATION READY / overall PARTIAL. Production multi-instance protection OPEN. Real distributed provider NOT IMPLEMENTED. COMMERCIAL PRODUCTION READY NO.**
 
 ## 1. Baseline and scope

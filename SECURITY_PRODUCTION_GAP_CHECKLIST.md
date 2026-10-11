@@ -1,5 +1,11 @@
 # Security production gap checklist — Sprint 7K
 
+## Sprint 7U.1 — current process-local staging acceptance
+
+2026-10-11. Authoritative owner evidence:7U deployed to staging backend, LIVE; /health and /api/health/ready PASS with database.ok=true; normal login/admin/search PASS; unexpected429 NOT OBSERVED under ordinary owner use. Current mode PROCESS-LOCAL / MEMORY; process-local limiter STAGING ACCEPTED, normal-use regression PASS. No real distributed provider configured; no live limiter exhaustion/brute force/load test/DoS performed. No separate failed-login acceptance result inferred.
+
+Distributed store contract READY; atomic consume contract READY; synthetic A/B, separate-memory negative control and network/account/public aggregation remain historical offline PASS, not live fleet proof. Distributed declaration without provider and silent memory fallback BLOCKED in offline tests. Real distributed provider NOT IMPLEMENTED; production multi-instance protection OPEN. **P1 DISTRIBUTED ABUSE PROTECTION: STAGING FOUNDATION ACCEPTED / PRODUCTION DISTRIBUTED PROVIDER OPEN**, not fully resolved. Counts remain P0 4/P1 8/P2 5/OWNER 7/EXTERNAL 2. See [7U.1 acceptance report](SPRINT_7U1_ABUSE_PROTECTION_STAGING_ACCEPTANCE_REPORT.md). Earlier7U staging-pending statements below are historical. No runtime/Render/deploy/DB/KV/migration/provider/money action in this docs-only task; commercial production ready NO.
+
 ## Sprint 7U — distributed abuse foundation, not production acceptance
 
 2026-10-11. Process-local limiter STAGING READY (7N.4 historical acceptance); distributed store contract READY; atomic consume contract READY; local synthetic A/B proof PASS, separate-memory negative control PASS. Real distributed provider NOT IMPLEMENTED; production multi-instance protection OPEN. **P1 DISTRIBUTED ABUSE PROTECTION: FOUNDATION READY / overall PARTIAL**, not resolved. Counts stay P0 4/P1 8/P2 5/OWNER 7/EXTERNAL 2.
