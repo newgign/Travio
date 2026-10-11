@@ -8,30 +8,35 @@ async function migrate(migrationPool, env = process.env, localOptions = {}) {
   // Refuse the whole ordered batch, never skip 021/022 or mark either applied.
   // Guard before pool construction, connection, advisory lock or ledger mutation.
   const commercial = require('./lib/durableCommercialOperationsMigrationGuard.cjs');
+  const staging = env.LOCAL_COMMERCIAL_MIGRATION_APPROVAL !== commercial.localApproval && commercial.stagingPath(env);
+  let stagingConfig;
   if (env.LOCAL_COMMERCIAL_MIGRATION_APPROVAL === commercial.localApproval) commercial.assertLocalExecutionAllowed(env, migrationPool);
+  else if(staging) stagingConfig=commercial.assertStagingConfiguration(env);
   else {
     assertExecutionAllowed(env);
     // Old 021/022 approval never authorizes the newly added 023 batch.
     commercial.assertLocalExecutionAllowed(env, migrationPool);
   }
-  migrationPool = migrationPool || require("../db");
+  if(staging && localOptions.through!==undefined)throw Object.assign(new Error('Staging migration boundary blocked'),{code:'DURABLE_COMMERCIAL_MIGRATION_BLOCKED'});
+  migrationPool = migrationPool || (staging ? new (require('pg').Pool)(stagingConfig) : require("../db"));
+  if(staging)commercial.assertStagingPool(migrationPool,stagingConfig);
   const client = await migrationPool.connect();
 
   try {
     // One migration runner per database, including separate deployment processes.
     await client.query('SELECT pg_advisory_lock(319003)');
-    await client.query(`
+    const files = fs.readdirSync(migrationsDir).filter((file) => file.endsWith(".sql")).sort();
+    if(staging) {
+      // Ledger metadata only, under the same advisory lock; no CREATE/ALTER/INSERT before validation.
+      const history=await client.query('SELECT name FROM public._migrations ORDER BY name');
+      commercial.assertStagingLedger(history.rows.map(row=>row.name),env,files);
+    } else await client.query(`
       CREATE TABLE IF NOT EXISTS _migrations (
         id SERIAL PRIMARY KEY,
         name VARCHAR(255) NOT NULL UNIQUE,
         applied_at TIMESTAMP NOT NULL DEFAULT NOW()
       )
     `);
-
-    const files = fs
-      .readdirSync(migrationsDir)
-      .filter((file) => file.endsWith(".sql"))
-      .sort();
 
     if (localOptions.through !== undefined) {
       if (env.LOCAL_COMMERCIAL_MIGRATION_APPROVAL !== commercial.localApproval || localOptions.through !== 22)
@@ -79,8 +84,12 @@ async function migrate(migrationPool, env = process.env, localOptions = {}) {
 }
 
 if (require.main === module) migrate().catch((error) => {
-  console.error("MIGRATION ERROR:", error.code || "MIGRATION_FAILED");
+  console.error("MIGRATION ERROR:", publicMigrationCode(error));
   process.exit(1);
 });
 
-module.exports = { migrate };
+function publicMigrationCode(error) {
+  return ['DURABLE_COMMERCIAL_MIGRATION_BLOCKED','RECONCILIATION_MIGRATION_BLOCKED','SESSION_SECURITY_MIGRATION_BLOCKED','RENDER_INTERNAL_TLS_BLOCKED'].includes(error?.code)
+    ? error.code : /^\d[A-Z0-9]{4}$/.test(error?.code||'') ? 'MIGRATION_SQL_FAILED' : 'MIGRATION_FAILED';
+}
+module.exports = { migrate,publicMigrationCode };
