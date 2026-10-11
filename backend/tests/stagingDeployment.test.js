@@ -39,11 +39,11 @@ test('memory cache behavior is preserved outside ignored runtime directory', () 
 test('migration runner locks before inspecting schema and unlocks on failure', async () => {
   const { migrate } = require('../scripts/migrate');
   const calls=[];
-  const fake={connect:async()=>({query:async sql=>{calls.push(sql);if(sql.includes('CREATE TABLE'))throw new Error('fixture');},release(){calls.push('release');}}),end:async()=>calls.push('end')};
-  const approved = require('./helpers/reconciliationMigrationEnv.cjs')();
-  await assert.rejects(migrate(fake, { ...approved, SESSION_SECURITY_MIGRATION_ENABLED: 'true',
-    SESSION_SECURITY_MIGRATION_APPROVAL: 'I_APPROVE_022_WITH_ORDERED_PENDING_MIGRATIONS',
-    SESSION_SECURITY_EXPECTED_DB_IDENTITY: approved.RECONCILIATION_EXPECTED_DB_IDENTITY }));
+  const fake={options:{host:'127.0.0.1',port:55437,database:'asedeliya_7x_upgrade_abcdef123456',ssl:false},connect:async()=>({query:async sql=>{calls.push(sql);if(sql.includes('CREATE TABLE'))throw new Error('fixture');},release(){calls.push('release');}}),end:async()=>calls.push('end')};
+  const approved = {NODE_ENV:'test',APP_ENV:'test',EXPECTED_APP_ENV:'test',DB_SSL_MODE:'disable',
+    DATABASE_URL:'postgresql://fixture@127.0.0.1:55437/asedeliya_7x_upgrade_abcdef123456',
+    LOCAL_COMMERCIAL_MIGRATION_APPROVAL:require('../scripts/lib/durableCommercialOperationsMigrationGuard.cjs').localApproval};
+  await assert.rejects(migrate(fake, approved), /fixture/);
   assert.equal(calls[0],'SELECT pg_advisory_lock(319003)');
   assert.deepEqual(calls.slice(-3),['SELECT pg_advisory_unlock(319003)','release','end']);
 });

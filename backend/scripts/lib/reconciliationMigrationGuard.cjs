@@ -12,7 +12,7 @@ function inventoryCheck() {
   const files = inventory.migrations;
   const sql = fs.readFileSync(path.resolve(__dirname, '../../../database/migrations', migration), 'utf8').replace(/\r\n/g, '\n');
   const hash = crypto.createHash('sha256').update(sql).digest('hex');
-  return files.length === 22 && files.every((file, i) => file.startsWith(String(i + 1).padStart(3, '0') + '_'))
+  return files.length === 23 && files[22] === '023_durable_commercial_operations.sql' && files.every((file, i) => file.startsWith(String(i + 1).padStart(3, '0') + '_'))
     && files[20] === migration && files[21] === '022_session_security_state.sql' && hash === expectedHash;
 }
 function disabledChecks(env) {

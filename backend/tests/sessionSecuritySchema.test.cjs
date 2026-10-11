@@ -13,7 +13,7 @@ const approved = () => { const env = require('./helpers/reconciliationMigrationE
 
 test('022 follows intact 021 in complete ordered inventory', () => {
   const files = fs.readdirSync(path.resolve(__dirname, '../../database/migrations')).filter(f => f.endsWith('.sql')).sort();
-  assert.equal(files.length, 22); assert.equal(files[20], '021_reconciliation_storage.sql'); assert.equal(files[21], guard.migration);
+  assert.equal(files.length, 23); assert.equal(files[20], '021_reconciliation_storage.sql'); assert.equal(files[21], guard.migration); assert.equal(files[22], '023_durable_commercial_operations.sql');
   assert.equal(guard.inventoryCheck(), true);
 });
 test('version is a positive non-null integer with safe initial default', () => assert.match(sql, /session_version INTEGER NOT NULL DEFAULT 1 CHECK \(session_version >= 1\)/));

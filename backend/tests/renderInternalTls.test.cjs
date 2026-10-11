@@ -49,10 +49,10 @@ for (const [label, patch] of [
   await assert.rejects(migrate({ connect() { calls++; throw Error('MOCK_BOUNDARY'); } }, env), { code: 'RECONCILIATION_MIGRATION_BLOCKED' });
   assert.equal(calls, 0);
 });
-test('exact contract reaches only injected pool boundary, not SQL', async () => {
+test('021/022 Render TLS contract cannot authorize new local-only 023 batch', async () => {
   let calls = 0;
-  await assert.rejects(migrate({ connect() { calls++; throw Error('MOCK_BOUNDARY'); } }, approved()), /MOCK_BOUNDARY/);
-  assert.equal(calls, 1);
+  await assert.rejects(migrate({ connect() { calls++; throw Error('MOCK_BOUNDARY'); } }, approved()), {code:'DURABLE_COMMERCIAL_MIGRATION_BLOCKED'});
+  assert.equal(calls, 0);
 });
 for (const mode of ['disabled', 'enabled']) test(`runtime require permits enforcement ${mode} with migration flags OFF`, () => {
   const env = { ...approved(), RECONCILIATION_STORAGE_MIGRATION_ENABLED: 'false', SESSION_SECURITY_MIGRATION_ENABLED: 'false',

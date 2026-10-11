@@ -4,10 +4,16 @@ const { assertExecutionAllowed } = require('./lib/sessionSecurityMigrationGuard.
 
 const migrationsDir = path.resolve(__dirname, "../../database/migrations");
 
-async function migrate(migrationPool, env = process.env) {
+async function migrate(migrationPool, env = process.env, localOptions = {}) {
   // Refuse the whole ordered batch, never skip 021/022 or mark either applied.
   // Guard before pool construction, connection, advisory lock or ledger mutation.
-  assertExecutionAllowed(env);
+  const commercial = require('./lib/durableCommercialOperationsMigrationGuard.cjs');
+  if (env.LOCAL_COMMERCIAL_MIGRATION_APPROVAL === commercial.localApproval) commercial.assertLocalExecutionAllowed(env, migrationPool);
+  else {
+    assertExecutionAllowed(env);
+    // Old 021/022 approval never authorizes the newly added 023 batch.
+    commercial.assertLocalExecutionAllowed(env, migrationPool);
+  }
   migrationPool = migrationPool || require("../db");
   const client = await migrationPool.connect();
 
@@ -26,6 +32,12 @@ async function migrate(migrationPool, env = process.env) {
       .readdirSync(migrationsDir)
       .filter((file) => file.endsWith(".sql"))
       .sort();
+
+    if (localOptions.through !== undefined) {
+      if (env.LOCAL_COMMERCIAL_MIGRATION_APPROVAL !== commercial.localApproval || localOptions.through !== 22)
+        throw Object.assign(new Error('Unsupported local migration boundary'), {code:'DURABLE_COMMERCIAL_MIGRATION_BLOCKED'});
+      files.splice(22); // Disposable-local upgrade fixture only; never a remote skip policy.
+    }
 
     for (const file of files) {
       const applied = await client.query(

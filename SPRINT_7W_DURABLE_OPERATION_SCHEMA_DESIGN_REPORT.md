@@ -1,5 +1,9 @@
 # Sprint 7W — Durable Commercial Operation Schema Design
 
+## Subsequent 7X implementation evidence
+
+2026-10-11. Authoritative7W design below retained historically. [7X proof](SPRINT_7X_MIGRATION_023_LOCAL_PROOF_REPORT.md) implements023 source and local41/41 upgrade/fresh/ledger/constraint/concurrency tests, preservingHYBRID and001–022. Proposed023 now exists; no staging migration, backfill or commercial runtime activation. P0 schema IMPLEMENTED LOCALLY; runtime OPEN. Future runtime/crash-test plan in section17 is now assigned to7Y by the explicit7X scope, not implemented in7X. Commercial ordering/retention decisions remain required; real external acceptance NOT RUN.
+
 2026-10-11, Asia/Qyzylorda. **SCHEMA DESIGN: PASS. P0 COMMERCIAL ORCHESTRATION SCHEMA: DESIGN READY.** Proposed design only: migration NOT IMPLEMENTED, new durable orchestration runtime NOT IMPLEMENTED, external acceptance NOT RUN. This resolves the 7V prerequisite by design, not by implementation or production acceptance.
 
 ## 1. Baseline and current schema findings

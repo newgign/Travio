@@ -69,10 +69,10 @@ function migrationInventory(applied) {
   const unique = [{table:'_migrations',columns:['name']}];
   const primary = [{table:'_migrations',columns:['id']}];
   // Bounded inventory for the repository's CREATE TABLE / CREATE INDEX syntax, not a general SQL parser.
-  for (const match of text.matchAll(/CREATE TABLE IF NOT EXISTS (\w+)\s*\(([\s\S]*?)\n\);/gi)) {
+  for (const match of text.matchAll(/CREATE TABLE (?:IF NOT EXISTS )?(\w+)\s*\(([\s\S]*?)\n\);/gi)) {
     const [,table,body] = match; tables.push(table);
     for (const m of body.matchAll(/\b(\w+)\s+(?:BIG)?SERIAL\b/gi)) serials.push({table,column:m[1]});
-    for (const m of body.matchAll(/\b(\w+)\s+(?:INTEGER|BIGINT)[^,\n]*?REFERENCES\s+(\w+)\s*\((\w+)\)/gi)) foreignKeys.push({table,column:m[1],parent:m[2],parentColumn:m[3]});
+    for (const m of body.matchAll(/\b(\w+)\s+(?:INTEGER|BIGINT|UUID|TEXT|VARCHAR\(\d+\))[^,\n]*?REFERENCES\s+(\w+)\s*\((\w+)\)/gi)) foreignKeys.push({table,column:m[1],parent:m[2],parentColumn:m[3]});
     for (const m of body.matchAll(/CONSTRAINT\s+(\w+)\s+FOREIGN KEY\s*\(([^)]+)\)\s*REFERENCES\s+(\w+)\s*\(([^)]+)\)/gi)) {
       const columns = m[2].split(',').map(s => s.trim()), parentColumns = m[4].split(',').map(s => s.trim());
       if (columns.length !== parentColumns.length) fail('MIGRATION_INVENTORY_UNSUPPORTED');
@@ -88,8 +88,14 @@ function migrationInventory(applied) {
     }
     for (const m of body.matchAll(/\b(\w+)\s+VARCHAR\(\d+\)\s+UNIQUE/gi)) unique.push({table,columns:[m[1]]});
   }
-  for (const m of text.matchAll(/CREATE (UNIQUE )?INDEX IF NOT EXISTS (\w+)\s+ON (\w+)/gi)) indexes.push({name:m[2],table:m[3],unique:Boolean(m[1])});
-  if (new Set(tables).size !== tables.length || tables.length !== (text.match(/CREATE TABLE IF NOT EXISTS/gi)||[]).length + 1) fail('MIGRATION_INVENTORY_UNSUPPORTED');
+  for (const m of text.matchAll(/CREATE (UNIQUE )?INDEX (?:IF NOT EXISTS )?(\w+)\s+ON (\w+)/gi)) indexes.push({name:m[2],table:m[3],unique:Boolean(m[1])});
+  for (const m of text.matchAll(/ALTER TABLE (\w+) ADD CONSTRAINT (\w+) UNIQUE\(([^)]+)\)/gi)) unique.push({table:m[1],columns:m[3].split(',').map(s=>s.trim())});
+  for (const m of text.matchAll(/ALTER TABLE (\w+) ADD CONSTRAINT (\w+) FOREIGN KEY\s*\(([^)]+)\)\s*REFERENCES\s+(\w+)\s*\(([^)]+)\)/gi)) {
+    const columns=m[3].split(',').map(s=>s.trim()), parentColumns=m[5].split(',').map(s=>s.trim());
+    if(columns.length!==parentColumns.length) fail('MIGRATION_INVENTORY_UNSUPPORTED');
+    foreignKeys.push({table:m[1],column:columns[0],parent:m[4],parentColumn:parentColumns[0],columns,parentColumns,constraintName:m[2]});
+  }
+  if (new Set(tables).size !== tables.length || tables.length !== (text.match(/CREATE TABLE (?:IF NOT EXISTS )?/gi)||[]).length + 1) fail('MIGRATION_INVENTORY_UNSUPPORTED');
   return { migrations: selected, tables:tables.sort(), serials, primary, foreignKeys, unique, indexes };
 }
 function dumpName(now = new Date()) {
