@@ -1,5 +1,9 @@
 # Sprint 7V — Durable Commercial Orchestration Design & Crash Proof
 
+## Subsequent 7W design — historical stop preserved
+
+2026-10-11. [Sprint 7W](SPRINT_7W_DURABLE_OPERATION_SCHEMA_DESIGN_REPORT.md) resolves the schema prerequisite **BY DESIGN** with a HYBRID typed operation/attempt/evidence ledger and domain constraints. Proposed 023_durable_commercial_operations.sql is not created or executed. New runtime NOT IMPLEMENTED; no new crash/concurrency proof. 7V remains BLOCKED BY DESIGN historically; C0-04 remains PARTIAL, not closed. Separate schema/runtime authorization and tests are still required before 7V's durable crash proof can be completed. Commercial ordering remains OWNER DECISION REQUIRED; no real operation enabled.
+
 2026-10-11, Asia/Qyzylorda. **BLOCKED — SCHEMA GAP DISCOVERED.** Stopped at the explicit sections 7/29 schema prerequisite, before migration or implementation. No commercial readiness claimed.
 
 ## 1. Baseline and current architecture

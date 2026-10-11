@@ -1,5 +1,11 @@
 # Security production gap checklist — Sprint 7K
 
+## Sprint 7W — durable operation schema design
+
+2026-10-11. **P0 COMMERCIAL ORCHESTRATION SCHEMA: DESIGN READY**, scoped to supplier booking, charge, cancellation and full refund. Recommended HYBRID: typed operation ledger plus attempts/evidence/reconciliation journals, domain FKs and immutable semantics. Atomic claim and separate durable dispatch authorization fence competing workers; possible dispatch remains OUTCOME_UNKNOWN until evidence resolves it. DB logical uniqueness prevents random-key duplicates; no exactly-once external guarantee. 021 EXTEND REQUIRED through additive linkage/new operation recovery journal. Proposed 023_durable_commercial_operations.sql is documentation only: migration NOT IMPLEMENTED, new runtime NOT IMPLEMENTED, external acceptance NOT RUN. See [7W design](SPRINT_7W_DURABLE_OPERATION_SCHEMA_DESIGN_REPORT.md).
+
+7V gaps RESOLVED BY DESIGN, not implementation. Commercial ordering OWNER DECISION REQUIRED; authorization/capture subtypes require review if selected. Retention OWNER / LEGAL POLICY REQUIRED. C0-04 remains PARTIAL; counts P0 4/P1 8/P2 5/OWNER 7/EXTERNAL 2 unchanged. Real booking/payment/commercial production NO. No runtime/schema/DB/Render/provider action.
+
 ## Sprint 7V — schema prerequisite stop
 
 2026-10-11. **BLOCKED — SCHEMA GAP DISCOVERED**, under the explicit 7V STOP rule. C0-04 remains PARTIAL; counts P0 4/P1 8/P2 5/OWNER 7/EXTERNAL 2 unchanged. Existing atomic per-booking confirmation claim is retained evidence, not complete crash recovery. Payment intent is not persisted; cancellation lacks a pre-dispatch atomic operation claim. 021 observation/event uniqueness does not supply a generic account/resource/operation intent and attempt ledger; 022 is account security. Required invariant: durable scoped logical-operation uniqueness, immutable payload binding, atomic dispatch ownership and persisted ambiguous/result evidence across process death. No migration or runner implemented. See [7V report](SPRINT_7V_DURABLE_COMMERCIAL_ORCHESTRATION_REPORT.md).
